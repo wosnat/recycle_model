@@ -25,6 +25,7 @@ import pprint
 from sympy import *
 import math
 from scipy.integrate import solve_ivp
+from scipy.optimize import differential_evolution
 
 
 from SALib.sample import saltelli
@@ -109,6 +110,8 @@ if __name__ == '__main__':
     parser.add_argument("--timeout", help="timeout",  type=int default=10*60)
     parser.add_argument("--number_of_runs", help="number of simulations to run",  type=int, default=1000)
     parser.add_argument("--chunk", help="which of the chunks to run ",  type=int, required=True)
+    parser.add_argument("--optimize", help="run optimization (default: run model)",
+                        action="store_true")
     
     args = parser.parse_args()
     dpath = args.outdpath
@@ -132,25 +135,45 @@ if __name__ == '__main__':
         'O_p', 'O_h', 'epsilon', 'VTmax', 'KT_h', 'omega'
     ]
 
-    samples = np.loadtxt(args.params_txt)
-    # def generate_json_and_run_from_X(X, params_to_update, param_vals, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60):
+    if not args.optimize:
+        samples = np.loadtxt(args.params_txt)
+        # def generate_json_and_run_from_X(X, params_to_update, param_vals, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60):
 
-    start_line = (args.chunk  - 1) * args.number_of_runs
-    end_line = min(samples.shape[0], start_line + args.number_of_runs)
-    if start_line >= end_line:
-        print(f'start ({start_line}) >= end ({end_line}), stopping...'
-    for i in range(start_line, end_line):
-    
-        run_id = f'{args.run_id}_{i}'
-        print(run_id)
-        generate_json_and_run_from_X(
-            param_values[i], params_to_update, param_vals, 
+        start_line = (args.chunk  - 1) * args.number_of_runs
+        end_line = min(samples.shape[0], start_line + args.number_of_runs)
+        if start_line >= end_line:
+            print(f'start ({start_line}) >= end ({end_line}), stopping...'
+        for i in range(start_line, end_line):
+        
+            run_id = f'{args.run_id}_{i}'
+            print(run_id)
+            generate_json_and_run_from_X(
+                param_values[i], params_to_update, param_vals, 
+                args.ref_csv, args.jsondpath, dpath, run_id, 
+                timeout=args.timeout)
+
+
+    if (args.optimize):
+        func = lambda X :  generate_json_and_run_from_X(
+            X, params_to_update, param_vals, 
             args.ref_csv, args.jsondpath, dpath, run_id, 
             timeout=args.timeout)
-
-
-
-
+        result = differential_evolution(func, bounds, disp=True, init='latinhypercube')
+        print(result.message)
+        print(result.x, result.fun)
+        print(zip (params_to_update, result.x))
+        res_dict = {
+            'fun': result.fun,
+             'message': result.message,
+             'nfev': result.nfev,
+             'nit': result.nit,
+             'success': result.success,
+            'run_id' : args.run_id,
+        }
+        res_dict.update({i:v for i,v in zip (params_to_update, result.x)})
+        pd.DataFrame([res_dict]).to_csv(os.path.join(dpath, f'{args.run_id}_differential_evolution.csv.gz'))
+        
+        
 
 
 

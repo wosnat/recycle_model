@@ -670,13 +670,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run models - nutrients recycle with separate N/C and quotas.')
     parser.add_argument('--ref_csv', help='reference CSV', default='prelim bottle.csv')
     parser.add_argument('--json', help='json with param vals', default=None)
-    # parser.add_argument('--workers', help='number of workers', type=int, default=-1)
     parser.add_argument('--maxday', help='max day of simulation', type=int, default=63)
 
     parser.add_argument("--outdpath", help="output dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
-    parser.add_argument("--optimize", help="run optimization (default: run model)",
-                        action="store_true")
 
     args = parser.parse_args()
     dpath = args.outdpath
@@ -685,27 +682,5 @@ if __name__ == '__main__':
     refdf = pd.read_csv(args.ref_csv)
     model_name = args.run_id
 
-    if args.optimize:
-        add_init=False
-        assert(len(args.params_opt))
-        result = genetic_optimization(args.params_opt, refdf,
-                                      disable_organism=disable_organism, disable_nutrient=disable_nutrient,
-                                      ref_pro_col=args.ref_pro_col, ref_alt_col=args.ref_alt_col,
-                                      workers= args.workers,
-                                      add_init=args.opt_add_init, optimize_all=args.optimize_all)
-        pprint.pprint(result)
-        success = result.success
-        res_dict = {
-            'fun': result.fun,
-             'message': result.message,
-             'nfev': result.nfev,
-             'nit': result.nit,
-             'success': result.success,
-            'model_name' : model_name,
-        }
-        res_dict.update({i:v for i,v in zip (args.params_opt, result.x)})
-        pd.DataFrame([res_dict]).to_csv(args.outfile)
-
-    else:
-        MSE_err = run_with_params_json(args.json, args.maxday, refdf, dpath, args.run_id)
-        print ('\nMSE:', MSE_err)
+    MSE_err = run_with_params_json(args.json, args.maxday, refdf, dpath, args.run_id)
+    print ('\nMSE:', MSE_err)
