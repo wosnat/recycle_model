@@ -101,7 +101,7 @@ if __name__ == '__main__':
     # def generate_json_and_run_from_X(X,  json_dpath, out_dpath, out_fprefix, timeout=10*60):
     parser = argparse.ArgumentParser(description='Run models - nutrients recycle with separate N/C and quotas.')
     parser.add_argument('--ref_csv', help='reference CSV', default='prelim bottle.csv')
-    parser.add_argument('--params_txt', help='parameters file', default='param_values.txt')
+    parser.add_argument('--params_txt', help='parameters file', default='param_values.txt.gz')
     parser.add_argument('--jsondpath', help='folder to put json files with param vals', default='.')
     # parser.add_argument('--workers', help='number of workers', type=int, default=-1)
 
@@ -109,8 +109,10 @@ if __name__ == '__main__':
     parser.add_argument("--run_id", help="run id", required=True)
     parser.add_argument("--timeout", help="timeout",  type=int default=10*60)
     parser.add_argument("--number_of_runs", help="number of simulations to run",  type=int, default=1000)
-    parser.add_argument("--chunk", help="which of the chunks to run ",  type=int, required=True)
+    parser.add_argument("--chunk", help="which of the chunks to run ",  type=int, default=1)
     parser.add_argument("--optimize", help="run optimization (default: run model)",
+                        action="store_true")
+    parser.add_argument("--gen_sensitivity", help="generate sensitivity",
                         action="store_true")
     
     args = parser.parse_args()
@@ -135,25 +137,18 @@ if __name__ == '__main__':
         'O_p', 'O_h', 'epsilon', 'VTmax', 'KT_h', 'omega'
     ]
 
-    if not args.optimize:
-        samples = np.loadtxt(args.params_txt)
-        # def generate_json_and_run_from_X(X, params_to_update, param_vals, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60):
 
-        start_line = (args.chunk  - 1) * args.number_of_runs
-        end_line = min(samples.shape[0], start_line + args.number_of_runs)
-        if start_line >= end_line:
-            print(f'start ({start_line}) >= end ({end_line}), stopping...'
-        for i in range(start_line, end_line):
-        
-            run_id = f'{args.run_id}_{i}'
-            print(run_id)
-            generate_json_and_run_from_X(
-                param_values[i], params_to_update, param_vals, 
-                args.ref_csv, args.jsondpath, dpath, run_id, 
-                timeout=args.timeout)
+    if args.gen_sensitivity:
+        problem = {
+            'num_vars': len(params_to_update),
+            'names': params_to_update,
+            'bounds': bounds,
+        }
+        param_values = saltelli.sample(problem, 1024)
+        print(param_values.shape)
+        np.savetxt(args.params_txt, param_values)
 
-
-    if (args.optimize):
+    elif args.optimize:
         func = lambda X :  generate_json_and_run_from_X(
             X, params_to_update, param_vals, 
             args.ref_csv, args.jsondpath, dpath, run_id, 
@@ -173,6 +168,22 @@ if __name__ == '__main__':
         res_dict.update({i:v for i,v in zip (params_to_update, result.x)})
         pd.DataFrame([res_dict]).to_csv(os.path.join(dpath, f'{args.run_id}_differential_evolution.csv.gz'))
         
+    else:
+        samples = np.loadtxt(args.params_txt)
+        # def generate_json_and_run_from_X(X, params_to_update, param_vals, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60):
+
+        start_line = (args.chunk  - 1) * args.number_of_runs
+        end_line = min(samples.shape[0], start_line + args.number_of_runs)
+        if start_line >= end_line:
+            print(f'start ({start_line}) >= end ({end_line}), stopping...'
+        for i in range(start_line, end_line):
+        
+            run_id = f'{args.run_id}_{i}'
+            print(run_id)
+            generate_json_and_run_from_X(
+                param_values[i], params_to_update, param_vals, 
+                args.ref_csv, args.jsondpath, dpath, run_id, 
+                timeout=args.timeout)
         
 
 
