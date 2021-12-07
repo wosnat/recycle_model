@@ -107,7 +107,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--outdpath", help="output dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
-    parser.add_argument("--timeout", help="timeout",  type=int default=10*60)
+    parser.add_argument("--timeout", help="timeout",  type=int, default=10*60)
     parser.add_argument("--number_of_runs", help="number of simulations to run",  type=int, default=1000)
     parser.add_argument("--chunk", help="which of the chunks to run ",  type=int, default=1)
     parser.add_argument("--optimize", help="run optimization (default: run model)",
@@ -175,7 +175,7 @@ if __name__ == '__main__':
         start_line = (args.chunk  - 1) * args.number_of_runs
         end_line = min(samples.shape[0], start_line + args.number_of_runs)
         if start_line >= end_line:
-            print(f'start ({start_line}) >= end ({end_line}), stopping...'
+            print(f'start ({start_line}) >= end ({end_line}), stopping...')
         for i in range(start_line, end_line):
         
             run_id = f'{args.run_id}_{i}'
