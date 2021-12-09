@@ -661,7 +661,47 @@ def run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout=10*60):
         print("stderr:", err.stderr)
     return 1e50
 
+def run_chunk(param_values, params_to_update, chunk, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout):
+    start_line = (chunk  - 1) * number_of_runs
+    end_line = min(param_values.shape[0], start_line + number_of_runs)
+    if start_line >= end_line:
+        print(f'start ({start_line}) >= end ({end_line}), stopping...')
+        return
+    print (f'running chunk {chunk} \t\t<<<==========')
+    for i in range(start_line, end_line):
 
+        out_fprefix = f'{run_id}_{i}'
+        print(out_fprefix)
+        generate_json_and_run_from_X(
+            param_values[i], params_to_update, param_vals, 
+            ref_csv, json_dpath, out_dpath, out_fprefix, timeout)
+            
+
+def run_sensitivity_chunks():
+    param_values = np.loadtxt("param_values.txt.gz")
+    params_to_update = [
+        'M_h', 'M_p', 'gamma^D_p', 'gamma^D_h', 
+        #'R_p', 'R_h', 
+        'E^O_p', 'E^I_p', 'E^O_h', 'E^I_h', 
+        'K^ON_p', 'K^IN_p', 'K^OC_p', 'K^IC_p', 'K^ON_h', 'K^IN_h', 'K^OC_h', 'K^IC_h', 
+        # 'Vmax^ON_p', 
+        'Vmax^IN_p', 
+        # 'Vmax^OC_p', 
+        'Vmax^IC_p', 'Vmax^ON_h', 'Vmax^IN_h', 'Vmax^OC_h', 
+        #'Vmax^IC_h', 
+        'O_p', 'O_h', 'epsilon', 'VTmax', 'KT_h', 'omega'
+    ]
+    
+    number_of_runs = 1000
+    run_id = 'se_'
+    ref_csv = 'prelim bottle.csv'
+    json_dpath = r'C:\Users\wosnat\Documents\GitHub\recycle_model\res\se1\json'
+    out_dpath = r'C:\Users\wosnat\Documents\GitHub\recycle_model\res\se1'
+    timeout = 2*60
+    for chunk in range(1,30):
+        run_chunk(param_values, params_to_update, chunk, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout)
+
+    
 if __name__ == '__main__':
     import argparse
     import json
