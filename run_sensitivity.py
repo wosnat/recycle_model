@@ -102,12 +102,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run models - nutrients recycle with separate N/C and quotas.')
     parser.add_argument('--ref_csv', help='reference CSV', default='prelim bottle.csv')
     parser.add_argument('--params_txt', help='parameters file', default='param_values.txt.gz')
-    parser.add_argument('--jsondpath', help='folder to put json files with param vals', default='.')
+    parser.add_argument('--json_dpath', help='folder to put json files with param vals', default='.')
     # parser.add_argument('--workers', help='number of workers', type=int, default=-1)
 
-    parser.add_argument("--outdpath", help="output dir", default='.')
+    parser.add_argument("--out_dpath", help="output dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
-    parser.add_argument("--timeout", help="timeout",  type=int, default=10*60)
+    parser.add_argument("--timeout", help="timeout",  type=int, default=2*60)
     parser.add_argument("--number_of_runs", help="number of simulations to run",  type=int, default=1000)
     parser.add_argument("--chunk", help="which of the chunks to run ",  type=int, default=1)
     parser.add_argument("--optimize", help="run optimization (default: run model)",
@@ -116,10 +116,10 @@ if __name__ == '__main__':
                         action="store_true")
     
     args = parser.parse_args()
-    dpath = args.outdpath
+    dpath = args.out_dpath
     if dpath != '':
         os.makedirs(dpath, exist_ok=True)
-    os.makedirs(jsondpath, exist_ok=True)
+    os.makedirs(args.json_dpath, exist_ok=True)
     
     refdf = pd.read_csv(args.ref_csv)
     model_name = args.run_id
@@ -169,23 +169,11 @@ if __name__ == '__main__':
         pd.DataFrame([res_dict]).to_csv(os.path.join(dpath, f'{args.run_id}_differential_evolution.csv.gz'))
         
     else:
-        samples = np.loadtxt(args.params_txt)
-        # def generate_json_and_run_from_X(X, params_to_update, param_vals, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60):
-
-        start_line = (args.chunk  - 1) * args.number_of_runs
-        end_line = min(samples.shape[0], start_line + args.number_of_runs)
-        if start_line >= end_line:
-            print(f'start ({start_line}) >= end ({end_line}), stopping...')
-        for i in range(start_line, end_line):
-        
-            run_id = f'{args.run_id}_{i}'
-            print(run_id)
-            generate_json_and_run_from_X(
-                param_values[i], params_to_update, param_vals, 
-                args.ref_csv, args.jsondpath, dpath, run_id, 
-                timeout=args.timeout)
-        
-
+    param_values = np.loadtxt(args.params_txt)
+    run_chunk(
+        param_values, params_to_update, args.chunk, args.number_of_runs, 
+        args.run_id, args.ref_csv, args.json_dpath, args.out_dpath, args.timeout
+    )
 
 
 
