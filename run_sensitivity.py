@@ -28,8 +28,8 @@ from scipy.integrate import solve_ivp
 from scipy.optimize import differential_evolution
 
 
-from SALib.sample import saltelli
-from SALib.analyze import sobol
+# from SALib.sample import saltelli
+# from SALib.analyze import sobol
 
 from model_equations_separate_NC_sep_vmax import *
 
@@ -137,6 +137,42 @@ if __name__ == '__main__':
         'O_p', 'O_h', 'epsilon', 'VTmax', 'KT_h', 'omega'
     ]
 
+    bounds = [
+        (0/ seconds_in_day,1/ seconds_in_day ), # 'M_h', 
+        (0/ seconds_in_day,1/ seconds_in_day ), # 'M_p', 
+        (0,1 ), # 'gamma^D_p', 
+        (0,1 ), # 'gamma^D_h', 
+        # ?? 'R_p', 'R_h', 
+        
+        (0/ seconds_in_day,0.9/ seconds_in_day ), # 'E^O_p', 
+        (0/ seconds_in_day,0.9/ seconds_in_day ), # 'E^I_p',
+        (0/ seconds_in_day,0.9/ seconds_in_day ), # 'E^O_h',
+        (0/ seconds_in_day,0.9/ seconds_in_day ), # 'E^I_h',
+        (param_vals[str(KONp)]/100,param_vals[str(KONp)]*100 ), # 'K^ON_p', 
+        (param_vals[str(KINp)]/100,param_vals[str(KINp)]*100 ), # 'K^IN_p', 
+        (param_vals[str(KOCp)]/100,param_vals[str(KOCp)]*100 ), # 'K^OC_p', 
+        (param_vals[str(KICp)]/100,param_vals[str(KICp)]*100 ), # 'K^IC_p', 
+        (param_vals[str(KONh)]/100,param_vals[str(KONh)]*100 ), # 'K^ON_h',  
+        (param_vals[str(KINh)]/100,param_vals[str(KINh)]*100 ), # 'K^IN_h', 
+        (param_vals[str(KOCh)]/100,param_vals[str(KOCh)]*100 ), # 'K^OC_h', 
+        (param_vals[str(KICh)]/100,param_vals[str(KICh)]*100 ), # 'K^IC_h', 
+        # 'Vmax^ON_p',
+        (param_vals[str(VmaxINp)]/100,param_vals[str(VmaxINp)]*100 ), #  'Vmax^IN_p',
+        # 'Vmax^OC_p', 
+        (param_vals[str(VmaxICp)]/100,param_vals[str(VmaxICp)]*100 ), # 'Vmax^IC_p', 
+        (param_vals[str(VmaxONh)]/100,param_vals[str(VmaxONh)]*100 ), # 'Vmax^ON_h', 
+        (param_vals[str(VmaxINh)]/100,param_vals[str(VmaxINh)]*100 ), # 'Vmax^IN_h', 
+        (param_vals[str(VmaxOCh)]/100,param_vals[str(VmaxOCh)]*100 ), # 'Vmax^OC_h', 
+        # 'Vmax^IC_h', 
+        (0, 1 ), # 'O_p', 
+        (0, 1 ), # 'O_h', 
+        (0/ seconds_in_day,1/ seconds_in_day ), # 'epsilon', 
+        (param_vals[str(VTmax)]/100,param_vals[str(VTmax)]*100 ), # 'VTmax', 
+        (param_vals[str(KTh)]/100,param_vals[str(KTh)]*100 ), # 'KT_h'
+        (0,2), # 'omega'
+        
+    ]
+
 
     if args.gen_sensitivity:
         problem = {
@@ -151,8 +187,12 @@ if __name__ == '__main__':
     elif args.optimize:
         func = lambda X :  generate_json_and_run_from_X(
             X, params_to_update, param_vals, 
-            args.ref_csv, args.jsondpath, dpath, run_id, 
+            args.ref_csv, args.json_dpath, args.out_dpath, args.run_id, 
             timeout=args.timeout)
+        print (
+            params_to_update, param_vals, 
+            args.ref_csv, args.json_dpath, args.out_dpath, args.run_id, 
+            args.timeout)
         result = differential_evolution(func, bounds, disp=True, init='latinhypercube')
         print(result.message)
         print(result.x, result.fun)
@@ -169,11 +209,11 @@ if __name__ == '__main__':
         pd.DataFrame([res_dict]).to_csv(os.path.join(dpath, f'{args.run_id}_differential_evolution.csv.gz'))
         
     else:
-    param_values = np.loadtxt(args.params_txt)
-    run_chunk(
-        param_values, params_to_update, args.chunk, args.number_of_runs, 
-        args.run_id, args.ref_csv, args.json_dpath, args.out_dpath, args.timeout
-    )
+        param_values = np.loadtxt(args.params_txt)
+        run_chunk(
+            param_values, params_to_update, args.chunk, args.number_of_runs, 
+            args.run_id, args.ref_csv, args.json_dpath, args.out_dpath, args.timeout
+        )
 
 
 
