@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import os
+import glob
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -648,7 +649,8 @@ def run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout=10*60):
         print("stderr:", result.stderr)
 
         m = re.search(r'^MSE: ([\d\.]+)$', result.stdout, flags=re.MULTILINE)
-        return (float(m.groups()[0]))
+        if m is not None:
+            return (float(m.groups()[0]))
         
     except subprocess.CalledProcessError as err:
         print('CalledProcessError', err.returncode)
@@ -661,7 +663,7 @@ def run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout=10*60):
         print("stderr:", err.stderr)
     return 1e50
 
-def run_chunk(param_values, params_to_update, chunk, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout):
+def run_chunk(param_values, params_to_update, chunk, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True):
     start_line = (chunk  - 1) * number_of_runs
     end_line = min(param_values.shape[0], start_line + number_of_runs)
     if start_line >= end_line:
@@ -672,9 +674,12 @@ def run_chunk(param_values, params_to_update, chunk, number_of_runs, run_id, ref
 
         out_fprefix = f'{run_id}_{i}'
         print(out_fprefix)
-        generate_json_and_run_from_X(
-            param_values[i], params_to_update, param_vals, 
-            ref_csv, json_dpath, out_dpath, out_fprefix, timeout)
+
+        files = glob.glob(os.path.join(out_dpath, f'{out_fprefix}_*_df.csv.gz'))
+        if len(files) == 0:
+            generate_json_and_run_from_X(
+                param_values[i], params_to_update, param_vals, 
+                ref_csv, json_dpath, out_dpath, out_fprefix, timeout)
             
 
 def run_sensitivity_chunks():
