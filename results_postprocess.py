@@ -15,21 +15,27 @@ import glob
 import os
 
 
-
-def _read_csv_df(f):
+def _read_csv_try(f):
     try:
         df = pd.read_csv(f)    
-        df['run_id'] = os.path.basename(f).replace('_df.csv.gz', '')
         return df
     except:
-        print(f)
+        print('failed to read:', f)
         return None
+
+
+def _read_csv_df(f):
+    df = _read_csv_try(f)
+    if df is not None:
+        df['run_id'] = os.path.basename(f).replace('_df.csv.gz', '')
+    return df
+
 
 def concat_csvs(dpaths, out_dpath, out_fprefix):
     res_glob_pattern = '*_df.csv.gz'
     sum_glob_pattern = '*_sum.csv.gz'
 
-    sum_dfs = [pd.read_csv(f) for dpath in dpaths for f in glob.glob(os.path.join(dpath,sum_glob_pattern )) ]
+    sum_dfs = [_read_csv_try(f) for dpath in dpaths for f in glob.glob(os.path.join(dpath,sum_glob_pattern )) ]
     sum_df = pd.concat ( [ d for d in sum_dfs if d is not None])
     sum_df['error'] = sum_df.h_err + sum_df.p_err
     sum_df['logerror'] = np.log(sum_df['error'])
