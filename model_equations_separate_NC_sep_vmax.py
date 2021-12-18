@@ -20,10 +20,12 @@ import sys
 import re
 
 # variables
-Bp, Bh, DOC, RDOC, DIC, DON, RDON, DIN, ROS = symbols('B_p B_h DOC RDOC DIC DON RDON DIN ROS')
+Bp, Bh, DOC, RDOC, DIC, DON, RDON, DIN, ROS, Sp, Sh = symbols('B_p B_h DOC RDOC DIC DON RDON DIN ROS S_p S_h')
+
 
 # parameters
 gammaDp, gammaDh, EOp, EIp, EOh, EIh = symbols('gamma^D_p gamma^D_h E^O_p E^I_p E^O_h E^I_h')
+KSp, KSh, Esp, Esh, Msp, Msh = symbols('K^S_p K^S_h E^S_p E^S_h M^S_p M^S_h')
 
 Op, Oh = symbols('O_p O_h')
 epsilon, VTmax, KTh, omega = symbols('epsilon VTmax KT_h omega')
@@ -32,6 +34,9 @@ Rp, Rh = symbols('R_p R_h')
 
 KONp, KINp, KOCp, KICp, KONh, KINh, KOCh, KICh = symbols('K^ON_p K^IN_p K^OC_p K^IC_p K^ON_h K^IN_h K^OC_h K^IC_h')
 VmaxONp, VmaxINp, VmaxOCp, VmaxICp, VmaxONh, VmaxINh, VmaxOCh, VmaxICh = symbols('Vmax^ON_p Vmax^IN_p Vmax^OC_p Vmax^IC_p Vmax^ON_h Vmax^IN_h Vmax^OC_h Vmax^IC_h')
+
+tau, r0p, r0h, bp, bh = symbols('tau r0_p r0_h b_p b_h')
+
 
 
 # Redfield ratio
@@ -65,17 +70,25 @@ INIT_BP = 1e9 * Qp
 INIT_BH = 1e10 * Qh
 INIT_BH_CC = 5e9 * Qh # the actual concentration in the measurements
 INIT_ROS = 0
+INIT_SP = 0
+INIT_SH = 0
 
 R_P = R_CN
 R_H = R_CN
+
+# DIC exchange
+h = 0.3 # height in m
+Kg = 0.4968 / seconds_in_day # m sec-1 = 0.7 cm h-1 from Cole & Caraco 1998
+c_sat = INIT_DIC
+
 
 param_vals_with_symbols = {
     # 1/d
     Mh: 0.1/ seconds_in_day,
     Mp : 0.1/ seconds_in_day,
     # ratio
-    gammaDp : 0.5,         # pro death release 
-    gammaDh : 0.5,         # het death release
+    gammaDp : 0.8,         # pro death release 
+    gammaDh : 0.8,         # het death release
     
     # ratio
     Rp : R_CN,
@@ -95,14 +108,14 @@ param_vals_with_symbols = {
     # K >> N --> >> 0 --> no uptake
     # K << N --> >> 1 --> max uptake
 
-    KONp : 0.17 * pro_vol**0.27 * 10, 
-    KINp : 0.17 * pro_vol**0.27 * 10, 
-    KOCp : 0.17 * pro_vol**0.27 * 10, 
-    KICp : 0.17 * pro_vol**0.27 * 10, 
-    KONh : 0.17 * alt_vol**0.27 * 10, 
-    KINh : 0.17 * alt_vol**0.27 * 10, 
-    KOCh : 0.17 * alt_vol**0.27 * 10, 
-    KICh : 0.17 * alt_vol**0.27 * 10, 
+    KONp : 0.17 * pro_vol**0.27, 
+    KINp : 0.17 * pro_vol**0.27, 
+    KOCp : 0.17 * pro_vol**0.27, 
+    KICp : 0.17 * pro_vol**0.27, 
+    KONh : 0.17 * alt_vol**0.27, 
+    KINh : 0.17 * alt_vol**0.27, 
+    KOCh : 0.17 * alt_vol**0.27, 
+    KICh : 0.17 * alt_vol**0.27, 
     # umol N/cell/d
     # vmax = muinfp* VmaxIp * Qp
     # 1/day  * umol/cell  * umol/cell/d # TODO - figure out units
@@ -128,7 +141,26 @@ param_vals_with_symbols = {
     # umol/l
     KTh : 0.17 * alt_vol**0.27, 
     # 1/ umol/l
-    omega : 0.1,
+    omega : 0.01, #0.1,
+    
+    # Signals
+    # umolN/L
+    KSp : 0.17 * pro_vol**0.27 * 100, 
+    KSh : 0.17 * pro_vol**0.27 * 100, 
+    # umol/cell/d
+    Esp : 1e-20 / Qp / seconds_in_day, 
+    Esh : 1e-20 / Qh / seconds_in_day, 
+    # 1/d (between -1 to 1)  / seconds_in_day
+    Msp : -0.01 / seconds_in_day, 
+    Msh : -0.01 / seconds_in_day,
+    # DIC (CO2) 
+    tau : h / Kg,
+    # dark respiration, sec-1 = 0.18 d-1, Geider & Osborne 1989 
+    r0p : 0.18 / seconds_in_day, 
+    r0h : 0.18 / seconds_in_day,  
+    # respiration coefficient, no units, Geider & Osborne 1989
+    bp  : 0.01, 
+    bh  : 0.01,
     
 }
 param_vals = {str(k) : v for k,v in param_vals_with_symbols.items()}
@@ -145,8 +177,8 @@ class DISABLE_MECHANISMS(Flag):
     H_OVERFLOW = auto()
     MIXOTROPHY = auto()
     DETOXIFICATION = auto()
-    #PROALLELO = auto()
-    #HETALLELO = auto()
+    P_SIGNAL = auto()
+    H_SIGNAL = auto()
 
 
 def disable_mechanism(mechanisms, param_vals):
@@ -176,14 +208,10 @@ def disable_mechanism(mechanisms, param_vals):
         new_param_vals[str(VmaxOCp)] = new_param_vals[str(VmaxOCp)] * 50
     if DISABLE_MECHANISMS.DETOXIFICATION in mechanisms:
         new_param_vals[str(omega)] = 0
-    #if PRO_ALLELO in mechanisms:
-        # TODO
-        # new_param_vals[VmaxINh] = new_param_vals[VmaxINh] * 1e-2
-    #    pass
-    #if HET_ALLELO in mechanisms:
-        # TODO
-        # new_param_vals[VmaxINh] = new_param_vals[VmaxINh] * 1e-2
-    #    pass
+    if P_SIGNAL in mechanisms:
+        new_param_vals[str(Msp)] = 0
+    if H_SIGNAL in mechanisms:
+        new_param_vals[str(Msh)] = 0
 
     return new_param_vals
 
@@ -210,6 +238,8 @@ limONh = (DON / (DON + KONh))
 limICh = (DIC / (DIC + KICh))
 limOCh = (DOC / (DOC + KOCh))
 
+limSh = (Sh / (Sh + KSh))
+limSp = (Sp / (Sp + KSp))
 
 
 # vmax = muinfp* VmaxIp / Qp
@@ -256,6 +286,10 @@ overflowONh =                   (1 - Oh) * overflowNh * (1 - IOuptakeRateNh)
 overflowICh = Oh * overflowCh + (1 - Oh) * overflowCh * IOuptakeRateCh
 overflowOCh =                   (1 - Oh) * overflowCh * (1 - IOuptakeRateCh)
 
+respirationp =  bp* actual_uptakeNp + Bp * r0p
+respirationh =  bh* actual_uptakeNh + Bh * r0h
+dic_uptake   =  - (DIC - c_sat) / tau
+
 
 
 
@@ -263,8 +297,12 @@ overflowOCh =                   (1 - Oh) * overflowCh * (1 - IOuptakeRateCh)
 
 # death = M * X = M * B /Q = M / Q * B
 
-deathp = Mp * Bp #* Xp
-deathh = Mh * Bh #* Xh
+death_ratep = Min(Max(Mp - Msp*limSh, 0), 1 / seconds_in_day)
+death_rateh = Min(Max(Mh - Msh*limSp, 0), 1 / seconds_in_day)
+
+deathp = death_ratep * Bp #* Xp
+deathh = death_rateh * Bh #* Xh
+
 exudationOp = EOp * Bp
 exudationIp = EIp * Bp
 exudationOh = EOh * Bh
@@ -275,51 +313,61 @@ exudationIh = EIh * Bh
 Treleasep = epsilon * Bp
 Tbreakdownh = VTmax * ROS / (ROS + KTh) * Bh
 
-dBpdt = actual_uptakeNp - deathp - exudationOp - exudationIp
-dBhdt = actual_uptakeNh - deathh - exudationOh - exudationIh
+# signal
+Sreleasep = Esp * Bp
+Sreleaseh = Esh * Bh
+
+
+# final equation - coculture
+dBpdt = actual_uptakeNp - deathp - exudationOp - exudationIp - respirationp - Sreleasep
+dBhdt = actual_uptakeNh - deathh - exudationOh - exudationIh - respirationh - Sreleaseh
 dDONdt = deathp * gammaDp + deathh * gammaDh + exudationOp +  exudationOh - gross_uptakeONp -  gross_uptakeONh + overflowONp + overflowONh 
 dDOCdt = deathp * gammaDp * Rp + deathh * gammaDh * Rh + exudationOp *Rp +  exudationOh * Rh - gross_uptakeOCp -  gross_uptakeOCh + overflowOCp + overflowOCh
 dRDONdt = deathp * (1 - gammaDp) + deathh * (1 - gammaDh)
 dRDOCdt = deathp * (1 - gammaDp) * Rp + deathh * (1 - gammaDh) * Rh
 
-dDINdt = exudationIp +  exudationIh - gross_uptakeINp -  gross_uptakeINh  + overflowINp + overflowINh 
-dDICdt = exudationIp *Rp +  exudationIh* Rh - gross_uptakeICp -  gross_uptakeICh  + overflowICp + overflowICh
+dDINdt = exudationIp +  exudationIh - gross_uptakeINp -  gross_uptakeINh  + overflowINp + overflowINh + respirationh + respirationp 
+dDICdt = exudationIp *Rp +  exudationIh* Rh - gross_uptakeICp -  gross_uptakeICh  + overflowICp + overflowICh + respirationh* Rh + respirationp * Rp + dic_uptake
 
 dROSdt = Treleasep - Tbreakdownh 
+dSpdt = Sreleasep
+dShdt = Sreleaseh
+
+
 
 # PRO only model
 dDONdt_ponly = deathp * gammaDp + exudationOp - gross_uptakeONp  + overflowONp  
 dDOCdt_ponly = deathp * gammaDp * Rp + exudationOp *Rp - gross_uptakeOCp + overflowOCp 
 dRDONdt_ponly = deathp * (1 - gammaDp) 
 dRDOCdt_ponly = deathp * (1 - gammaDp) * Rp
-# todo if needed: dRDOCdt = deathp * (1 - gammaDp) + deathh * (1 - gammaDh)
-dDINdt_ponly = exudationIp - gross_uptakeINp + overflowINp
-dDICdt_ponly = exudationIp *Rp - gross_uptakeICp + overflowICp
+dDINdt_ponly = exudationIp - gross_uptakeINp + overflowINp+ respirationp
+dDICdt_ponly = exudationIp *Rp - gross_uptakeICp + overflowICp + respirationp* Rp + dic_uptake
 dROSdt_ponly = Treleasep  
+dShdt_ponly = Integer(0)
 
 # HET only model
 dDONdt_honly = deathh * gammaDh +  exudationOh -  gross_uptakeONh + overflowONh
 dDOCdt_honly = deathh * gammaDh * Rh +  exudationOh * Rh - gross_uptakeOCh + overflowOCh
 dRDONdt_honly = deathh * (1 - gammaDh)
 dRDOCdt_honly = deathh * (1 - gammaDh) * Rh
-# todo if needed: dRDOCdt = deathp * (1 - gammaDp) + deathh * (1 - gammaDh)
-dDINdt_honly = exudationIh -  gross_uptakeINh  + overflowINh 
-dDICdt_honly = exudationIh* Rh -  gross_uptakeICh  + overflowICh
+dDINdt_honly = exudationIh -  gross_uptakeINh  + overflowINh + respirationh
+dDICdt_honly = exudationIh* Rh -  gross_uptakeICh  + overflowICh + respirationh* Rh + dic_uptake
 dROSdt_honly = - Tbreakdownh 
+dSpdt_honly = Integer(0)
 
 
 def print_equations():
-    var_names  = ['Bp',  'Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS']
-    sfunc_list = [dBpdt, dBhdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt]
+    var_names  = ['Bp',  'Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'Sp', 'Sh']
+    sfunc_list = [dBpdt, dBhdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, dSpdt, dShdt]
     for n,f in zip(var_names, sfunc_list):
         print(f'd{n}/dt')
         display(f)
 
 def get_main_data(param_vals_str=param_vals):
-    sfunc_list = [dBpdt, dBhdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt]
-    var_list   = [ Bp,    Bh,    DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS]
-    var_names  = ['Bp',  'Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS']
-    init_vars = [INIT_BP,INIT_BH_CC,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS]
+    sfunc_list = [dBpdt, dBhdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, dSpdt, dShdt]
+    var_list   = [ Bp,    Bh,    DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS,    Sp,    Sh]
+    var_names  = ['Bp',  'Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS',   'Sp',  'Sh']
+    init_vars = [INIT_BP,INIT_BH_CC,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
@@ -358,6 +406,8 @@ def get_main_data(param_vals_str=param_vals):
         deathp , deathh ,
         exudationOp, exudationIp, exudationOh, exudationIh, 
         Treleasep, Tbreakdownh,
+        respirationp, respirationh, dic_uptake,
+        
     ]
     interm_names = [
         'Xp', 'Xh',
@@ -389,6 +439,7 @@ def get_main_data(param_vals_str=param_vals):
         'deathp' , 'deathh' ,
         'exudationOp', 'exudationIp', 'exudationOh', 'exudationIh', 
         'Treleasep', 'Tbreakdownh',    
+        'respirationp', 'respirationh', 'dic_uptake',
     ]
 
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
@@ -397,10 +448,10 @@ def get_main_data(param_vals_str=param_vals):
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
 def get_ponly_data(param_vals_str=param_vals):
-    sfunc_list = [dBpdt,  dDONdt_ponly, dRDONdt_ponly, dDINdt_ponly, dDOCdt_ponly, dRDOCdt_ponly, dDICdt_ponly, dROSdt_ponly]
-    var_list   = [ Bp,    DON,    RDON,    DIN,    DOC,    RDOC,  DIC,    ROS]
-    var_names  = ['Bp',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS']
-    init_vars = [INIT_BP,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS]
+    sfunc_list = [dBpdt,  dDONdt_ponly, dRDONdt_ponly, dDINdt_ponly, dDOCdt_ponly, dRDOCdt_ponly, dDICdt_ponly, dROSdt_ponly, dSpdt, dShdt_ponly]
+    var_list   = [ Bp,    DON,    RDON,    DIN,    DOC,    RDOC,  DIC,    ROS,    Sp,   Sh]
+    var_names  = ['Bp',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'Sp', 'Sh']
+    init_vars = [INIT_BP,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
@@ -428,6 +479,8 @@ def get_ponly_data(param_vals_str=param_vals):
         deathp ,
         exudationOp, exudationIp, 
         Treleasep, 
+        respirationp, dic_uptake,
+
     ]
     interm_names = [
         'Xp', 
@@ -447,6 +500,8 @@ def get_ponly_data(param_vals_str=param_vals):
         'deathp' , 
         'exudationOp', 'exudationIp', 
         'Treleasep',  
+        'respirationp', 'dic_uptake',
+        
     ]
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
     intermediate_func = lambdify(var_list, interm_funclist)
@@ -454,10 +509,10 @@ def get_ponly_data(param_vals_str=param_vals):
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
 def get_honly_data(param_vals_str=param_vals):
-    sfunc_list = [dBhdt, dDONdt_honly, dRDONdt_honly, dDINdt_honly, dDOCdt_honly, dRDOCdt_honly,dDICdt_honly, dROSdt_honly]
-    var_list   = [Bh,    DON,    RDON,    DIN,    DOC,    RDOC,   DIC,    ROS]
-    var_names  = ['Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS']
-    init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS]
+    sfunc_list = [dBhdt, dDONdt_honly, dRDONdt_honly, dDINdt_honly, dDOCdt_honly, dRDOCdt_honly,dDICdt_honly, dROSdt_honly, dSpdt_honly, dShdt]
+    var_list   = [Bh,    DON,    RDON,    DIN,    DOC,    RDOC,   DIC,    ROS,    Sp,   Sh]
+    var_names  = ['Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'Sp', 'Sh']
+    init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
@@ -485,6 +540,7 @@ def get_honly_data(param_vals_str=param_vals):
          deathh ,
         exudationOh, exudationIh, 
         Tbreakdownh,
+        respirationh, dic_uptake,
     ]
     interm_names = [
         'Xh',
@@ -505,6 +561,7 @@ def get_honly_data(param_vals_str=param_vals):
         'deathh' ,
         'exudationOh', 'exudationIh', 
         'Tbreakdownh',    
+        'respirationh', 'dic_uptake',
     ]
 
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
@@ -565,6 +622,10 @@ def solver2df(sol, var_names, interm_names, intermediate_func):
         df['Bp[C]'] = df['Bp']*param_vals[str(Rp)]
     if 'Bh' in df.columns:
         df['Bh[C]'] = df['Bh']*param_vals[str(Rh)]
+    if 'Sp' in df.columns:
+        df['Sp[C]'] = df['Sp']*param_vals[str(Rp)]
+    if 'Sh' in df.columns:
+        df['Sh[C]'] = df['Sh']*param_vals[str(Rh)]
     mdf = df.melt(id_vars=['t', 'day'])
     return df, mdf
 
@@ -605,14 +666,14 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix):
         sumdf['message'] = sol.message
     if sol.success:
         df, mdf = solver2df(sol, var_names, interm_names, intermediate_func)
-        df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'))
+        df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip')
 
         if refdf is not None:
             perr = mean_squared_error(df.Bp, refdf['cc Bp[N]'])
             herr = mean_squared_error(df.Bh, refdf['cc Bh[N]'])
             sumdf['h_err'] = herr
             sumdf['p_err'] = perr
-    sumdf.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'))
+    sumdf.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'), compression='gzip')
     return perr + herr
    
 def generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60):
