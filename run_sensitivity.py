@@ -110,6 +110,7 @@ if __name__ == '__main__':
     parser.add_argument("--timeout", help="timeout",  type=int, default=2*60)
     parser.add_argument("--number_of_runs", help="number of simulations to run",  type=int, default=1000)
     parser.add_argument("--chunk", help="which of the chunks to run ",  type=int, default=1)
+    parser.add_argument("--param_sensitivity", help="index of param to update (0 based) ",  type=int, default=-1)
     parser.add_argument("--optimize", help="run optimization (default: run model)",
                         action="store_true")
     parser.add_argument("--gen_sensitivity", help="generate sensitivity",
@@ -215,6 +216,12 @@ if __name__ == '__main__':
         }
         res_dict.update({i:v for i,v in zip (params_to_update, result.x)})
         pd.DataFrame([res_dict]).to_csv(os.path.join(dpath, f'{args.run_id}_differential_evolution.csv.gz'))
+        
+    elif args.param_sensitivity != -1:
+        idx = args.param_sensitivity
+        run_sensitivity_per_parameter(params_to_update[idx], bounds[idx], args.number_of_runs, 
+            args.run_id, args.ref_csv, args.json_dpath, args.out_dpath, args.timeout
+        )
         
     else:
         param_values = np.loadtxt(args.params_txt)
