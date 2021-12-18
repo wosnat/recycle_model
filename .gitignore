@@ -115,3 +115,5 @@ dmypy.json
 
 # results
 res/
+mechanism_json/
+mechanism_out/
