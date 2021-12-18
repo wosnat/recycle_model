@@ -135,6 +135,8 @@ if __name__ == '__main__':
         'Vmax^IC_p', 'Vmax^ON_h', 'Vmax^IN_h', 'Vmax^OC_h', 
         #'Vmax^IC_h', 
         'O_p', 'O_h', 'epsilon', 'VTmax', 'KT_h', 'omega'
+        'K^S_p', 'K^S_h', 'E^S_p', 'E^S_h', 'M^S_p', 'M^S_h', 
+
     ]
 
     bounds = [
@@ -170,6 +172,12 @@ if __name__ == '__main__':
         (param_vals[str(VTmax)]/100,param_vals[str(VTmax)]*100 ), # 'VTmax', 
         (param_vals[str(KTh)]/100,param_vals[str(KTh)]*100 ), # 'KT_h'
         (0,2), # 'omega'
+        (param_vals[str(KSp)]/100,param_vals[str(KSp)]*100 ), # 'K^S_p', 
+        (param_vals[str(KSh)]/100,param_vals[str(KSh)]*100 ), # 'K^S_h'
+        (0/ seconds_in_day,0.9/ seconds_in_day  ), # 'E^S_p',
+        (0/ seconds_in_day,0.9/ seconds_in_day  ), # 'E^S_h', 
+        (-1/ seconds_in_day,1/ seconds_in_day  ), #  'M^S_p', 
+        (-1/ seconds_in_day,1/ seconds_in_day  ), #  'M^S_h', 
         
     ]
 
