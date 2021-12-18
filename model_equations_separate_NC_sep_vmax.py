@@ -743,29 +743,14 @@ def run_chunk(param_values, params_to_update, chunk, number_of_runs, run_id, ref
                 ref_csv, json_dpath, out_dpath, out_fprefix, timeout)
             
 
-def run_sensitivity_chunks():
-    param_values = np.loadtxt("param_values.txt.gz")
-    params_to_update = [
-        'M_h', 'M_p', 'gamma^D_p', 'gamma^D_h', 
-        #'R_p', 'R_h', 
-        'E^O_p', 'E^I_p', 'E^O_h', 'E^I_h', 
-        'K^ON_p', 'K^IN_p', 'K^OC_p', 'K^IC_p', 'K^ON_h', 'K^IN_h', 'K^OC_h', 'K^IC_h', 
-        # 'Vmax^ON_p', 
-        'Vmax^IN_p', 
-        # 'Vmax^OC_p', 
-        'Vmax^IC_p', 'Vmax^ON_h', 'Vmax^IN_h', 'Vmax^OC_h', 
-        #'Vmax^IC_h', 
-        'O_p', 'O_h', 'epsilon', 'VTmax', 'KT_h', 'omega'
-    ]
-    
-    number_of_runs = 1000
-    run_id = 'se_'
-    ref_csv = 'prelim bottle.csv'
-    json_dpath = r'C:\Users\wosnat\Documents\GitHub\recycle_model\res\se1\json'
-    out_dpath = r'C:\Users\wosnat\Documents\GitHub\recycle_model\res\se1'
-    timeout = 2*60
-    for chunk in range(1,30):
-        run_chunk(param_values, params_to_update, chunk, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout)
+def run_sensitivity_per_parameter(parameter, bound, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True):
+    for i,v in enumerate(np.linspace(bound[0], bound[1],num=number_of_runs)):
+        out_fprefix = f'{run_id}_{parameter}_{i}'
+        print(out_fprefix)
+        generate_json_and_run_from_X(
+            [v], [parameter], param_vals, 
+            ref_csv, json_dpath, out_dpath, out_fprefix, timeout)
+
 
     
 if __name__ == '__main__':
