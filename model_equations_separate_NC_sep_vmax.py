@@ -177,8 +177,8 @@ class DISABLE_MECHANISMS(Flag):
     H_OVERFLOW = auto()
     MIXOTROPHY = auto()
     DETOXIFICATION = auto()
-    #PROALLELO = auto()
-    #HETALLELO = auto()
+    P_SIGNAL = auto()
+    H_SIGNAL = auto()
 
 
 def disable_mechanism(mechanisms, param_vals):
@@ -208,14 +208,10 @@ def disable_mechanism(mechanisms, param_vals):
         new_param_vals[str(VmaxOCp)] = new_param_vals[str(VmaxOCp)] * 50
     if DISABLE_MECHANISMS.DETOXIFICATION in mechanisms:
         new_param_vals[str(omega)] = 0
-    #if PRO_ALLELO in mechanisms:
-        # TODO
-        # new_param_vals[VmaxINh] = new_param_vals[VmaxINh] * 1e-2
-    #    pass
-    #if HET_ALLELO in mechanisms:
-        # TODO
-        # new_param_vals[VmaxINh] = new_param_vals[VmaxINh] * 1e-2
-    #    pass
+    if P_SIGNAL in mechanisms:
+        new_param_vals[str(Msp)] = 0
+    if H_SIGNAL in mechanisms:
+        new_param_vals[str(Msh)] = 0
 
     return new_param_vals
 
@@ -670,14 +666,14 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix):
         sumdf['message'] = sol.message
     if sol.success:
         df, mdf = solver2df(sol, var_names, interm_names, intermediate_func)
-        df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'))
+        df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip')
 
         if refdf is not None:
             perr = mean_squared_error(df.Bp, refdf['cc Bp[N]'])
             herr = mean_squared_error(df.Bh, refdf['cc Bh[N]'])
             sumdf['h_err'] = herr
             sumdf['p_err'] = perr
-    sumdf.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'))
+    sumdf.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'), compression='gzip')
     return perr + herr
    
 def generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60):
