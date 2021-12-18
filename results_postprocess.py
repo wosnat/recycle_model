@@ -17,9 +17,10 @@ import os
 
 def _read_csv_try(f):
     try:
-        df = pd.read_csv(f)    
+        df = pd.read_csv(f, compression=None)    
         return df
-    except:
+    except BaseException as err:
+        print(f"Unexpected {err}, {type(err)}")
         print('failed to read:', f)
         return None
 
@@ -40,13 +41,13 @@ def concat_csvs(dpaths, out_dpath, out_fprefix):
     sum_df['error'] = sum_df.h_err + sum_df.p_err
     sum_df['logerror'] = np.log(sum_df['error'])
     sum_df.drop(columns=['Unnamed: 0',], inplace=True)
-    sum_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'))
+    sum_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'), compression='gzip')
 
 
     data_dfs = [ _read_csv_df(f) for dpath in dpaths for f in glob.glob(os.path.join(dpath,res_glob_pattern ))] 
     data_df = pd.concat ( [ d for d in data_dfs if d is not None])
     data_df.drop(columns=['Unnamed: 0',], inplace=True)
-    data_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'))
+    data_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip')
 
 
 def run_umap_hdbscan(df, sum_df):
