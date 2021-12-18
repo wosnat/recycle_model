@@ -134,7 +134,7 @@ if __name__ == '__main__':
         # 'Vmax^OC_p', 
         'Vmax^IC_p', 'Vmax^ON_h', 'Vmax^IN_h', 'Vmax^OC_h', 
         #'Vmax^IC_h', 
-        'O_p', 'O_h', 'epsilon', 'VTmax', 'KT_h', 'omega'
+        'O_p', 'O_h', 'epsilon', 'VTmax', 'KT_h', 'omega',
         'K^S_p', 'K^S_h', 'E^S_p', 'E^S_h', 'M^S_p', 'M^S_h', 
 
     ]
