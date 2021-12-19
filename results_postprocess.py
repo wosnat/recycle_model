@@ -17,7 +17,8 @@ import os
 
 def _read_csv_try(f):
     try:
-        df = pd.read_csv(f, compression=None)    
+        df = pd.read_csv(f, #compression=None
+                )    
         return df
     except BaseException as err:
         print(f"Unexpected {err}, {type(err)}")
