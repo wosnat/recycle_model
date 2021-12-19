@@ -683,13 +683,17 @@ def generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, t
     params2json(params, json_fpath)
     return run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout)
 
-def get_params(X, params_to_update, param_vals): 
+
+def get_params(X, params_to_update, param_vals, log_params=None): 
     new_param_vals = param_vals.copy()
+    if log_params is not None:
+        X = [np.exp(x) if lg else x for x,lg in zip(X, log_params)]
+    
     new_param_vals.update({k : v for k,v in zip(params_to_update, X)})
     return new_param_vals
 
-def generate_json_and_run_from_X(X, params_to_update, param_vals, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60):
-    params = get_params(X, params_to_update, param_vals)
+def generate_json_and_run_from_X(X, params_to_update, param_vals, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60, log_params=None):
+    params = get_params(X, params_to_update, param_vals, log_params)
     return generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout)
 
 
@@ -724,7 +728,7 @@ def run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout=10*60):
         print("stderr:", err.stderr)
     return 1e50
 
-def run_chunk(param_values, params_to_update, chunk, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True):
+def run_chunk(param_values, params_to_update, chunk, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_params=None):
     start_line = (chunk  - 1) * number_of_runs
     end_line = min(param_values.shape[0], start_line + number_of_runs)
     if start_line >= end_line:
@@ -740,16 +744,18 @@ def run_chunk(param_values, params_to_update, chunk, number_of_runs, run_id, ref
         if len(files) == 0:
             generate_json_and_run_from_X(
                 param_values[i], params_to_update, param_vals, 
-                ref_csv, json_dpath, out_dpath, out_fprefix, timeout)
+                ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=log_params)
             
 
-def run_sensitivity_per_parameter(parameter, bound, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True):
+def run_sensitivity_per_parameter(parameter, bound, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_param=False):
+    if log_param:
+        bound = (np.log(bound[0]), np.log(bound[1]))
     for i,v in enumerate(np.linspace(bound[0], bound[1],num=number_of_runs)):
         out_fprefix = f'{run_id}_{parameter}_{i}'
         print(out_fprefix)
         generate_json_and_run_from_X(
             [v], [parameter], param_vals, 
-            ref_csv, json_dpath, out_dpath, out_fprefix, timeout)
+            ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=log_params)
 
 
     
