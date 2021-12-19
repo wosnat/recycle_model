@@ -209,9 +209,9 @@ def disable_mechanism(mechanisms, param_vals):
     if DISABLE_MECHANISMS.DETOXIFICATION in mechanisms:
         new_param_vals[str(omega)] = 0
     if P_SIGNAL in mechanisms:
-        new_param_vals[str(Msp)] = 0
+        new_param_vals[str(Esp)] = 0
     if H_SIGNAL in mechanisms:
-        new_param_vals[str(Msh)] = 0
+        new_param_vals[str(Esh)] = 0
 
     return new_param_vals
 

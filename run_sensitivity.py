@@ -26,6 +26,7 @@ from sympy import *
 import math
 from scipy.integrate import solve_ivp
 from scipy.optimize import differential_evolution
+from itertools import combinations
 
 
 # from SALib.sample import saltelli
@@ -115,6 +116,9 @@ if __name__ == '__main__':
                         action="store_true")
     parser.add_argument("--gen_sensitivity", help="generate sensitivity",
                         action="store_true")
+    parser.add_argument("--disable_mechanism", help="run with mechanisms disabled",
+                        action="store_true")
+                        
     
     args = parser.parse_args()
     dpath = args.out_dpath
@@ -222,6 +226,18 @@ if __name__ == '__main__':
         run_sensitivity_per_parameter(params_to_update[idx], bounds[idx], args.number_of_runs, 
             args.run_id, args.ref_csv, args.json_dpath, args.out_dpath, args.timeout
         )
+    elif args.disable_mechanism:
+        comb2 = [i | j for i,j in (combinations(DISABLE_MECHANISMS, 2))]
+        dislist = [DISABLE_MECHANISMS(0)] + list(DISABLE_MECHANISMS) + comb2
+        for m in dislist:
+            print(m)
+            id = str(m).replace('DISABLE_MECHANISMS.', '').replace('|','-')
+            if id is '0':
+                id = 'default'
+            run_id = f"{args.run_id}_dis_{id}"
+            new_params = disable_mechanism(m, param_vals)
+            err = generate_json_and_run(new_params, args.ref_csv, args.json_dpath, args.out_dpath, run_id, args.timeout)
+            print (m, err)
         
     else:
         param_values = np.loadtxt(args.params_txt)
