@@ -755,7 +755,7 @@ def run_sensitivity_per_parameter(parameter, bound, number_of_runs, run_id, ref_
         print(out_fprefix)
         generate_json_and_run_from_X(
             [v], [parameter], param_vals, 
-            ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=log_params)
+            ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=[log_param])
 
 
     
