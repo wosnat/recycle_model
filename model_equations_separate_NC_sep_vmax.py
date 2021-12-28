@@ -109,11 +109,11 @@ param_vals_with_symbols = {
     # K << N --> >> 1 --> max uptake
 
     KONp : 0.17 * pro_vol**0.27, 
-    KINp : 0.17 * pro_vol**0.27, 
+    KINp : 10* 0.17 * pro_vol**0.27, # x 10 based on sensitivity
     KOCp : 0.17 * pro_vol**0.27, 
     KICp : 0.17 * pro_vol**0.27, 
     KONh : 0.17 * alt_vol**0.27, 
-    KINh : 0.17 * alt_vol**0.27, 
+    KINh : 0.17 * alt_vol**0.27, # / 10 based on sensitivity
     KOCh : 0.17 * alt_vol**0.27, 
     KICh : 0.17 * alt_vol**0.27, 
     # umol N/cell/d
@@ -124,7 +124,7 @@ param_vals_with_symbols = {
     VmaxOCp : 0.7 * 1.9e-9 / 10000 * R_P / Qp / seconds_in_day, 
     VmaxICp : 0.7 * 1.9e-9 * R_P / Qp / seconds_in_day, 
     VmaxONh : 2 * 1.9e-9 / Qh / seconds_in_day, 
-    VmaxINh : 2 * 1.9e-9 / Qh / seconds_in_day, 
+    VmaxINh : 4 * 1.9e-9 / Qh / seconds_in_day, # x 3 based on sensitivity
     VmaxOCh : 2 * 1.9e-9 * R_H / Qh / seconds_in_day, 
     VmaxICh : 2 * 1.9e-9 / 10000 * R_H / Qh / seconds_in_day, 
     
