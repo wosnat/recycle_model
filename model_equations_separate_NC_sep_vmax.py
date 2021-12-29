@@ -109,12 +109,12 @@ param_vals_with_symbols = {
     # K << N --> >> 1 --> max uptake
 
     KONp : 0.17 * pro_vol**0.27, 
-    KINp : 10* 0.17 * pro_vol**0.27, # x 10 based on sensitivity
+    KINp : 5* 0.17 * pro_vol**0.27, # x 5 based on sensitivity
     KOCp : 0.17 * pro_vol**0.27, 
     KICp : 0.17 * pro_vol**0.27, 
     KONh : 0.17 * alt_vol**0.27, 
     KINh : 0.17 * alt_vol**0.27, # / 10 based on sensitivity
-    KOCh : 0.17 * alt_vol**0.27, 
+    KOCh : 5*0.17 * alt_vol**0.27, # x 5 based on sensitivity
     KICh : 0.17 * alt_vol**0.27, 
     # umol N/cell/d
     # vmax = muinfp* VmaxIp * Qp
@@ -132,8 +132,8 @@ param_vals_with_symbols = {
     #Vmaxh : 3 * 1.9e-9 * alt_vol**0.67 / Qh / seconds_in_day, 
 
     # overflow rate
-    Op : 1,
-    Oh : 1,
+    Op : 0.6, # changed based on sensitivity
+    Oh : 0.6, # changed based on sensitivity
     
     # umol/cell/d
     epsilon : 1e-10 / Qp / seconds_in_day, 
