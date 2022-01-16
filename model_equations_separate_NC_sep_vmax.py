@@ -13,11 +13,13 @@ from sympy import *
 import math
 init_printing(use_unicode=True)
 from scipy.integrate import solve_ivp
+from scipy.integrate import odeint
 from sklearn.metrics import mean_squared_error
 import json
 import subprocess
 import sys
 import re
+import time
 
 # variables
 Bp, Bh, DOC, RDOC, DIC, DON, RDON, DIN, ROS, Sp, Sh = symbols('B_p B_h DOC RDOC DIC DON RDON DIN ROS S_p S_h')
@@ -598,7 +600,7 @@ def biomass_diff0_honly(calc_dydt, var_names, init_vars):
 
 
 
-def run_solver(calc_dydt, init_vars, days=63, t_eval=None):
+def run_solver_ivp(calc_dydt, init_vars, days, t_eval):
     tstart = 0
     tend = days*seconds_in_day
     if t_eval is None: 
@@ -611,7 +613,7 @@ def run_solver(calc_dydt, init_vars, days=63, t_eval=None):
     return sol
 
 
-def solver2df(sol, var_names, interm_names, intermediate_func):
+def solver2df_ivp(sol, var_names, interm_names, intermediate_func):
     d = dict(zip(var_names, sol.y))
     d['t'] = sol.t
     df = pd.DataFrame(data=d)
@@ -629,6 +631,58 @@ def solver2df(sol, var_names, interm_names, intermediate_func):
     mdf = df.melt(id_vars=['t', 'day'])
     return df, mdf
 
+
+def run_solver_ode(calc_dydt, init_vars, days, t_eval):
+    tstart = 0
+    tend = days*seconds_in_day
+    if t_eval is None: 
+        t_eval = np.arange(tstart, tend, 3600*4)
+    y = odeint(
+        func=calc_dydt, y0=init_vars,
+        t=t_eval, hmax=100, h0=1, tfirst=True)
+    #print(f'solve_ivp(fun=calc_dydt, y0={init_vars},\n    t_span=[{tstart}, {tend}],\n    t_eval={t_eval})')
+    #print(sol.message)
+    return t_eval, y
+    #return solver2df_ode(sol, t_eval, var_names, interm_names, intermediate_func)
+
+def solver2df_ode(sol, var_names, interm_names, intermediate_func):
+    d = dict(zip(var_names, sol[1].T))
+    d['t'] = sol[0]
+    df = pd.DataFrame(data=d)
+    df['day'] = df['t']/seconds_in_day
+    df[interm_names] = df[var_names].apply(lambda x : intermediate_func(*x), axis=1, 
+                                           result_type='expand')
+    if 'Bp' in df.columns:
+        df['Bp[C]'] = df['Bp']*param_vals[str(Rp)]
+    if 'Bh' in df.columns:
+        df['Bh[C]'] = df['Bh']*param_vals[str(Rh)]
+    if 'Sp' in df.columns:
+        df['Sp[C]'] = df['Sp']*param_vals[str(Rp)]
+    if 'Sh' in df.columns:
+        df['Sh[C]'] = df['Sh']*param_vals[str(Rh)]
+    mdf = df.melt(id_vars=['t', 'day'])
+    return df, mdf
+
+
+def run_solver(calc_dydt, init_vars, days=140, t_eval=None):
+    tstart = time.process_time()
+    sol = run_solver_ode(calc_dydt, init_vars, days, t_eval=t_eval)
+    tend =  time.process_time()
+    print ('simulation time', tend - tstart)
+    return sol
+    
+def solver2df(sol, var_names, interm_names, intermediate_func):
+    return solver2df_ode(sol, var_names, interm_names, intermediate_func)
+
+def get_t_eval(maxday, step = 3600*4, ref_times = None):
+    tstart = 0
+    tend = maxday*seconds_in_day
+    sim_times = np.arange(tstart, tend, step)
+    if ref_times is not None:
+        ref_times = np.rint(ref_times)
+        sim_times = np.concatenate((sim_times, ref_times))
+        sim_times = np.unique(sim_times)
+    return sim_times
 
 ##################################################################
 ##################################################################
@@ -655,24 +709,28 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix):
     herr = -1
     new_params = json2params(param_vals, json_fpath)
     var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_main_data(param_vals_str=new_params)
-    t_eval=None
     if refdf is not None:
-        t_eval=refdf.t.values
+        ref_t = np.rint(refdf['t'])
+        t_eval = get_t_eval(days, ref_times = ref_t)
+    else:
+        t_eval = get_t_eval(days)
+    
     sol = run_solver(calc_dydt, init_vars, t_eval=t_eval, days=days)
     sumdf = pd.DataFrame({str(k): v for k,v in new_params.items()}, index=[0])
     sumdf['run_id'] = out_fprefix
-    sumdf['status'] = sol.status
-    if sol.status != 0:
-        sumdf['message'] = sol.message
-    if sol.success:
-        df, mdf = solver2df(sol, var_names, interm_names, intermediate_func)
-        df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip')
+    #sumdf['status'] = sol.status
+    #if sol.status != 0:
+    #    sumdf['message'] = sol.message
+    #if sol.success:
+    df, mdf = solver2df(sol, var_names, interm_names, intermediate_func)
+    df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip')
 
-        if refdf is not None:
-            perr = mean_squared_error(df.Bp, refdf['cc Bp[N]'])
-            herr = mean_squared_error(df.Bh, refdf['cc Bh[N]'])
-            sumdf['h_err'] = herr
-            sumdf['p_err'] = perr
+    if refdf is not None:
+        tdf = df.loc[df.t.isin(ref_t)]
+        perr = mean_squared_error(tdf.Bp, refdf['cc Bp[N]'])
+        herr = mean_squared_error(tdf.Bh, refdf['cc Bh[N]'])
+        sumdf['h_err'] = herr
+        sumdf['p_err'] = perr
     sumdf.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'), compression='gzip')
     return perr + herr
    
@@ -699,7 +757,6 @@ def generate_json_and_run_from_X(X, params_to_update, param_vals, ref_csv, json_
 
 
 def run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout=10*60):
-    print('file', __file__)
     try:
         result = subprocess.run(
             [sys.executable, __file__, 
@@ -767,7 +824,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run models - nutrients recycle with separate N/C and quotas.')
     parser.add_argument('--ref_csv', help='reference CSV', default='prelim bottle.csv')
     parser.add_argument('--json', help='json with param vals', default=None)
-    parser.add_argument('--maxday', help='max day of simulation', type=int, default=63)
+    parser.add_argument('--maxday', help='max day of simulation', type=int, default=140)
 
     parser.add_argument("--outdpath", help="output dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
