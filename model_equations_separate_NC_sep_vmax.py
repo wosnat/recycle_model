@@ -702,7 +702,12 @@ def json2params(default_params, fpath):
     return new_param_vals
 
 
-
+def _rmse(refdf, df, refcol, col):
+    smallrefdf = refdf.dropna(subset=[refcol])
+    ref_t = np.rint(smallrefdf['t'])
+    tdf = df.loc[df.t.isin(ref_t)]
+    return mean_squared_error(tdf[col], smallrefdf[refcol])
+   
 
 def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix):
     perr = -1
@@ -726,9 +731,8 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix):
     df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip')
 
     if refdf is not None:
-        tdf = df.loc[df.t.isin(ref_t)]
-        perr = mean_squared_error(tdf.Bp, refdf['cc Bp[N]'])
-        herr = mean_squared_error(tdf.Bh, refdf['cc Bh[N]'])
+        perr =  _rmse(refdf, df, refcol = 'cc Bp[N]', col='Bp')
+        herr =  _rmse(refdf, df, refcol = 'cc Bh[N]', col='Bh')
         sumdf['h_err'] = herr
         sumdf['p_err'] = perr
     sumdf.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'), compression='gzip')
