@@ -168,6 +168,91 @@ param_vals_with_symbols = {
 param_vals = {str(k) : v for k,v in param_vals_with_symbols.items()}
 
 
+param_vals_neutral_with_symbols = {
+    # 1/d
+    Mh: 0.1/ seconds_in_day,
+    Mp : 0.1/ seconds_in_day,
+    # ratio
+    gammaDp : 0.8,         # pro death release 
+    gammaDh : 0.8,         # het death release
+    
+    # ratio
+    Rp : R_CN,
+    Rh : R_CN,
+    
+    # 1/d
+    # EOp : 0.2 / seconds_in_day,        # move to income tax # pro organic exudation 
+    # EIh : 0.2 / seconds_in_day,        # move to income tax # het inorganic exudation 
+    EOp : 0.1 / seconds_in_day,        # pro organic exudation 
+    EIp : 0 / seconds_in_day,          # pro inorganic exudation
+    EOh : 0 / seconds_in_day,          # het organic exudation 
+    EIh : 0.1 / seconds_in_day,        # het inorganic exudation 
+    # TODO - change k for organic/inorganic
+    # umol/l
+    # K = 0 --> 1
+    # K = N --> ½
+    # K >> N --> >> 0 --> no uptake
+    # K << N --> >> 1 --> max uptake
+
+    KONp : 0.17 * pro_vol**0.27, 
+    KINp : 0.17 * pro_vol**0.27, # x 5 based on sensitivity
+    KOCp : 0.17 * pro_vol**0.27, 
+    KICp : 0.17 * pro_vol**0.27, 
+    KONh : 0.17 * alt_vol**0.27, 
+    KINh : 0.17 * alt_vol**0.27, # / 10 based on sensitivity
+    KOCh : 0.17 * alt_vol**0.27, # x 5 based on sensitivity
+    KICh : 0.17 * alt_vol**0.27, 
+    # umol N/cell/d
+    # vmax = muinfp* VmaxIp * Qp
+    # 1/day  * umol/cell  * umol/cell/d # TODO - figure out units
+    VmaxONp : 0.7 * 1.9e-9 / Qp / seconds_in_day, 
+    VmaxINp : 0.7 * 1.9e-9 / Qp / seconds_in_day, 
+    VmaxOCp : 0.7 * 1.9e-9 * R_P / Qp / seconds_in_day, 
+    VmaxICp : 0.7 * 1.9e-9 * R_P / Qp / seconds_in_day, 
+    VmaxONh : 2 * 1.9e-9 / Qh / seconds_in_day, 
+    VmaxINh : 2 * 1.9e-9 / Qh / seconds_in_day, # x 3 based on sensitivity
+    VmaxOCh : 2 * 1.9e-9 * R_H / Qh / seconds_in_day, 
+    VmaxICh : 2 * 1.9e-9 / 10000 * R_H / Qh / seconds_in_day, 
+    
+    #Vmaxp : 0.8 * 1.9e-9 * pro_vol**0.67 /Qp / seconds_in_day, 
+    #Vmaxh : 3 * 1.9e-9 * alt_vol**0.67 / Qh / seconds_in_day, 
+
+    # overflow rate
+    Op : 0.6, # changed based on sensitivity
+    Oh : 0.6, # changed based on sensitivity
+    
+    # umol/cell/d
+    epsilon : 1e-10 / Qp / seconds_in_day, 
+    VTmax : 1.9e-9 / Qh / seconds_in_day, 
+    # umol/l
+    KTh : 0.17 * alt_vol**0.27, 
+    # 1/ umol/l
+    omega : 0.01, #0.1,
+    
+    # Signals
+    # umolN/L
+    KSp : 0.17 * pro_vol**0.27 * 100, 
+    KSh : 0.17 * pro_vol**0.27 * 100, 
+    # umol/cell/d
+    Esp : 1e-20 / Qp / seconds_in_day, 
+    Esh : 1e-20 / Qh / seconds_in_day, 
+    # 1/d (between -1 to 1)  / seconds_in_day
+    Msp : -0.01 / seconds_in_day, 
+    Msh : -0.01 / seconds_in_day,
+    # DIC (CO2) 
+    tau : h / Kg,
+    # dark respiration, sec-1 = 0.18 d-1, Geider & Osborne 1989 
+    r0p : 0.18 / seconds_in_day, 
+    r0h : 0.18 / seconds_in_day,  
+    # respiration coefficient, no units, Geider & Osborne 1989
+    bp  : 0.01, 
+    bh  : 0.01,
+    
+}
+param_vals_neutral = {str(k) : v for k,v in param_vals_neutral_with_symbols.items()}
+
+
+
 from enum import Flag, auto
 class DISABLE_MECHANISMS(Flag):
     COMPETITION = auto()
@@ -218,6 +303,84 @@ def disable_mechanism(mechanisms, param_vals):
     return new_param_vals
 
 
+
+# different model configurations
+DISABLE_ROS_SIGNAL = {
+    # ROS
+    str(epsilon), 
+    str(VTmax), 
+    str(KTh), 
+    str(omega), #0.1,
+    
+    # Signals
+    # umolN/L
+    str(KSp), 
+    str(KSh), 
+    # umol/cell/d
+    str(Esp), 
+    str(Esh), 
+    # 1/d (between -1 to 1)  / seconds_in_day
+    str(Msp), 
+    str(Msh),
+}
+
+DISABLE_MIXOTROPHY = {
+    str(VmaxONp), 
+    str(VmaxOCp), 
+}
+
+DISABLE_EXUDATION_OVERFLOW = {
+    str(Op), 
+    str(Oh), 
+    str(EOp),
+    str(EIp),
+    str(EOh),
+    str(EIh),
+}
+
+
+def model_partial(disable_set, param_vals, params_to_update, bounds, log_params):
+    new_param_vals = param_vals.copy()
+    # zero out the disabled params
+    new_param_vals.update({str(p): 0 for p in disable_set})
+    new_params_to_update = [p for p in params_to_update if p not in disable_set]
+    new_bounds = [b for p,b in zip(params_to_update, bounds) if p not in disable_set]
+    new_log_params = [b for p,b in zip(params_to_update, log_params) if p not in disable_set]
+    return new_param_vals, new_params_to_update, new_bounds, new_log_params
+    
+def model_min(param_vals, params_to_update, bounds, log_params):
+    return model_partial(
+        DISABLE_ROS_SIGNAL + DISABLE_MIXOTROPHY + DISABLE_EXUDATION_OVERFLOW, 
+        param_vals, params_to_update, bounds, log_params
+    )
+
+def model_mixotrophy(param_vals, params_to_update, bounds, log_params):
+    return model_partial(
+        DISABLE_ROS_SIGNAL, 
+        param_vals, params_to_update, bounds, log_params
+    )
+
+
+def model_exudation(param_vals, params_to_update, bounds, log_params):
+    return model_partial(
+        DISABLE_ROS_SIGNAL + DISABLE_MIXOTROPHY, 
+        param_vals, params_to_update, bounds, log_params
+    )
+
+def set_model(modeltype, param_vals, params_to_update, bounds, log_params):
+    if modeltype == 'full':
+        return param_vals, params_to_update, bounds, log_params
+    elif modeltype == 'min':
+        disableset = DISABLE_ROS_SIGNAL + DISABLE_MIXOTROPHY + DISABLE_EXUDATION_OVERFLOW
+    elif modeltype == 'exu':
+        disableset = DISABLE_ROS_SIGNAL + DISABLE_MIXOTROPHY 
+    elif modeltype == 'mix':
+        disableset = DISABLE_ROS_SIGNAL  
+    return model_partial(disableset, 
+        param_vals, params_to_update, bounds, log_params
+    )
+        
+     
 
 def print_params(param_vals=param_vals):
     for i in param_vals:
@@ -789,7 +952,7 @@ def run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout=10*60):
         print("stderr:", err.stderr)
     return 1e50
 
-def run_chunk(param_values, params_to_update, chunk, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_params=None):
+def run_chunk(param_vals, param_values, params_to_update, chunk, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_params=None):
     start_line = (chunk  - 1) * number_of_runs
     end_line = min(param_values.shape[0], start_line + number_of_runs)
     if start_line >= end_line:
@@ -808,7 +971,7 @@ def run_chunk(param_values, params_to_update, chunk, number_of_runs, run_id, ref
                 ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=log_params)
             
 
-def run_sensitivity_per_parameter(parameter, bound, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_param=False):
+def run_sensitivity_per_parameter(param_vals, parameter, bound, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_param=False):
     if log_param:
         bound = (np.log(bound[0]), np.log(bound[1]))
     for i,v in enumerate(np.linspace(bound[0], bound[1],num=number_of_runs)):
