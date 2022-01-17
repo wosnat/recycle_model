@@ -178,7 +178,7 @@ if __name__ == '__main__':
     
     refdf = pd.read_csv(args.ref_csv)
 
-    param_vals, params_to_update, bounds, log_params = set_model(args.model, param_vals, params_to_update, bounds, log_params)
+    param_vals, params_to_update, bounds, log_params = set_model(args.model, param_vals_neutral, params_to_update, bounds, log_params)
     run_id = f"{args.run_id}_{args.model}"
 
 
