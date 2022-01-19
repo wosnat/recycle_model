@@ -350,7 +350,7 @@ def model_partial(disable_set, param_vals, params_to_update, bounds, log_params)
     
 def model_min(param_vals, params_to_update, bounds, log_params):
     return model_partial(
-        DISABLE_ROS_SIGNAL + DISABLE_MIXOTROPHY + DISABLE_EXUDATION_OVERFLOW, 
+        DISABLE_ROS_SIGNAL | DISABLE_MIXOTROPHY | DISABLE_EXUDATION_OVERFLOW, 
         param_vals, params_to_update, bounds, log_params
     )
 
@@ -363,7 +363,7 @@ def model_mixotrophy(param_vals, params_to_update, bounds, log_params):
 
 def model_exudation(param_vals, params_to_update, bounds, log_params):
     return model_partial(
-        DISABLE_ROS_SIGNAL + DISABLE_MIXOTROPHY, 
+        DISABLE_ROS_SIGNAL | DISABLE_MIXOTROPHY, 
         param_vals, params_to_update, bounds, log_params
     )
 
@@ -371,9 +371,9 @@ def set_model(modeltype, param_vals, params_to_update, bounds, log_params):
     if modeltype == 'full':
         return param_vals, params_to_update, bounds, log_params
     elif modeltype == 'min':
-        disableset = DISABLE_ROS_SIGNAL + DISABLE_MIXOTROPHY + DISABLE_EXUDATION_OVERFLOW
+        disableset = DISABLE_ROS_SIGNAL | DISABLE_MIXOTROPHY | DISABLE_EXUDATION_OVERFLOW
     elif modeltype == 'exu':
-        disableset = DISABLE_ROS_SIGNAL + DISABLE_MIXOTROPHY 
+        disableset = DISABLE_ROS_SIGNAL | DISABLE_MIXOTROPHY 
     elif modeltype == 'mix':
         disableset = DISABLE_ROS_SIGNAL  
     return model_partial(disableset, 
