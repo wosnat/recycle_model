@@ -229,7 +229,7 @@ if __name__ == '__main__':
         for m in dislist:
             print(m)
             id = str(m).replace('DISABLE_MECHANISMS.', '').replace('|','-')
-            if id is '0':
+            if id == '0':
                 id = 'default'
             run_id = f"{run_id}_dis_{id}"
             new_params = disable_mechanism(m, param_vals)
