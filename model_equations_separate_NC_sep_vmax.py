@@ -61,6 +61,28 @@ Qminh = 7e-10  * pro_alt_vol_ratio
 Qh = (Qminh + Qmaxh) / 2
 Qp = (Qminp + Qmaxp) / 2
 
+# H params
+# H: C: 30 - 292 fg cell-1
+# H: N: 25-50 mean 37 fg cell-1
+# H C:N 4-6.6 mean 4.9 fg cell-1
+
+
+# P params
+# N 5-7 fg/cell
+# C 20-50 fg/cell
+# C:N 5.5-7, 5-12
+# michal 10-21 N
+# shira/yara 17-30 N
+
+# parameter values
+R_P = 7
+R_H = 4.5 # in the range 4-6 (for DSS N limited, 11)
+
+# fg -> umol 14 (N mulecular weight) * 1e-9 (fmol -> umol)
+Qp = 25  * 1e-9 / 14
+Qh = 40 * 1e-9 / 14
+
+
 # initial concentrations
 INIT_DIN = 100
 INIT_DON = 20
@@ -75,8 +97,10 @@ INIT_ROS = 0
 INIT_SP = 0
 INIT_SH = 0
 
-R_P = R_CN
-R_H = R_CN
+
+
+
+
 
 # DIC exchange
 h = 0.3 # height in m
@@ -89,12 +113,12 @@ param_vals_with_symbols = {
     Mh: 0.1/ seconds_in_day,
     Mp : 0.1/ seconds_in_day,
     # ratio
-    gammaDp : 0.8,         # pro death release 
-    gammaDh : 0.8,         # het death release
+    gammaDp : 0.6,         # pro death release 
+    gammaDh : 0.6,         # het death release
     
     # ratio
-    Rp : R_CN,
-    Rh : R_CN,
+    Rp : R_P,
+    Rh : R_H,
     
     # 1/d
     # EOp : 0.2 / seconds_in_day,        # move to income tax # pro organic exudation 
@@ -111,22 +135,22 @@ param_vals_with_symbols = {
     # K << N --> >> 1 --> max uptake
 
     KONp : 0.17 * pro_vol**0.27, 
-    KINp : 5* 0.17 * pro_vol**0.27, # x 5 based on sensitivity
+    KINp : 0.17 * pro_vol**0.27, # x 5 based on sensitivity
     KOCp : 0.17 * pro_vol**0.27, 
     KICp : 0.17 * pro_vol**0.27, 
     KONh : 0.17 * alt_vol**0.27, 
     KINh : 0.17 * alt_vol**0.27, # / 10 based on sensitivity
-    KOCh : 5*0.17 * alt_vol**0.27, # x 5 based on sensitivity
+    KOCh : 0.17 * alt_vol**0.27, # x 5 based on sensitivity
     KICh : 0.17 * alt_vol**0.27, 
     # umol N/cell/d
     # vmax = muinfp* VmaxIp * Qp
     # 1/day  * umol/cell  * umol/cell/d # TODO - figure out units
     VmaxONp : 0.7 * 1.9e-9 / 10000 / Qp / seconds_in_day, 
-    VmaxINp : 0.5 * 1.9e-9 / Qp / seconds_in_day, 
+    VmaxINp : 0.7 * 1.9e-9 / Qp / seconds_in_day, 
     VmaxOCp : 0.7 * 1.9e-9 / 10000 * R_P / Qp / seconds_in_day, 
     VmaxICp : 0.7 * 1.9e-9 * R_P / Qp / seconds_in_day, 
     VmaxONh : 2 * 1.9e-9 / Qh / seconds_in_day, 
-    VmaxINh : 4 * 1.9e-9 / Qh / seconds_in_day, # x 3 based on sensitivity
+    VmaxINh : 2 * 1.9e-9 / Qh / seconds_in_day, # x 3 based on sensitivity
     VmaxOCh : 2 * 1.9e-9 * R_H / Qh / seconds_in_day, 
     VmaxICh : 2 * 1.9e-9 / 10000 * R_H / Qh / seconds_in_day, 
     
@@ -177,8 +201,8 @@ param_vals_neutral_with_symbols = {
     gammaDh : 0.8,         # het death release
     
     # ratio
-    Rp : R_CN,
-    Rh : R_CN,
+    Rp : R_P,
+    Rh : R_H,
     
     # 1/d
     # EOp : 0.2 / seconds_in_day,        # move to income tax # pro organic exudation 
