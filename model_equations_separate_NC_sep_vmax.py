@@ -27,10 +27,10 @@ Bp, Bh, DOC, RDOC, DIC, DON, RDON, DIN, ROS, Sp, Sh = symbols('B_p B_h DOC RDOC 
 
 # parameters
 gammaDp, gammaDh, EOp, EIp, EOh, EIh = symbols('gamma^D_p gamma^D_h E^O_p E^I_p E^O_h E^I_h')
-KSp, KSh, Esp, Esh, Msp, Msh = symbols('K^S_p K^S_h E^S_p E^S_h M^S_p M^S_h')
+KSp, KSh, Esp, Esh, Msp, Msh, decaySp, decaySh = symbols('K^S_p K^S_h E^S_p E^S_h M^S_p M^S_h decay^S_p decay^S_h')
 
 Op, Oh = symbols('O_p O_h')
-epsilon, VTmax, KTh, omega = symbols('epsilon VTmax KT_h omega')
+ETp, ETh, VTmax, KTh, omegaP, omegaH, ROS_decay= symbols('E^T_p E^T_h  VTmax KT_h omega_p omega_h ROS_decay')
 Mp, Mh = symbols('M_p M_h')
 Rp, Rh = symbols('R_p R_h')
 
@@ -73,6 +73,9 @@ Qp = (Qminp + Qmaxp) / 2
 # C:N 5.5-7, 5-12
 # michal 10-21 N
 # shira/yara 17-30 N
+# Dalit N 11.8-22.3 fg cell-1 N
+# Dalit C 71-134 fg cell-1
+# Dalit C:N 6
 
 # parameter values
 R_P = 7
@@ -89,11 +92,14 @@ INIT_DON = 20
 INIT_RDON = 0
 INIT_RDOC = 0
 INIT_DIC = 3000
+
+# Dalit: 0.047155376888899 nM ?
+# Dalit init TOC 16 mM
 INIT_DOC = INIT_DON * R_CN
 INIT_BP = 1e9 * Qp
 INIT_BH = 1e10 * Qh
 INIT_BH_CC = 5e9 * Qh # the actual concentration in the measurements
-INIT_ROS = 0
+INIT_ROS = 0.2 # Morris, J. Jeffrey, et al. "Dependence of the cyanobacterium Prochlorococcus on hydrogen peroxide scavenging microbes for growth at the ocean's surface." PloS one 6.2 (2011): e16805.‏
 INIT_SP = 0
 INIT_SH = 0
 
@@ -109,6 +115,7 @@ c_sat = INIT_DIC
 
 
 param_vals_with_symbols = {
+    # Mortality and refractoriness
     # 1/d
     Mh: 0.1/ seconds_in_day,
     Mp : 0.1/ seconds_in_day,
@@ -120,13 +127,16 @@ param_vals_with_symbols = {
     Rp : R_P,
     Rh : R_H,
     
+    # Exudation rates (“property tax”)
     # 1/d
     # EOp : 0.2 / seconds_in_day,        # move to income tax # pro organic exudation 
     # EIh : 0.2 / seconds_in_day,        # move to income tax # het inorganic exudation 
     EOp : 0.1 / seconds_in_day,        # pro organic exudation 
     EIp : 0 / seconds_in_day,          # pro inorganic exudation
-    EOh : 0 / seconds_in_day,          # het organic exudation 
-    EIh : 0.1 / seconds_in_day,        # het inorganic exudation 
+    EOh : 0.1 / seconds_in_day,          # het organic exudation 
+    EIh : 0 / seconds_in_day,        # het inorganic exudation 
+    
+    # K’s (affinity).
     # TODO - change k for organic/inorganic
     # umol/l
     # K = 0 --> 1
@@ -142,17 +152,16 @@ param_vals_with_symbols = {
     KINh : 0.17 * alt_vol**0.27, # / 10 based on sensitivity
     KOCh : 0.17 * alt_vol**0.27, # x 5 based on sensitivity
     KICh : 0.17 * alt_vol**0.27, 
-    # umol N/cell/d
-    # vmax = muinfp* VmaxIp * Qp
-    # 1/day  * umol/cell  * umol/cell/d # TODO - figure out units
-    VmaxONp : 0.7 * 1.9e-9 / 10000 / Qp / seconds_in_day, 
-    VmaxINp : 0.7 * 1.9e-9 / Qp / seconds_in_day, 
-    VmaxOCp : 0.7 * 1.9e-9 / 10000 * R_P / Qp / seconds_in_day, 
-    VmaxICp : 0.7 * 1.9e-9 * R_P / Qp / seconds_in_day, 
-    VmaxONh : 2 * 1.9e-9 / Qh / seconds_in_day, 
-    VmaxINh : 2 * 1.9e-9 / Qh / seconds_in_day, # x 3 based on sensitivity
-    VmaxOCh : 2 * 1.9e-9 * R_H / Qh / seconds_in_day, 
-    VmaxICh : 2 * 1.9e-9 / 10000 * R_H / Qh / seconds_in_day, 
+
+    # 1/d
+    VmaxONp : 1e-2 / seconds_in_day, 
+    VmaxINp : 1 / seconds_in_day, 
+    VmaxOCp : 1e-2 * R_P / Qp / seconds_in_day, 
+    VmaxICp : 1 * R_P / Qp / seconds_in_day, 
+    VmaxONh : 5 / seconds_in_day, 
+    VmaxINh : 5 / seconds_in_day, # x 3 based on sensitivity
+    VmaxOCh : 5 * R_H / seconds_in_day, 
+    VmaxICh : 1e-5 * R_H / Qh / seconds_in_day, 
     
     #Vmaxp : 0.8 * 1.9e-9 * pro_vol**0.67 /Qp / seconds_in_day, 
     #Vmaxh : 3 * 1.9e-9 * alt_vol**0.67 / Qh / seconds_in_day, 
@@ -161,13 +170,20 @@ param_vals_with_symbols = {
     Op : 0.6, # changed based on sensitivity
     Oh : 0.6, # changed based on sensitivity
     
+    # Toxin (ROS)
+
     # umol/cell/d
-    epsilon : 1e-10 / Qp / seconds_in_day, 
+    ETp : 1e-10 / Qp / seconds_in_day, 
+    ETh : 1e-10 / Qh / seconds_in_day, 
     VTmax : 1.9e-9 / Qh / seconds_in_day, 
     # umol/l
     KTh : 0.17 * alt_vol**0.27, 
     # 1/ umol/l
-    omega : 0.01, #0.1,
+    omegaP : 0.01, #0.1,
+    omegaH : 0.00001, #0.1,
+    
+    # ROS decay 
+    ROS_decay : 0.01,
     
     # Signals
     # umolN/L
@@ -176,6 +192,10 @@ param_vals_with_symbols = {
     # umol/cell/d
     Esp : 1e-20 / Qp / seconds_in_day, 
     Esh : 1e-20 / Qh / seconds_in_day, 
+    # signal decay (1/d)
+    decaySh : 0.01, 
+    decaySp : 0.01, 
+    
     # 1/d (between -1 to 1)  / seconds_in_day
     Msp : -0.01 / seconds_in_day, 
     Msh : -0.01 / seconds_in_day,
@@ -209,8 +229,8 @@ param_vals_neutral_with_symbols = {
     # EIh : 0.2 / seconds_in_day,        # move to income tax # het inorganic exudation 
     EOp : 0.1 / seconds_in_day,        # pro organic exudation 
     EIp : 0 / seconds_in_day,          # pro inorganic exudation
-    EOh : 0 / seconds_in_day,          # het organic exudation 
-    EIh : 0.1 / seconds_in_day,        # het inorganic exudation 
+    EOh : 0.1 / seconds_in_day,          # het organic exudation 
+    EIh : 0 / seconds_in_day,        # het inorganic exudation 
     # TODO - change k for organic/inorganic
     # umol/l
     # K = 0 --> 1
@@ -246,12 +266,18 @@ param_vals_neutral_with_symbols = {
     Oh : 0.6, # changed based on sensitivity
     
     # umol/cell/d
-    epsilon : 1e-10 / Qp / seconds_in_day, 
+    ETp : 1e-10 / seconds_in_day, 
+    ETh : 1e-10 / seconds_in_day, 
     VTmax : 1.9e-9 / Qh / seconds_in_day, 
     # umol/l
     KTh : 0.17 * alt_vol**0.27, 
-    # 1/ umol/l
-    omega : 0.01, #0.1,
+    # 1/ umol/l 
+    # How much do the ROS affect growth
+
+    omegaP : 0.01, #0.1,
+    omegaH : 0.00001, #0.1,
+    
+    ROS_decay : 0.01, 
     
     # Signals
     # umolN/L
@@ -263,6 +289,10 @@ param_vals_neutral_with_symbols = {
     # 1/d (between -1 to 1)  / seconds_in_day
     Msp : -0.01 / seconds_in_day, 
     Msh : -0.01 / seconds_in_day,
+    # signal decay (1/d)
+    decaySh : 0.01, 
+    decaySp : 0.01, 
+
     # DIC (CO2) 
     tau : h / Kg,
     # dark respiration, sec-1 = 0.18 d-1, Geider & Osborne 1989 
@@ -318,7 +348,8 @@ def disable_mechanism(mechanisms, param_vals):
         new_param_vals[str(VmaxONp)] = new_param_vals[str(VmaxONp)] * 50
         new_param_vals[str(VmaxOCp)] = new_param_vals[str(VmaxOCp)] * 50
     if DISABLE_MECHANISMS.DETOXIFICATION in mechanisms:
-        new_param_vals[str(omega)] = 0
+        new_param_vals[str(omegaP)] = 0
+        new_param_vals[str(omegaH)] = 0
     if DISABLE_MECHANISMS.P_SIGNAL in mechanisms:
         new_param_vals[str(Esp)] = 0
     if DISABLE_MECHANISMS.H_SIGNAL in mechanisms:
@@ -331,10 +362,12 @@ def disable_mechanism(mechanisms, param_vals):
 # different model configurations
 DISABLE_ROS_SIGNAL = {
     # ROS
-    str(epsilon), 
+    str(ETh), 
+    str(ETp), 
     str(VTmax), 
     str(KTh), 
-    str(omega), #0.1,
+    str(omegaP), #0.1,
+    str(omegaH), #0.1,
     
     # Signals
     # umolN/L
@@ -433,15 +466,15 @@ limSp = (Sp / (Sp + KSp))
 
 # vmax = muinfp* VmaxIp / Qp
 # umol N /L 
-gross_uptakeINp = VmaxINp * limINp * exp(-omega*ROS) * Bp
-gross_uptakeONp = VmaxONp * limONp * exp(-omega*ROS) * Bp
-gross_uptakeINh = VmaxINh * limINh * Bh
-gross_uptakeONh = VmaxONh * limONh * Bh
+gross_uptakeINp = VmaxINp * limINp * exp(-omegaP*ROS) * Bp
+gross_uptakeONp = VmaxONp * limONp * exp(-omegaP*ROS) * Bp
+gross_uptakeINh = VmaxINh * limINh * exp(-omegaH*ROS) * Bh
+gross_uptakeONh = VmaxONh * limONh * exp(-omegaH*ROS) * Bh
 # umol C /L
-gross_uptakeICp = VmaxICp * limICp * exp(-omega*ROS) * Bp 
-gross_uptakeOCp = VmaxOCp * limOCp * exp(-omega*ROS) * Bp 
-gross_uptakeICh = VmaxICh * limICh * Bh 
-gross_uptakeOCh = VmaxOCh * limOCh * Bh 
+gross_uptakeICp = VmaxICp * limICp * exp(-omegaP*ROS) * Bp 
+gross_uptakeOCp = VmaxOCp * limOCp * exp(-omegaP*ROS) * Bp 
+gross_uptakeICh = VmaxICh * limICh * exp(-omegaH*ROS) * Bh 
+gross_uptakeOCh = VmaxOCh * limOCh * exp(-omegaH*ROS) * Bh 
 
 # umol N / L
 actual_uptakeNp = Min(gross_uptakeINp + gross_uptakeONp, 
@@ -499,12 +532,13 @@ exudationIh = EIh * Bh
 
 # epsilon = epsilon / Q
 # VTMax = VTmax / Q
-Treleasep = epsilon * Bp
+Treleasep = ETp * Bp
+Treleaseh = ETh * Bh
 Tbreakdownh = VTmax * ROS / (ROS + KTh) * Bh
 
 # signal
-Sreleasep = Esp * Bp
-Sreleaseh = Esh * Bh
+Sreleasep = Esp * Bp - Sp*decaySp
+Sreleaseh = Esh * Bh - Sh*decaySh
 
 
 # final equation - coculture
@@ -518,7 +552,7 @@ dRDOCdt = deathp * (1 - gammaDp) * Rp + deathh * (1 - gammaDh) * Rh
 dDINdt = exudationIp +  exudationIh - gross_uptakeINp -  gross_uptakeINh  + overflowINp + overflowINh + respirationh + respirationp 
 dDICdt = exudationIp *Rp +  exudationIh* Rh - gross_uptakeICp -  gross_uptakeICh  + overflowICp + overflowICh + respirationh* Rh + respirationp * Rp + dic_uptake
 
-dROSdt = Treleasep - Tbreakdownh 
+dROSdt = Max( -ROS*ROS_decay + Treleasep + Treleaseh - Tbreakdownh, -ROS)
 dSpdt = Sreleasep
 dShdt = Sreleaseh
 
@@ -532,6 +566,7 @@ dRDOCdt_ponly = deathp * (1 - gammaDp) * Rp
 dDINdt_ponly = exudationIp - gross_uptakeINp + overflowINp+ respirationp
 dDICdt_ponly = exudationIp *Rp - gross_uptakeICp + overflowICp + respirationp* Rp + dic_uptake
 dROSdt_ponly = Treleasep  
+dROSdt_ponly  = Max( -ROS*ROS_decay + Treleasep, -ROS)
 dShdt_ponly = Integer(0)
 
 # HET only model
@@ -541,7 +576,7 @@ dRDONdt_honly = deathh * (1 - gammaDh)
 dRDOCdt_honly = deathh * (1 - gammaDh) * Rh
 dDINdt_honly = exudationIh -  gross_uptakeINh  + overflowINh + respirationh
 dDICdt_honly = exudationIh* Rh -  gross_uptakeICh  + overflowICh + respirationh* Rh + dic_uptake
-dROSdt_honly = - Tbreakdownh 
+dROSdt_honly = Max( -ROS*ROS_decay + Treleaseh - Tbreakdownh, -ROS)
 dSpdt_honly = Integer(0)
 
 
