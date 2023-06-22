@@ -22,15 +22,15 @@ import re
 import time
 
 # variables
-Bp, Bh, DOC, RDOC, DIC, DON, RDON, DIN, ROS, Sp, Sh = symbols('B_p B_h DOC RDOC DIC DON RDON DIN ROS S_p S_h')
+Bp, Bh, DOC, RDOC, DIC, DON, RDON, DIN, ROS, ABp, ABh = symbols('B_p B_h DOC RDOC DIC DON RDON DIN ROS S_p S_h')
 
 
 # parameters
 gammaDp, gammaDh, EOp, EIp, EOh, EIh = symbols('gamma^D_p gamma^D_h E^O_p E^I_p E^O_h E^I_h')
-KSp, KSh, Esp, Esh, Msp, Msh, decaySp, decaySh = symbols('K^S_p K^S_h E^S_p E^S_h M^S_p M^S_h decay^S_p decay^S_h')
+KABp, KABh, EABp, EABh, Msp, Msh, decayABp, decayABh = symbols('K^S_p K^S_h E^S_p E^S_h M^S_p M^S_h decay^S_p decay^S_h')
 
 Op, Oh = symbols('O_p O_h')
-ETp, ETh, VTmax, KTh, omegaP, omegaH, ROS_decay= symbols('E^T_p E^T_h  VTmax KT_h omega_p omega_h ROS_decay')
+E_ROSp, E_ROSh, VTmax, K_ROSh, omegaP, omegaH, ROS_decay= symbols('E^T_p E^T_h  VTmax KT_h omega_p omega_h ROS_decay')
 Mp, Mh = symbols('M_p M_h')
 Rp, Rh = symbols('R_p R_h')
 
@@ -128,14 +128,14 @@ param_vals_with_symbols = {
     Rp : R_P,
     Rh : R_H,
     
-    # Exudation rates (“property tax”)
+    # leakiness rates (“property tax”)
     # 1/d
-    # EOp : 0.2 / seconds_in_day,        # move to income tax # pro organic exudation 
-    # EIh : 0.2 / seconds_in_day,        # move to income tax # het inorganic exudation 
-    EOp : 0.1 / seconds_in_day,        # pro organic exudation 
-    EIp : 0 / seconds_in_day,          # pro inorganic exudation
-    EOh : 0.1 / seconds_in_day,          # het organic exudation 
-    EIh : 0 / seconds_in_day,        # het inorganic exudation 
+    # EOp : 0.2 / seconds_in_day,        # move to income tax # pro organic leakiness 
+    # EIh : 0.2 / seconds_in_day,        # move to income tax # het inorganic leakiness 
+    EOp : 0.1 / seconds_in_day,        # pro organic leakiness 
+    EIp : 0 / seconds_in_day,          # pro inorganic leakiness
+    EOh : 0.1 / seconds_in_day,          # het organic leakiness 
+    EIh : 0 / seconds_in_day,        # het inorganic leakiness 
     
     # K’s (affinity).
     # TODO - change k for organic/inorganic
@@ -171,14 +171,14 @@ param_vals_with_symbols = {
     Op : 0.6, # changed based on sensitivity
     Oh : 0.6, # changed based on sensitivity
     
-    # Toxin (ROS)
+    # ROS
 
     # umol/cell/d
-    ETp : 1e-10 / Qp / seconds_in_day, 
-    ETh : 1e-10 / Qh / seconds_in_day, 
+    E_ROSp : 1e-10 / Qp / seconds_in_day, 
+    E_ROSh : 1e-10 / Qh / seconds_in_day, 
     VTmax : 1.9e-9 / Qh / seconds_in_day, 
     # umol/l
-    KTh : 0.17 * alt_vol**0.27, 
+    K_ROSh : 0.17 * alt_vol**0.27, 
     # 1/ umol/l
     omegaP : 0.01, #0.1,
     omegaH : 0.00001, #0.1,
@@ -186,16 +186,16 @@ param_vals_with_symbols = {
     # ROS decay 
     ROS_decay : 0.01,
     
-    # Signals
+    # antibiotic
     # umolN/L
-    KSp : 0.17 * pro_vol**0.27 * 100, 
-    KSh : 0.17 * pro_vol**0.27 * 100, 
+    KABp : 0.17 * pro_vol**0.27 * 100, 
+    KABh : 0.17 * pro_vol**0.27 * 100, 
     # umol/cell/d
-    Esp : 1e-20 / Qp / seconds_in_day, 
-    Esh : 1e-20 / Qh / seconds_in_day, 
+    EABp : 1e-20 / Qp / seconds_in_day, 
+    EABh : 1e-20 / Qh / seconds_in_day, 
     # signal decay (1/d)
-    decaySh : 0.01, 
-    decaySp : 0.01, 
+    decayABh : 0.01, 
+    decayABp : 0.01, 
     
     # 1/d (between -1 to 1)  / seconds_in_day
     Msp : -0.01 / seconds_in_day, 
@@ -226,12 +226,12 @@ param_vals_neutral_with_symbols = {
     Rh : R_H,
     
     # 1/d
-    # EOp : 0.2 / seconds_in_day,        # move to income tax # pro organic exudation 
-    # EIh : 0.2 / seconds_in_day,        # move to income tax # het inorganic exudation 
-    EOp : 0.1 / seconds_in_day,        # pro organic exudation 
-    EIp : 0 / seconds_in_day,          # pro inorganic exudation
-    EOh : 0.1 / seconds_in_day,          # het organic exudation 
-    EIh : 0 / seconds_in_day,        # het inorganic exudation 
+    # EOp : 0.2 / seconds_in_day,        # move to income tax # pro organic leakiness 
+    # EIh : 0.2 / seconds_in_day,        # move to income tax # het inorganic leakiness 
+    EOp : 0.1 / seconds_in_day,        # pro organic leakiness 
+    EIp : 0 / seconds_in_day,          # pro inorganic leakiness
+    EOh : 0.1 / seconds_in_day,          # het organic leakiness 
+    EIh : 0 / seconds_in_day,        # het inorganic leakiness 
     # TODO - change k for organic/inorganic
     # umol/l
     # K = 0 --> 1
@@ -267,11 +267,11 @@ param_vals_neutral_with_symbols = {
     Oh : 0.6, # changed based on sensitivity
     
     # umol/cell/d
-    ETp : 1e-10 / seconds_in_day, 
-    ETh : 1e-10 / seconds_in_day, 
+    E_ROSp : 1e-10 / seconds_in_day, 
+    E_ROSh : 1e-10 / seconds_in_day, 
     VTmax : 1.9e-9 / Qh / seconds_in_day, 
     # umol/l
-    KTh : 0.17 * alt_vol**0.27, 
+    K_ROSh : 0.17 * alt_vol**0.27, 
     # 1/ umol/l 
     # How much do the ROS affect growth
 
@@ -282,17 +282,17 @@ param_vals_neutral_with_symbols = {
     
     # Signals
     # umolN/L
-    KSp : 0.17 * pro_vol**0.27 * 100, 
-    KSh : 0.17 * pro_vol**0.27 * 100, 
+    KABp : 0.17 * pro_vol**0.27 * 100, 
+    KABh : 0.17 * pro_vol**0.27 * 100, 
     # umol/cell/d
-    Esp : 1e-20 / Qp / seconds_in_day, 
-    Esh : 1e-20 / Qh / seconds_in_day, 
+    EABp : 1e-20 / Qp / seconds_in_day, 
+    EABh : 1e-20 / Qh / seconds_in_day, 
     # 1/d (between -1 to 1)  / seconds_in_day
     Msp : -0.01 / seconds_in_day, 
     Msh : -0.01 / seconds_in_day,
     # signal decay (1/d)
-    decaySh : 0.01, 
-    decaySp : 0.01, 
+    decayABh : 0.01, 
+    decayABp : 0.01, 
 
     # DIC (CO2) 
     tau : h / Kg,
@@ -352,9 +352,9 @@ def disable_mechanism(mechanisms, param_vals):
         new_param_vals[str(omegaP)] = 0
         new_param_vals[str(omegaH)] = 0
     if DISABLE_MECHANISMS.P_SIGNAL in mechanisms:
-        new_param_vals[str(Esp)] = 0
+        new_param_vals[str(EABp)] = 0
     if DISABLE_MECHANISMS.H_SIGNAL in mechanisms:
-        new_param_vals[str(Esh)] = 0
+        new_param_vals[str(EABh)] = 0
 
     return new_param_vals
 
@@ -363,20 +363,20 @@ def disable_mechanism(mechanisms, param_vals):
 # different model configurations
 DISABLE_ROS_SIGNAL = {
     # ROS
-    str(ETh), 
-    str(ETp), 
+    str(E_ROSh), 
+    str(E_ROSp), 
     str(VTmax), 
-    str(KTh), 
+    str(K_ROSh), 
     str(omegaP), #0.1,
     str(omegaH), #0.1,
     
     # Signals
     # umolN/L
-    str(KSp), 
-    str(KSh), 
+    str(KABp), 
+    str(KABh), 
     # umol/cell/d
-    str(Esp), 
-    str(Esh), 
+    str(EABp), 
+    str(EABh), 
     # 1/d (between -1 to 1)  / seconds_in_day
     str(Msp), 
     str(Msh),
@@ -446,12 +446,13 @@ def print_params(param_vals=param_vals):
 
 # functions
 
+# number of cells (Q is a parameter)
 # cells/L
 Xp = Bp / Qp
 Xh = Bh / Qh
 
 
-# ratio
+# monod ratios
 limINp = (DIN / (DIN + KINp))
 limONp = (DON / (DON + KONp))
 limICp = (DIC / (DIC + KICp))
@@ -461,10 +462,11 @@ limONh = (DON / (DON + KONh))
 limICh = (DIC / (DIC + KICh))
 limOCh = (DOC / (DOC + KOCh))
 
-limSh = (Sh / (Sh + KSh))
-limSp = (Sp / (Sp + KSp))
+limABh = (ABh / (ABh + KABh))
+limABp = (ABp / (ABp + KABp))
 
 
+# gross uptake (regardless of C:N ratio)
 # vmax = muinfp* VmaxIp / Qp
 # umol N /L 
 gross_uptakeINp = VmaxINp * limINp * exp(-omegaP*ROS) * Bp
@@ -477,41 +479,49 @@ gross_uptakeOCp = VmaxOCp * limOCp * exp(-omegaP*ROS) * Bp
 gross_uptakeICh = VmaxICh * limICh * exp(-omegaH*ROS) * Bh 
 gross_uptakeOCh = VmaxOCh * limOCh * exp(-omegaH*ROS) * Bh 
 
+# net uptake (maintains C:N ratios)
 # umol N / L
-actual_uptakeNp = Min(gross_uptakeINp + gross_uptakeONp, 
+net_uptakeNp = Min(gross_uptakeINp + gross_uptakeONp, 
                      (gross_uptakeICp + gross_uptakeOCp) / Rp)
 
-actual_uptakeNh = Min(gross_uptakeINh + gross_uptakeONh, 
+net_uptakeNh = Min(gross_uptakeINh + gross_uptakeONh, 
                      (gross_uptakeICh + gross_uptakeOCh) / Rh)
 
-# ratio
-IOuptakeRateNp = gross_uptakeINp / (gross_uptakeINp + gross_uptakeONp)
-IOuptakeRateCp = gross_uptakeICp / (gross_uptakeICp + gross_uptakeOCp)
-IOuptakeRateNh = gross_uptakeINh / (gross_uptakeINh + gross_uptakeONh)
-IOuptakeRateCh = gross_uptakeICh / (gross_uptakeICh + gross_uptakeOCh)
+# inorganic to organic uptake ratio
+# IOuptakeRateNp = gross_uptakeINp / (gross_uptakeINp + gross_uptakeONp)
+# IOuptakeRateCp = gross_uptakeICp / (gross_uptakeICp + gross_uptakeOCp)
+# IOuptakeRateNh = gross_uptakeINh / (gross_uptakeINh + gross_uptakeONh)
+# IOuptakeRateCh = gross_uptakeICh / (gross_uptakeICh + gross_uptakeOCh)
 
+
+# Overflow quantity 
 # umol N / L
-overflowNp = gross_uptakeINp + gross_uptakeONp - actual_uptakeNp 
-overflowNh = gross_uptakeINh + gross_uptakeONh - actual_uptakeNh
+overflowNp = gross_uptakeINp + gross_uptakeONp - net_uptakeNp 
+overflowNh = gross_uptakeINh + gross_uptakeONh - net_uptakeNh
 # umol C /L
-overflowCp = gross_uptakeICp + gross_uptakeOCp - actual_uptakeNp * Rp
-overflowCh = gross_uptakeICh + gross_uptakeOCh - actual_uptakeNh * Rh
+overflowCp = gross_uptakeICp + gross_uptakeOCp - net_uptakeNp * Rp
+overflowCh = gross_uptakeICh + gross_uptakeOCh - net_uptakeNh * Rh
 
 # umol N / L
-overflowINp =                   (1 - Op) * overflowNp * IOuptakeRateNp
-overflowONp = Op * overflowNp + (1 - Op) * overflowNp * (1 - IOuptakeRateNp)
 
-overflowICp =                   (1 - Op) * overflowCp * IOuptakeRateCp
-overflowOCp = Op * overflowCp + (1 - Op) * overflowCp * (1 - IOuptakeRateCp)
+# TODO
+# overflowINp =                   (1 - Op) * overflowNp * IOuptakeRateNp
+# overflowONp = Op * overflowNp + (1 - Op) * overflowNp * (1 - IOuptakeRateNp)
 
-overflowINh = Oh * overflowNh + (1 - Oh) * overflowNh * IOuptakeRateNh
-overflowONh =                   (1 - Oh) * overflowNh * (1 - IOuptakeRateNh)
-overflowICh = Oh * overflowCh + (1 - Oh) * overflowCh * IOuptakeRateCh
-overflowOCh =                   (1 - Oh) * overflowCh * (1 - IOuptakeRateCh)
+# overflowICp =                   (1 - Op) * overflowCp * IOuptakeRateCp
+# overflowOCp = Op * overflowCp + (1 - Op) * overflowCp * (1 - IOuptakeRateCp)
 
-respirationp =  bp* actual_uptakeNp + Bp * r0p
-respirationh =  bh* actual_uptakeNh + Bh * r0h
-dic_uptake   =  - (DIC - c_sat) / tau
+# overflowINh = Oh * overflowNh + (1 - Oh) * overflowNh * IOuptakeRateNh
+# overflowONh =                   (1 - Oh) * overflowNh * (1 - IOuptakeRateNh)
+# overflowICh = Oh * overflowCh + (1 - Oh) * overflowCh * IOuptakeRateCh
+# overflowOCh =                   (1 - Oh) * overflowCh * (1 - IOuptakeRateCh)
+
+
+# Respiration – growth associated bp/bh and maintenance associated r0p/r0h
+# b * growth + r0 * biomass
+respirationp =  bp* net_uptakeNp + Bp * r0p
+respirationh =  bh* net_uptakeNh + Bh * r0h
+dic_air_water_exchange   =  - (DIC - c_sat) / tau
 
 
 
@@ -519,79 +529,159 @@ dic_uptake   =  - (DIC - c_sat) / tau
 # M = M / Q
 
 # death = M * X = M * B /Q = M / Q * B
+# death rate should be between 0 - 1
+# Maximum death rate everyone dead in one sec
+# minimum death rate - 0
+# If only AB then effect of AB on mortality is only positive
+# todo - make +
+death_ratep = Min(Max(Mp - Msp*limABh, 0), 1 )
+death_rateh = Min(Max(Mh - Msh*limABp, 0), 1 )
 
-death_ratep = Min(Max(Mp - Msp*limSh, 0), 1 / seconds_in_day)
-death_rateh = Min(Max(Mh - Msh*limSp, 0), 1 / seconds_in_day)
 
-deathp = death_ratep * Bp #* Xp
-deathh = death_rateh * Bh #* Xh
+# Need to explain why we used exponential decay – in ISMEJ we show that other formulations are better for co-cuiltures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
 
-exudationOp = EOp * Bp
-exudationIp = EIp * Bp
-exudationOh = EOh * Bh
-exudationIh = EIh * Bh
+deathp = death_ratep * Bp 
+deathh = death_rateh * Bh 
 
+# leakiness formulated as fraction of biomass (“property tax”)
+leakinessOp = EOp * Bp
+leakinessIp = EIp * Bp
+leakinessOh = EOh * Bh
+leakinessIh = EIh * Bh
+
+# ROS production depends on biomass
 # epsilon = epsilon / Q
 # VTMax = VTmax / Q
-Treleasep = ETp * Bp
-Treleaseh = ETh * Bh
-Tbreakdownh = VTmax * ROS / (ROS + KTh) * Bh
 
-# signal
-Sreleasep = Esp * Bp - Sp*decaySp
-Sreleaseh = Esh * Bh - Sh*decaySh
+ROSreleasep = E_ROSp * Bp
+ROSreleaseh = E_ROSh * Bh
+ROSbreakdownh = VTmax * ROS / (ROS + K_ROSh) * Bh
 
+# AB
+# TODO Change to antibiotic
+ABreleasep = EABp * Bp 
+ABreleaseh = EABh * Bh
 
+# We assume that the vast m,ajority of C and N biomass is in organic form, hence leakiness is to organic. We assume that overflow is also to organic in both organisms, as for the phototroph this is the release of fixed C (or inorganic N incorporated into e.g. AA) which cannot be used for growth. For the heterotrophs we assume overflow metabolism to be the inefficient use of organic C (e.g. not fully oxidized) to maximize growth rate (*citation E coli).
+
+####################################################
 # final equation - coculture
-dBpdt = actual_uptakeNp - deathp - exudationOp - exudationIp - respirationp - Sreleasep
-dBhdt = actual_uptakeNh - deathh - exudationOh - exudationIh - respirationh - Sreleaseh
-dDONdt = deathp * gammaDp + deathh * gammaDh + exudationOp +  exudationOh - gross_uptakeONp -  gross_uptakeONh + overflowONp + overflowONh 
-dDOCdt = deathp * gammaDp * Rp + deathh * gammaDh * Rh + exudationOp *Rp +  exudationOh * Rh - gross_uptakeOCp -  gross_uptakeOCh + overflowOCp + overflowOCh
-dRDONdt = deathp * (1 - gammaDp) + deathh * (1 - gammaDh)
-dRDOCdt = deathp * (1 - gammaDp) * Rp + deathh * (1 - gammaDh) * Rh
-
-dDINdt = exudationIp +  exudationIh - gross_uptakeINp -  gross_uptakeINh  + overflowINp + overflowINh + respirationh + respirationp 
-dDICdt = exudationIp *Rp +  exudationIh* Rh - gross_uptakeICp -  gross_uptakeICh  + overflowICp + overflowICh + respirationh* Rh + respirationp * Rp + dic_uptake
-
-dROSdt = Max( -ROS*ROS_decay + Treleasep + Treleaseh - Tbreakdownh, -ROS)
-dSpdt = Sreleasep
-dShdt = Sreleaseh
+dBpdt = net_uptakeNp - deathp - leakinessOp - respirationp - ABreleasep
+dBhdt = net_uptakeNh - deathh - leakinessOh - respirationh - ABreleaseh
+dDONdt = (
+    deathp * gammaDp + leakinessOp + overflowNp - gross_uptakeONp +
+    deathh * gammaDh + leakinessOh + overflowNh - gross_uptakeONh
+    ) 
+dDOCdt = (
+    deathp * gammaDp * Rp + leakinessOp * Rp + overflowCp - gross_uptakeOCp +
+    deathh * gammaDh * Rh + leakinessOh * Rh + overflowCh - gross_uptakeOCh)
 
 
+# In discussion can state that if DIN is produced also through overflow or leakiness then this could support Pro growth, but this is not encoded into our model.
+# Assuming that recalcitrant DON isd released only during mortality (discuss release through leakiness)
+# Assuming RDON/RDOC is recalcitrant to both organisms
 
+dRDONdt = (
+    deathp * (1 - gammaDp) + 
+    deathh * (1 - gammaDh))
+dRDOCdt = (
+    deathp * (1 - gammaDp) * Rp + 
+    deathh * (1 - gammaDh) * Rh)
+
+# Respiration of N is not a biological reality in this case (no NO3 respiration), and is used to maintain C:N ratio. It can be thought of as the release of NH4/urea for example during AA degradation
+
+# Point for discussion with Mick 
+dDINdt = (
+    respirationp - gross_uptakeINp +
+    respirationh - gross_uptakeINh)
+# leakiness of inorganic
+dDICdt = (
+    dic_air_water_exchange +
+    respirationp * Rp - gross_uptakeICp 
+    respirationh * Rh - gross_uptakeICh)
+
+# TODO Need to explain why Max and not just ROS dynamics
+dROSdt = Max( -ROS*ROS_decay + ROSreleasep + ROSreleaseh - ROSbreakdownh, -ROS)
+dABpdt = ABreleasep - ABp*decayABp
+dABhdt = ABreleaseh - ABh*decayABh
+
+
+
+####################################################
 # PRO only model
-dDONdt_ponly = deathp * gammaDp + exudationOp - gross_uptakeONp  + overflowONp  
-dDOCdt_ponly = deathp * gammaDp * Rp + exudationOp *Rp - gross_uptakeOCp + overflowOCp 
-dRDONdt_ponly = deathp * (1 - gammaDp) 
-dRDOCdt_ponly = deathp * (1 - gammaDp) * Rp
-dDINdt_ponly = exudationIp - gross_uptakeINp + overflowINp+ respirationp
-dDICdt_ponly = exudationIp *Rp - gross_uptakeICp + overflowICp + respirationp* Rp + dic_uptake
-dROSdt_ponly = Treleasep  
-dROSdt_ponly  = Max( -ROS*ROS_decay + Treleasep, -ROS)
-dShdt_ponly = Integer(0)
+dDONdt_ponly = (
+    deathp * gammaDp + leakinessOp + overflowNp - gross_uptakeONp) 
+dDOCdt_ponly = (
+    deathp * gammaDp * Rp + leakinessOp * Rp + overflowCp - gross_uptakeOCp)
 
+
+# In discussion can state that if DIN is produced also through overflow or leakiness then this could support Pro growth, but this is not encoded into our model.
+# Assuming that recalcitrant DON isd released only during mortality (discuss release through leakiness)
+# Assuming RDON/RDOC is recalcitrant to both organisms
+
+dRDONdt_ponly = (
+    deathp * (1 - gammaDp))
+dRDOCdt_ponly = (
+    deathp * (1 - gammaDp) * Rp)
+
+# Respiration of N is not a biological reality in this case (no NO3 respiration), and is used to maintain C:N ratio. It can be thought of as the release of NH4/urea for example during AA degradation
+
+# Point for discussion with Mick 
+dDINdt_ponly = (
+    respirationp - gross_uptakeINp)
+# leakiness of inorganic
+dDICdt_ponly = (
+    dic_air_water_exchange +
+    respirationp * Rp - gross_uptakeICp)
+
+# TODO Need to explain why Max and not just ROS dynamics
+dROSdt_ponly = Max( -ROS*ROS_decay + ROSreleasep, -ROS)
+dABhdt_ponly = Integer(0)
+
+####################################################
 # HET only model
-dDONdt_honly = deathh * gammaDh +  exudationOh -  gross_uptakeONh + overflowONh
-dDOCdt_honly = deathh * gammaDh * Rh +  exudationOh * Rh - gross_uptakeOCh + overflowOCh
-dRDONdt_honly = deathh * (1 - gammaDh)
-dRDOCdt_honly = deathh * (1 - gammaDh) * Rh
-dDINdt_honly = exudationIh -  gross_uptakeINh  + overflowINh + respirationh
-dDICdt_honly = exudationIh* Rh -  gross_uptakeICh  + overflowICh + respirationh* Rh + dic_uptake
-dROSdt_honly = Max( -ROS*ROS_decay + Treleaseh - Tbreakdownh, -ROS)
-dSpdt_honly = Integer(0)
+dDONdt_honly = (
+    deathh * gammaDh + leakinessOh + overflowNh - gross_uptakeONh
+    ) 
+dDOCdt_honly = (
+    deathh * gammaDh * Rh + leakinessOh * Rh + overflowCh - gross_uptakeOCh)
+
+
+# In discussion can state that if DIN is produced also through overflow or leakiness then this could support Pro growth, but this is not encoded into our model.
+# Assuming that recalcitrant DON isd released only during mortality (discuss release through leakiness)
+# Assuming RDON/RDOC is recalcitrant to both organisms
+
+dRDONdt_honly = (
+    deathh * (1 - gammaDh))
+dRDOCdt_honly = (
+    deathh * (1 - gammaDh) * Rh)
+
+# Respiration of N is not a biological reality in this case (no NO3 respiration), and is used to maintain C:N ratio. It can be thought of as the release of NH4/urea for example during AA degradation
+
+# Point for discussion with Mick 
+dDINdt_honly = (
+    respirationh - gross_uptakeINh)
+# leakiness of inorganic
+dDICdt_honly = (
+    dic_air_water_exchange +
+    respirationh * Rh - gross_uptakeICh)
+
+# TODO Need to explain why Max and not just ROS dynamics
+dROSdt_honly = Max( -ROS*ROS_decay + ROSreleaseh - ROSbreakdownh, -ROS)
+dABpdt_honly = Integer(0)
 
 
 def print_equations():
-    var_names  = ['Bp',  'Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'Sp', 'Sh']
-    sfunc_list = [dBpdt, dBhdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, dSpdt, dShdt]
+    var_names  = ['Bp',  'Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
+    sfunc_list = [dBpdt, dBhdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, dABpdt, dABhdt]
     for n,f in zip(var_names, sfunc_list):
         print(f'd{n}/dt')
         display(f)
 
 def get_main_data(param_vals_str=param_vals):
-    sfunc_list = [dBpdt, dBhdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, dSpdt, dShdt]
-    var_list   = [ Bp,    Bh,    DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS,    Sp,    Sh]
-    var_names  = ['Bp',  'Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS',   'Sp',  'Sh']
+    sfunc_list = [dBpdt, dBhdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, dABpdt, dABhdt]
+    var_list   = [ Bp,    Bh,    DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS,    ABp,    ABh]
+    var_names  = ['Bp',  'Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS',   'ABp',  'ABh']
     init_vars = [INIT_BP,INIT_BH_CC,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
@@ -620,8 +710,8 @@ def get_main_data(param_vals_str=param_vals):
         gross_uptakeICh,
         gross_uptakeOCh,
 
-        actual_uptakeNp,
-        actual_uptakeNh,
+        net_uptakeNp,
+        net_uptakeNh,
 
         overflowNp,
         overflowCp,
@@ -629,9 +719,9 @@ def get_main_data(param_vals_str=param_vals):
         overflowCh,
 
         deathp , deathh ,
-        exudationOp, exudationIp, exudationOh, exudationIh, 
-        Treleasep, Tbreakdownh,
-        respirationp, respirationh, dic_uptake,
+        leakinessOp, leakinessIp, leakinessOh, leakinessIh, 
+        ROSreleasep, ROSbreakdownh,
+        respirationp, respirationh, dic_air_water_exchange,
         
     ]
     interm_names = [
@@ -654,17 +744,17 @@ def get_main_data(param_vals_str=param_vals):
         'gross_uptakeICh',
         'gross_uptakeOCh',
 
-        'actual_uptakeNp',
-        'actual_uptakeNh',
+        'net_uptakeNp',
+        'net_uptakeNh',
 
         'overflowNp',
         'overflowCp',
         'overflowNh',
         'overflowCh',
         'deathp' , 'deathh' ,
-        'exudationOp', 'exudationIp', 'exudationOh', 'exudationIh', 
-        'Treleasep', 'Tbreakdownh',    
-        'respirationp', 'respirationh', 'dic_uptake',
+        'leakinessOp', 'leakinessIp', 'leakinessOh', 'leakinessIh', 
+        'ROSreleasep', 'ROSbreakdownh',    
+        'respirationp', 'respirationh', 'dic_air_water_exchange',
     ]
 
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
@@ -673,9 +763,9 @@ def get_main_data(param_vals_str=param_vals):
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
 def get_ponly_data(param_vals_str=param_vals):
-    sfunc_list = [dBpdt,  dDONdt_ponly, dRDONdt_ponly, dDINdt_ponly, dDOCdt_ponly, dRDOCdt_ponly, dDICdt_ponly, dROSdt_ponly, dSpdt, dShdt_ponly]
-    var_list   = [ Bp,    DON,    RDON,    DIN,    DOC,    RDOC,  DIC,    ROS,    Sp,   Sh]
-    var_names  = ['Bp',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'Sp', 'Sh']
+    sfunc_list = [dBpdt,  dDONdt_ponly, dRDONdt_ponly, dDINdt_ponly, dDOCdt_ponly, dRDOCdt_ponly, dDICdt_ponly, dROSdt_ponly, dABpdt, dABhdt_ponly]
+    var_list   = [ Bp,    DON,    RDON,    DIN,    DOC,    RDOC,  DIC,    ROS,    ABp,   ABh]
+    var_names  = ['Bp',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
     init_vars = [INIT_BP,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
@@ -696,15 +786,15 @@ def get_ponly_data(param_vals_str=param_vals):
         gross_uptakeICp,
         gross_uptakeOCp,
 
-        actual_uptakeNp,
+        net_uptakeNp,
 
         overflowNp,
         overflowCp,
 
         deathp ,
-        exudationOp, exudationIp, 
-        Treleasep, 
-        respirationp, dic_uptake,
+        leakinessOp, leakinessIp, 
+        ROSreleasep, 
+        respirationp, dic_air_water_exchange,
 
     ]
     interm_names = [
@@ -718,14 +808,14 @@ def get_ponly_data(param_vals_str=param_vals):
         'gross_uptakeONp',
         'gross_uptakeICp',
         'gross_uptakeOCp',
-        'actual_uptakeNp',
+        'net_uptakeNp',
 
         'overflowNp',
         'overflowCp',
         'deathp' , 
-        'exudationOp', 'exudationIp', 
-        'Treleasep',  
-        'respirationp', 'dic_uptake',
+        'leakinessOp', 'leakinessIp', 
+        'ROSreleasep',  
+        'respirationp', 'dic_air_water_exchange',
         
     ]
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
@@ -734,9 +824,9 @@ def get_ponly_data(param_vals_str=param_vals):
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
 def get_honly_data(param_vals_str=param_vals):
-    sfunc_list = [dBhdt, dDONdt_honly, dRDONdt_honly, dDINdt_honly, dDOCdt_honly, dRDOCdt_honly,dDICdt_honly, dROSdt_honly, dSpdt_honly, dShdt]
-    var_list   = [Bh,    DON,    RDON,    DIN,    DOC,    RDOC,   DIC,    ROS,    Sp,   Sh]
-    var_names  = ['Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'Sp', 'Sh']
+    sfunc_list = [dBhdt, dDONdt_honly, dRDONdt_honly, dDINdt_honly, dDOCdt_honly, dRDOCdt_honly,dDICdt_honly, dROSdt_honly, dABpdt_honly, dABhdt]
+    var_list   = [Bh,    DON,    RDON,    DIN,    DOC,    RDOC,   DIC,    ROS,    ABp,   ABh]
+    var_names  = ['Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
     init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
@@ -757,15 +847,15 @@ def get_honly_data(param_vals_str=param_vals):
         gross_uptakeICh,
         gross_uptakeOCh,
 
-        actual_uptakeNh,
+        net_uptakeNh,
 
         overflowNh,
         overflowCh,
 
          deathh ,
-        exudationOh, exudationIh, 
-        Tbreakdownh,
-        respirationh, dic_uptake,
+        leakinessOh, leakinessIh, 
+        ROSbreakdownh,
+        respirationh, dic_air_water_exchange,
     ]
     interm_names = [
         'Xh',
@@ -779,14 +869,14 @@ def get_honly_data(param_vals_str=param_vals):
         'gross_uptakeICh',
         'gross_uptakeOCh',
 
-        'actual_uptakeNh',
+        'net_uptakeNh',
 
         'overflowNh',
         'overflowCh',
         'deathh' ,
-        'exudationOh', 'exudationIh', 
-        'Tbreakdownh',    
-        'respirationh', 'dic_uptake',
+        'leakinessOh', 'leakinessIh', 
+        'ROSbreakdownh',    
+        'respirationh', 'dic_air_water_exchange',
     ]
 
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
@@ -847,10 +937,10 @@ def solver2df_ivp(sol, var_names, interm_names, intermediate_func):
         df['Bp[C]'] = df['Bp']*param_vals[str(Rp)]
     if 'Bh' in df.columns:
         df['Bh[C]'] = df['Bh']*param_vals[str(Rh)]
-    if 'Sp' in df.columns:
-        df['Sp[C]'] = df['Sp']*param_vals[str(Rp)]
-    if 'Sh' in df.columns:
-        df['Sh[C]'] = df['Sh']*param_vals[str(Rh)]
+    if 'ABp' in df.columns:
+        df['ABp[C]'] = df['ABp']*param_vals[str(Rp)]
+    if 'ABh' in df.columns:
+        df['ABh[C]'] = df['ABh']*param_vals[str(Rh)]
     mdf = df.melt(id_vars=['t', 'day'])
     return df, mdf
 
@@ -879,10 +969,10 @@ def solver2df_ode(sol, var_names, interm_names, intermediate_func):
         df['Bp[C]'] = df['Bp']*param_vals[str(Rp)]
     if 'Bh' in df.columns:
         df['Bh[C]'] = df['Bh']*param_vals[str(Rh)]
-    if 'Sp' in df.columns:
-        df['Sp[C]'] = df['Sp']*param_vals[str(Rp)]
-    if 'Sh' in df.columns:
-        df['Sh[C]'] = df['Sh']*param_vals[str(Rh)]
+    if 'ABp' in df.columns:
+        df['ABp[C]'] = df['ABp']*param_vals[str(Rp)]
+    if 'ABh' in df.columns:
+        df['ABh[C]'] = df['ABh']*param_vals[str(Rh)]
     mdf = df.melt(id_vars=['t', 'day'])
     return df, mdf
 
