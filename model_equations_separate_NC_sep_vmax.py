@@ -22,22 +22,22 @@ import re
 import time
 
 # variables
-Bp, Bh, DOC, RDOC, DIC, DON, RDON, DIN, ROS, ABp, ABh = symbols('B_p B_h DOC RDOC DIC DON RDON DIN ROS AB_p AB_h')
+Bp, Bh, DOC, RDOC, DIC, DON, RDON, DIN, ROS, ABp, ABh = symbols('Bp Bh DOC RDOC DIC DON RDON DIN ROS ABp ABh')
 
 
 # parameters
-gammaDp, gammaDh, EOp, EIp, EOh, EIh = symbols('gamma^D_p gamma^D_h E^O_p E^I_p E^O_h E^I_h')
-KABp, KABh, EABp, EABh, MABp, MABh, decayABp, decayABh = symbols('K^AB_p K^AB_h E^AB_p E^AB_h M^AB_p M^AB_h decay^AB_p decay^AB_h')
+gammaDp, gammaDh, EOp, EIp, EOh, EIh = symbols('gammaDp gammaDh EOp EIp EOh EIh')
+KABp, KABh, EABp, EABh, MABp, MABh, decayABp, decayABh = symbols('KABp KABh EABp EABh MABp MABh decayABp decayABh')
 
-Op, Oh = symbols('O_p O_h')
-E_ROSp, E_ROSh, VROSmax, K_ROSh, omegaP, omegaH, ROS_decay= symbols('E^ROS_p E^ROS_h  VROSmax KROS_h omega_p omega_h ROS_decay')
-Mp, Mh = symbols('M_p M_h')
-Rp, Rh = symbols('R_p R_h')
+Op, Oh = symbols('Op Oh')
+E_ROSp, E_ROSh, VROSmax, K_ROSh, omegaP, omegaH, ROS_decay= symbols('E_ROSp E_ROSh VROSmax K_ROSh omegaP omegaH ROS_decay')
+Mp, Mh = symbols('Mp Mh')
+Rp, Rh = symbols('Rp Rh')
 
-KONp, KINp, KOCp, KICp, KONh, KINh, KOCh, KICh = symbols('K^ON_p K^IN_p K^OC_p K^IC_p K^ON_h K^IN_h K^OC_h K^IC_h')
-VmaxONp, VmaxINp, VmaxOCp, VmaxICp, VmaxONh, VmaxINh, VmaxOCh, VmaxICh = symbols('Vmax^ON_p Vmax^IN_p Vmax^OC_p Vmax^IC_p Vmax^ON_h Vmax^IN_h Vmax^OC_h Vmax^IC_h')
+KONp, KINp, KOCp, KICp, KONh, KINh, KOCh, KICh = symbols('KONp KINp KOCp KICp KONh KINh KOCh KICh')
+VmaxONp, VmaxINp, VmaxOCp, VmaxICp, VmaxONh, VmaxINh, VmaxOCh, VmaxICh = symbols('VmaxONp VmaxINp VmaxOCp VmaxICp VmaxONh VmaxINh VmaxOCh VmaxICh')
 
-tau, r0p, r0h, bp, bh = symbols('tau r0_p r0_h b_p b_h')
+tau, r0p, r0h, bp, bh = symbols('tau r0p r0h bp bh')
 
 
 
@@ -198,8 +198,8 @@ param_vals_with_symbols = {
     decayABp : 0.01, 
     
     # 1/d (between -1 to 1)  / seconds_in_day
-    MABp : -0.01 / seconds_in_day, 
-    MABh : -0.01 / seconds_in_day,
+    MABp : 0.01 / seconds_in_day, 
+    MABh : 0.01 / seconds_in_day,
     # DIC (CO2) 
     tau : h / Kg,
     # dark respiration, sec-1 = 0.18 d-1, Geider & Osborne 1989 
