@@ -167,6 +167,9 @@ param_vals_with_symbols = {
     #Vmaxp : 0.8 * 1.9e-9 * pro_vol**0.67 /Qp / seconds_in_day, 
     #Vmaxh : 3 * 1.9e-9 * alt_vol**0.67 / Qh / seconds_in_day, 
 
+    # overflow
+    Oh : 1,
+    Op : 1,
     
     # ROS
 
@@ -188,8 +191,8 @@ param_vals_with_symbols = {
     KABp : 0.17 * pro_vol**0.27 * 100, 
     KABh : 0.17 * pro_vol**0.27 * 100, 
     # umol/cell/d
-    EABp : 0, #1e-20 / Qp / seconds_in_day, 
-    EABh : 0, #1e-20 / Qh / seconds_in_day, 
+    EABp : 1e-20 / Qp / seconds_in_day, 
+    EABh : 1e-20 / Qh / seconds_in_day, 
     # antibiotic decay (1/d)
     decayABh : 0.01, 
     decayABp : 0.01, 
@@ -371,7 +374,7 @@ DISABLE_ROS_SIGNAL = {
     # umol/cell/d
     str(EABp), 
     str(EABh), 
-    # 1/d (between -1 to 1)  / seconds_in_day
+    # 1/d (between 0 to 1)  / seconds_in_day
     str(MABp), 
     str(MABh),
 }
@@ -480,10 +483,11 @@ net_uptakeNh = Min(gross_uptakeINh + gross_uptakeONh,
                      (gross_uptakeICh + gross_uptakeOCh) / Rh)
 
 # inorganic to organic uptake ratio
-# IOuptakeRateNp = gross_uptakeINp / (gross_uptakeINp + gross_uptakeONp)
-# IOuptakeRateCp = gross_uptakeICp / (gross_uptakeICp + gross_uptakeOCp)
-# IOuptakeRateNh = gross_uptakeINh / (gross_uptakeINh + gross_uptakeONh)
-# IOuptakeRateCh = gross_uptakeICh / (gross_uptakeICh + gross_uptakeOCh)
+# used to restrict uptake when overflow is disabled
+IOuptakeRateNp = gross_uptakeONp / (gross_uptakeINp + gross_uptakeONp)
+IOuptakeRateCp = gross_uptakeOCp / (gross_uptakeICp + gross_uptakeOCp)
+IOuptakeRateNh = gross_uptakeONh / (gross_uptakeINh + gross_uptakeONh)
+IOuptakeRateCh = gross_uptakeOCh / (gross_uptakeICh + gross_uptakeOCh)
 
 
 # Overflow quantity 
@@ -493,6 +497,24 @@ overflowNh = gross_uptakeINh + gross_uptakeONh - net_uptakeNh
 # umol C /L
 overflowCp = gross_uptakeICp + gross_uptakeOCp - net_uptakeNp * Rp
 overflowCh = gross_uptakeICh + gross_uptakeOCh - net_uptakeNh * Rh
+
+
+# if overflow is disabled, Oh/Op is 0 and the overflow goes back to the source 
+# using the second half of the formulas below
+# (i.e. some of the non-limited nutrient is just not uptaken, 
+# and O/I preference is based on the organic/inorganic gross uptake ratio)
+# If overflow is enabled, Oh/Op is 1 and we use the second half of the formula, 
+# all overflow goes out as organic compounds
+overflowONp = Op * overflowNp + (1 - Op) * overflowNp * IOuptakeRateNp
+overflowINp =                   (1 - Op) * overflowNp * (1 - IOuptakeRateNp)
+overflowOCp = Op * overflowCp + (1 - Op) * overflowCp * IOuptakeRateCp
+overflowICp =                   (1 - Op) * overflowCp * (1 - IOuptakeRateCp)
+
+overflowONh = Oh * overflowNh + (1 - Oh) * overflowNh * IOuptakeRateNh
+overflowINh =                   (1 - Oh) * overflowNh * (1 - IOuptakeRateNh)
+overflowOCh = Oh * overflowCh + (1 - Oh) * overflowCh * IOuptakeRateCh
+overflowICh =                   (1 - Oh) * overflowCh * (1 - IOuptakeRateCh)
+
 
 # umol N / L
 
@@ -549,12 +571,12 @@ dBhdt = net_uptakeNh - deathh - leakinessOh - respirationh - ABreleaseh
 
 # todo disable overflow
 dDONdt = (
-    deathp * gammaDp + leakinessOp + overflowNp - gross_uptakeONp +
-    deathh * gammaDh + leakinessOh + overflowNh - gross_uptakeONh
+    deathp * gammaDp + leakinessOp + overflowONp - gross_uptakeONp +
+    deathh * gammaDh + leakinessOh + overflowONh - gross_uptakeONh
     ) 
 dDOCdt = (
-    deathp * gammaDp * Rp + leakinessOp * Rp + overflowCp - gross_uptakeOCp +
-    deathh * gammaDh * Rh + leakinessOh * Rh + overflowCh - gross_uptakeOCh)
+    deathp * gammaDp * Rp + leakinessOp * Rp + overflowOCp - gross_uptakeOCp +
+    deathh * gammaDh * Rh + leakinessOh * Rh + overflowOCh - gross_uptakeOCh)
 
 
 # In discussion can state that if DIN is produced also through overflow or leakiness then this could support Pro growth, but this is not encoded into our model.
@@ -572,13 +594,13 @@ dRDOCdt = (
 
 # Point for discussion with Mick 
 dDINdt = (
-    respirationp - gross_uptakeINp +
-    respirationh - gross_uptakeINh)
+    respirationp + overflowINp - gross_uptakeINp +
+    respirationh + overflowINh - gross_uptakeINh)
 # leakiness of inorganic
 dDICdt = (
     dic_air_water_exchange +
-    respirationp * Rp - gross_uptakeICp +
-    respirationh * Rh - gross_uptakeICh)
+    respirationp * Rp + overflowICp - gross_uptakeICp +
+    respirationh * Rh + overflowICh - gross_uptakeICh)
 
 # TODO Need to explain why Max and not just ROS dynamics
 dROSdt = Max( -ROS*ROS_decay + ROSreleasep + ROSreleaseh - ROSbreakdownh, -ROS)
@@ -590,9 +612,9 @@ dABhdt = ABreleaseh - ABh*decayABh
 ####################################################
 # PRO only model
 dDONdt_ponly = (
-    deathp * gammaDp + leakinessOp + overflowNp - gross_uptakeONp) 
+    deathp * gammaDp + leakinessOp + overflowONp - gross_uptakeONp) 
 dDOCdt_ponly = (
-    deathp * gammaDp * Rp + leakinessOp * Rp + overflowCp - gross_uptakeOCp)
+    deathp * gammaDp * Rp + leakinessOp * Rp + overflowOCp - gross_uptakeOCp)
 
 
 # In discussion can state that if DIN is produced also through overflow or leakiness then this could support Pro growth, but this is not encoded into our model.
@@ -608,11 +630,11 @@ dRDOCdt_ponly = (
 
 # Point for discussion with Mick 
 dDINdt_ponly = (
-    respirationp - gross_uptakeINp)
+    respirationp  + overflowINp - gross_uptakeINp)
 # leakiness of inorganic
 dDICdt_ponly = (
     dic_air_water_exchange +
-    respirationp * Rp - gross_uptakeICp)
+    respirationp * Rp  + overflowICp - gross_uptakeICp)
 
 # TODO Need to explain why Max and not just ROS dynamics
 dROSdt_ponly = Max( -ROS*ROS_decay + ROSreleasep, -ROS)
@@ -621,10 +643,10 @@ dABhdt_ponly = Integer(0)
 ####################################################
 # HET only model
 dDONdt_honly = (
-    deathh * gammaDh + leakinessOh + overflowNh - gross_uptakeONh
+    deathh * gammaDh + leakinessOh + overflowONh - gross_uptakeONh
     ) 
 dDOCdt_honly = (
-    deathh * gammaDh * Rh + leakinessOh * Rh + overflowCh - gross_uptakeOCh)
+    deathh * gammaDh * Rh + leakinessOh * Rh + overflowOCh - gross_uptakeOCh)
 
 
 # In discussion can state that if DIN is produced also through overflow or leakiness then this could support Pro growth, but this is not encoded into our model.
@@ -640,11 +662,11 @@ dRDOCdt_honly = (
 
 # Point for discussion with Mick 
 dDINdt_honly = (
-    respirationh - gross_uptakeINh)
+    respirationh + overflowINh - gross_uptakeINh)
 # leakiness of inorganic
 dDICdt_honly = (
     dic_air_water_exchange +
-    respirationh * Rh - gross_uptakeICh)
+    respirationh * Rh + overflowICh - gross_uptakeICh)
 
 # TODO Need to explain why Max and not just ROS dynamics
 dROSdt_honly = Max( -ROS*ROS_decay + ROSreleaseh - ROSbreakdownh, -ROS)
