@@ -22,15 +22,15 @@ import re
 import time
 
 # variables
-Bp, Bh, DOC, RDOC, DIC, DON, RDON, DIN, ROS, ABp, ABh = symbols('B_p B_h DOC RDOC DIC DON RDON DIN ROS S_p S_h')
+Bp, Bh, DOC, RDOC, DIC, DON, RDON, DIN, ROS, ABp, ABh = symbols('B_p B_h DOC RDOC DIC DON RDON DIN ROS AB_p AB_h')
 
 
 # parameters
 gammaDp, gammaDh, EOp, EIp, EOh, EIh = symbols('gamma^D_p gamma^D_h E^O_p E^I_p E^O_h E^I_h')
-KABp, KABh, EABp, EABh, Msp, Msh, decayABp, decayABh = symbols('K^S_p K^S_h E^S_p E^S_h M^S_p M^S_h decay^S_p decay^S_h')
+KABp, KABh, EABp, EABh, MABp, MABh, decayABp, decayABh = symbols('K^AB_p K^AB_h E^AB_p E^AB_h M^AB_p M^AB_h decay^AB_p decay^AB_h')
 
 Op, Oh = symbols('O_p O_h')
-E_ROSp, E_ROSh, VTmax, K_ROSh, omegaP, omegaH, ROS_decay= symbols('E^T_p E^T_h  VTmax KT_h omega_p omega_h ROS_decay')
+E_ROSp, E_ROSh, VROSmax, K_ROSh, omegaP, omegaH, ROS_decay= symbols('E^ROS_p E^ROS_h  VROSmax KROS_h omega_p omega_h ROS_decay')
 Mp, Mh = symbols('M_p M_h')
 Rp, Rh = symbols('R_p R_h')
 
@@ -118,13 +118,13 @@ c_sat = INIT_DIC
 param_vals_with_symbols = {
     # Mortality and refractoriness
     # 1/d
-    Mh: 0.1/ seconds_in_day,
+    Mh : 0.1/ seconds_in_day,
     Mp : 0.1/ seconds_in_day,
     # ratio
     gammaDp : 0.6,         # pro death release 
     gammaDh : 0.6,         # het death release
     
-    # ratio
+    # C:N ratio
     Rp : R_P,
     Rh : R_H,
     
@@ -155,28 +155,25 @@ param_vals_with_symbols = {
     KICh : 0.17 * alt_vol**0.27, 
 
     # 1/d
-    VmaxONp : 1e-2 / seconds_in_day, 
-    VmaxINp : 1 / seconds_in_day, 
-    VmaxOCp : 1e-2 * R_P / Qp / seconds_in_day, 
-    VmaxICp : 1 * R_P / Qp / seconds_in_day, 
-    VmaxONh : 5 / seconds_in_day, 
-    VmaxINh : 5 / seconds_in_day, # x 3 based on sensitivity
-    VmaxOCh : 5 * R_H / seconds_in_day, 
-    VmaxICh : 1e-5 * R_H / Qh / seconds_in_day, 
+    VmaxONp : 0 / seconds_in_day, 
+    VmaxINp : 0.7 / seconds_in_day, 
+    VmaxOCp : 0 * R_P /  seconds_in_day, 
+    VmaxICp : 0.7 * R_P / seconds_in_day, 
+    VmaxONh : 1.3 / seconds_in_day, 
+    VmaxINh : 1.3 / seconds_in_day, # x 3 based on sensitivity
+    VmaxOCh : 1.3 * R_H / seconds_in_day, 
+    VmaxICh : 0 * R_H  / seconds_in_day, 
     
     #Vmaxp : 0.8 * 1.9e-9 * pro_vol**0.67 /Qp / seconds_in_day, 
     #Vmaxh : 3 * 1.9e-9 * alt_vol**0.67 / Qh / seconds_in_day, 
 
-    # overflow rate
-    Op : 0.6, # changed based on sensitivity
-    Oh : 0.6, # changed based on sensitivity
     
     # ROS
 
     # umol/cell/d
     E_ROSp : 1e-10 / Qp / seconds_in_day, 
     E_ROSh : 1e-10 / Qh / seconds_in_day, 
-    VTmax : 1.9e-9 / Qh / seconds_in_day, 
+    VROSmax : 1.9e-9 / Qh / seconds_in_day, 
     # umol/l
     K_ROSh : 0.17 * alt_vol**0.27, 
     # 1/ umol/l
@@ -191,15 +188,15 @@ param_vals_with_symbols = {
     KABp : 0.17 * pro_vol**0.27 * 100, 
     KABh : 0.17 * pro_vol**0.27 * 100, 
     # umol/cell/d
-    EABp : 1e-20 / Qp / seconds_in_day, 
-    EABh : 1e-20 / Qh / seconds_in_day, 
-    # signal decay (1/d)
+    EABp : 0, #1e-20 / Qp / seconds_in_day, 
+    EABh : 0, #1e-20 / Qh / seconds_in_day, 
+    # antibiotic decay (1/d)
     decayABh : 0.01, 
     decayABp : 0.01, 
     
     # 1/d (between -1 to 1)  / seconds_in_day
-    Msp : -0.01 / seconds_in_day, 
-    Msh : -0.01 / seconds_in_day,
+    MABp : -0.01 / seconds_in_day, 
+    MABh : -0.01 / seconds_in_day,
     # DIC (CO2) 
     tau : h / Kg,
     # dark respiration, sec-1 = 0.18 d-1, Geider & Osborne 1989 
@@ -228,9 +225,9 @@ param_vals_neutral_with_symbols = {
     # 1/d
     # EOp : 0.2 / seconds_in_day,        # move to income tax # pro organic leakiness 
     # EIh : 0.2 / seconds_in_day,        # move to income tax # het inorganic leakiness 
-    EOp : 0.1 / seconds_in_day,        # pro organic leakiness 
+    EOp : 0.05 / seconds_in_day,        # pro organic leakiness 
     EIp : 0 / seconds_in_day,          # pro inorganic leakiness
-    EOh : 0.1 / seconds_in_day,          # het organic leakiness 
+    EOh : 0.05 / seconds_in_day,          # het organic leakiness 
     EIh : 0 / seconds_in_day,        # het inorganic leakiness 
     # TODO - change k for organic/inorganic
     # umol/l
@@ -262,14 +259,11 @@ param_vals_neutral_with_symbols = {
     #Vmaxp : 0.8 * 1.9e-9 * pro_vol**0.67 /Qp / seconds_in_day, 
     #Vmaxh : 3 * 1.9e-9 * alt_vol**0.67 / Qh / seconds_in_day, 
 
-    # overflow rate
-    Op : 0.6, # changed based on sensitivity
-    Oh : 0.6, # changed based on sensitivity
     
     # umol/cell/d
-    E_ROSp : 1e-10 / seconds_in_day, 
-    E_ROSh : 1e-10 / seconds_in_day, 
-    VTmax : 1.9e-9 / Qh / seconds_in_day, 
+    E_ROSp : 0, # 1e-10 / seconds_in_day, 
+    E_ROSh : 0, # 1e-10 / seconds_in_day, 
+    VROSmax : 1.9e-9 / Qh / seconds_in_day, 
     # umol/l
     K_ROSh : 0.17 * alt_vol**0.27, 
     # 1/ umol/l 
@@ -285,12 +279,12 @@ param_vals_neutral_with_symbols = {
     KABp : 0.17 * pro_vol**0.27 * 100, 
     KABh : 0.17 * pro_vol**0.27 * 100, 
     # umol/cell/d
-    EABp : 1e-20 / Qp / seconds_in_day, 
-    EABh : 1e-20 / Qh / seconds_in_day, 
+    EABp : 0,  #1e-20 / Qp / seconds_in_day, 
+    EABh : 0, # 1e-20 / Qh / seconds_in_day, 
     # 1/d (between -1 to 1)  / seconds_in_day
-    Msp : -0.01 / seconds_in_day, 
-    Msh : -0.01 / seconds_in_day,
-    # signal decay (1/d)
+    MABp : 0.01 / seconds_in_day, 
+    MABh : 0.01 / seconds_in_day,
+    # antibiotic decay (1/d)
     decayABh : 0.01, 
     decayABp : 0.01, 
 
@@ -365,7 +359,7 @@ DISABLE_ROS_SIGNAL = {
     # ROS
     str(E_ROSh), 
     str(E_ROSp), 
-    str(VTmax), 
+    str(VROSmax), 
     str(K_ROSh), 
     str(omegaP), #0.1,
     str(omegaH), #0.1,
@@ -378,8 +372,8 @@ DISABLE_ROS_SIGNAL = {
     str(EABp), 
     str(EABh), 
     # 1/d (between -1 to 1)  / seconds_in_day
-    str(Msp), 
-    str(Msh),
+    str(MABp), 
+    str(MABh),
 }
 
 DISABLE_MIXOTROPHY = {
@@ -388,8 +382,6 @@ DISABLE_MIXOTROPHY = {
 }
 
 DISABLE_EXUDATION_OVERFLOW = {
-    str(Op), 
-    str(Oh), 
     str(EOp),
     str(EIp),
     str(EOh),
@@ -504,19 +496,6 @@ overflowCh = gross_uptakeICh + gross_uptakeOCh - net_uptakeNh * Rh
 
 # umol N / L
 
-# TODO
-# overflowINp =                   (1 - Op) * overflowNp * IOuptakeRateNp
-# overflowONp = Op * overflowNp + (1 - Op) * overflowNp * (1 - IOuptakeRateNp)
-
-# overflowICp =                   (1 - Op) * overflowCp * IOuptakeRateCp
-# overflowOCp = Op * overflowCp + (1 - Op) * overflowCp * (1 - IOuptakeRateCp)
-
-# overflowINh = Oh * overflowNh + (1 - Oh) * overflowNh * IOuptakeRateNh
-# overflowONh =                   (1 - Oh) * overflowNh * (1 - IOuptakeRateNh)
-# overflowICh = Oh * overflowCh + (1 - Oh) * overflowCh * IOuptakeRateCh
-# overflowOCh =                   (1 - Oh) * overflowCh * (1 - IOuptakeRateCh)
-
-
 # Respiration – growth associated bp/bh and maintenance associated r0p/r0h
 # b * growth + r0 * biomass
 respirationp =  bp* net_uptakeNp + Bp * r0p
@@ -533,9 +512,8 @@ dic_air_water_exchange   =  - (DIC - c_sat) / tau
 # Maximum death rate everyone dead in one sec
 # minimum death rate - 0
 # If only AB then effect of AB on mortality is only positive
-# todo - make +
-death_ratep = Min(Max(Mp - Msp*limABh, 0), 1 )
-death_rateh = Min(Max(Mh - Msh*limABp, 0), 1 )
+death_ratep = Min(Mp + MABp*limABh, 1 )
+death_rateh = Min(Mh + MABh*limABp, 1 )
 
 
 # Need to explain why we used exponential decay – in ISMEJ we show that other formulations are better for co-cuiltures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
@@ -551,11 +529,11 @@ leakinessIh = EIh * Bh
 
 # ROS production depends on biomass
 # epsilon = epsilon / Q
-# VTMax = VTmax / Q
+# VTMax = VROSmax / Q
 
 ROSreleasep = E_ROSp * Bp
 ROSreleaseh = E_ROSh * Bh
-ROSbreakdownh = VTmax * ROS / (ROS + K_ROSh) * Bh
+ROSbreakdownh = VROSmax * ROS / (ROS + K_ROSh) * Bh
 
 # AB
 # TODO Change to antibiotic
@@ -568,6 +546,8 @@ ABreleaseh = EABh * Bh
 # final equation - coculture
 dBpdt = net_uptakeNp - deathp - leakinessOp - respirationp - ABreleasep
 dBhdt = net_uptakeNh - deathh - leakinessOh - respirationh - ABreleaseh
+
+# todo disable overflow
 dDONdt = (
     deathp * gammaDp + leakinessOp + overflowNp - gross_uptakeONp +
     deathh * gammaDh + leakinessOh + overflowNh - gross_uptakeONh
@@ -597,7 +577,7 @@ dDINdt = (
 # leakiness of inorganic
 dDICdt = (
     dic_air_water_exchange +
-    respirationp * Rp - gross_uptakeICp 
+    respirationp * Rp - gross_uptakeICp +
     respirationh * Rh - gross_uptakeICh)
 
 # TODO Need to explain why Max and not just ROS dynamics
@@ -722,7 +702,7 @@ def get_main_data(param_vals_str=param_vals):
         leakinessOp, leakinessIp, leakinessOh, leakinessIh, 
         ROSreleasep, ROSbreakdownh,
         respirationp, respirationh, dic_air_water_exchange,
-        
+        limICp,  exp(-omegaP*ROS),
     ]
     interm_names = [
         'Xp', 'Xh',
@@ -755,6 +735,8 @@ def get_main_data(param_vals_str=param_vals):
         'leakinessOp', 'leakinessIp', 'leakinessOh', 'leakinessIh', 
         'ROSreleasep', 'ROSbreakdownh',    
         'respirationp', 'respirationh', 'dic_air_water_exchange',
+        
+        'limICp',  'exp(-omegaP*ROS)',
     ]
 
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
