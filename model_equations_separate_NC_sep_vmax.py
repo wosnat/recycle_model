@@ -21,6 +21,8 @@ import sys
 import re
 import time
 
+import calc_csat
+
 # variables
 Bp, Bh, DOC, RDOC, DIC, DON, RDON, DIN, ROS, ABp, ABh = symbols('Bp Bh DOC RDOC DIC DON RDON DIN ROS ABp ABh')
 
@@ -110,9 +112,55 @@ INIT_SH = 0
 
 
 # DIC exchange
-h = 0.3 # height in m
-Kg = 0.4968 / seconds_in_day # m sec-1 = 0.7 cm h-1 from Cole & Caraco 1998
-c_sat = INIT_DIC
+h = 0.115 # height in m of media in the tube
+Kg = 1.40E-06; #% m sec-1 measured in the lab
+# Kg = 0.4968 / seconds_in_day # m sec-1 = 0.7 cm h-1 from Cole & Caraco 1998
+#c_sat = INIT_DIC
+
+# from Michal:
+# % CO2 parameters
+# Kg = 0.4968/86400; #% m sec-1 = 0.7 cm h-1 from Cole & Caraco 1998
+
+B  = 10;           #% Revelle buffer factor, Mick's book
+ 
+rhoref = 1024.5;        #% reference density of seawater
+thetaK = 273.15 + 22.0; #% temperature (degrees K) 
+salt   = 34.5;          #% salinity (PSU) 
+pt     = 50 * rhoref / 1e6;  #% inorganic phosphate (mol/^3) 
+sit    = 0.0;           #% inorganic silicate (mol/^3) 
+pCO2   = 400e-6;        # atmospheric reference pCO2 level (atmospheres)
+                        # for which to find equilibrium dic, csat
+ta      = 2711 * rhoref / 1e6; # total alkalinity (eq/m^3), from Dalit
+# (alk from To new PRO99 medium. addition of 1mM BC)
+
+# equilibrium total inorganic carbon (mol/m^3)
+csatd = calc_csat.calc_csat(T=thetaK, S=salt, pco2eq=pCO2, pt=pt, sit=sit, ta=ta)
+c_sat = csatd * 1e6 / rhoref; 
+#    h = (.09/-27/86400)*i+.105; % the hight of the water columns in meters
+#    
+#    % alkalinity and Csat calculation
+#    ta1     = (112.46/86400)*i + 2617.6;
+#    ta      = ta1 * rhoref / 1e6;
+#    [csatd] = calc_csat(thetaK, salt, pCO2, pt, sit, ta);
+#    Csat    = csatd * 1e6 / rhoref;
+
+# initial concentrations
+INIT_DIN = 100
+INIT_DON = 20
+INIT_RDON = 0
+INIT_RDOC = 0
+# Dalit DIC: 1618.825333  or 1.62E+03 uM
+INIT_DIC = c_sat
+
+# Dalit: DOC 0.047155376888899 nM ?
+# Dalit init TOC 16 mM
+INIT_DOC = INIT_DON * R_CN
+INIT_BP = 1e9 * Qp
+INIT_BH = 1e10 * Qh
+INIT_BH_CC = 5e9 * Qh # the actual concentration in the measurements
+INIT_ROS = 0.2 # Morris, J. Jeffrey, et al. "Dependence of the cyanobacterium Prochlorococcus on hydrogen peroxide scavenging microbes for growth at the ocean's surface." PloS one 6.2 (2011): e16805.‏
+INIT_SP = 0
+INIT_SH = 0
 
 
 param_vals_with_symbols = {
@@ -522,8 +570,11 @@ overflowICh =                   (1 - Oh) * overflowCh * (1 - IOuptakeRateCh)
 # b * growth + r0 * biomass
 respirationp =  bp* net_uptakeNp + Bp * r0p
 respirationh =  bh* net_uptakeNh + Bh * r0h
-dic_air_water_exchange   =  - (DIC - c_sat) / tau
 
+
+
+#dic_air_water_exchange   =  - (DIC - c_sat) / tau
+dic_air_water_exchange   = - (DIC - c_sat) / ((h * DIC) / (Kg * B * 0.01 * DIC))
 
 
 
