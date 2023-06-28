@@ -32,7 +32,7 @@ gammaDp, gammaDh, EOp, EIp, EOh, EIh = symbols('gammaDp gammaDh EOp EIp EOh EIh'
 KABp, KABh, EABp, EABh, MABp, MABh, decayABp, decayABh = symbols('KABp KABh EABp EABh MABp MABh decayABp decayABh')
 
 Op, Oh = symbols('Op Oh')
-E_ROSp, E_ROSh, VROSmax, K_ROSh, omegaP, omegaH, ROS_decay= symbols('E_ROSp E_ROSh VROSmax K_ROSh omegaP omegaH ROS_decay')
+E_ROSp, E_ROSh, VmaxROSh, K_ROSh, omegaP, omegaH, ROS_decay= symbols('E_ROSp E_ROSh VmaxROSh K_ROSh omegaP omegaH ROS_decay')
 Mp, Mh = symbols('Mp Mh')
 Rp, Rh = symbols('Rp Rh')
 
@@ -125,12 +125,12 @@ B  = 10;           #% Revelle buffer factor, Mick's book
  
 rhoref = 1024.5;        #% reference density of seawater
 thetaK = 273.15 + 22.0; #% temperature (degrees K) 
-salt   = 34.5;          #% salinity (PSU) 
+salt   = 38.5;          #% salinity (PSU) 
 pt     = 50 * rhoref / 1e6;  #% inorganic phosphate (mol/^3) 
 sit    = 0.0;           #% inorganic silicate (mol/^3) 
 pCO2   = 400e-6;        # atmospheric reference pCO2 level (atmospheres)
                         # for which to find equilibrium dic, csat
-ta      = 2711 * rhoref / 1e6; # total alkalinity (eq/m^3), from Dalit
+ta      = 2650 * rhoref / 1e6; # total alkalinity (eq/m^3), from Dalit
 # (alk from To new PRO99 medium. addition of 1mM BC)
 
 # equilibrium total inorganic carbon (mol/m^3)
@@ -165,36 +165,14 @@ INIT_SH = 0
 def get_param_vals(model_name):
     param_df = pd.read_excel( 'Model_Parameters.xlsx',)
     param_df['values'] = param_df['full model']
-    if model_name is not None:
-        model_col = f'param hardcoded (disabled) {model_name} model'
+    if model_name not in [None, 'FULL']:
+        model_col = f'{model_name} model hardcoded parameters'
         param_df.loc[~param_df[model_col].isna(), 'values'] = param_df.loc[~param_df[model_col].isna(), model_col] 
-    param_vals1 = param_df['values']
-    param_vals1.index = param_df.parameter
-    return param_vals1.to_dict()
+    param_vals_series = param_df['values']
+    param_vals_series.index = param_df.parameter
+    return param_vals_series.to_dict()
     
 
-param_vals_with_symbols = {
-    # Mortality and refractoriness
-    # 1/d
-    Mh : 0.1/ seconds_in_day,
-    Mp : 0.1/ seconds_in_day,
-    # ratio
-    gammaDp : 0.6,         # pro death release 
-    gammaDh : 0.6,         # het death release
-    
-    # C:N ratio
-    Rp : R_P,
-    Rh : R_H,
-    
-    # leakiness rates (“property tax”)
-    # 1/d
-    # EOp : 0.2 / seconds_in_day,        # move to income tax # pro organic leakiness 
-    # EIh : 0.2 / seconds_in_day,        # move to income tax # het inorganic leakiness 
-    EOp : 0.1 / seconds_in_day,        # pro organic leakiness 
-    EIp : 0 / seconds_in_day,          # pro inorganic leakiness
-    EOh : 0.1 / seconds_in_day,          # het organic leakiness 
-    EIh : 0 / seconds_in_day,        # het inorganic leakiness 
-    
     # K’s (affinity).
     # TODO - change k for organic/inorganic
     # umol/l
@@ -203,95 +181,36 @@ param_vals_with_symbols = {
     # K >> N --> >> 0 --> no uptake
     # K << N --> >> 1 --> max uptake
 
-    KONp : 0.17 * pro_vol**0.27, 
-    KINp : 0.17 * pro_vol**0.27, # x 5 based on sensitivity
-    KOCp : 0.17 * pro_vol**0.27, 
-    KICp : 0.17 * pro_vol**0.27, 
-    KONh : 0.17 * alt_vol**0.27, 
-    KINh : 0.17 * alt_vol**0.27, # / 10 based on sensitivity
-    KOCh : 0.17 * alt_vol**0.27, # x 5 based on sensitivity
-    KICh : 0.17 * alt_vol**0.27, 
-
-    # 1/d
-    VmaxONp : 0 / seconds_in_day, 
-    VmaxINp : 0.7 / seconds_in_day, 
-    VmaxOCp : 0 * R_P /  seconds_in_day, 
-    VmaxICp : 0.7 * R_P / seconds_in_day, 
-    VmaxONh : 1.3 / seconds_in_day, 
-    VmaxINh : 1.3 / seconds_in_day, # x 3 based on sensitivity
-    VmaxOCh : 1.3 * R_H / seconds_in_day, 
-    VmaxICh : 0 * R_H  / seconds_in_day, 
-    
-    #Vmaxp : 0.8 * 1.9e-9 * pro_vol**0.67 /Qp / seconds_in_day, 
-    #Vmaxh : 3 * 1.9e-9 * alt_vol**0.67 / Qh / seconds_in_day, 
-
-    # overflow
-    Oh : 1,
-    Op : 1,
-    
-    # ROS
-
-    # umol/cell/d
-    E_ROSp : 1e-10 / Qp / seconds_in_day, 
-    E_ROSh : 1e-10 / Qh / seconds_in_day, 
-    VROSmax : 1.9e-9 / Qh / seconds_in_day, 
-    # umol/l
-    K_ROSh : 0.17 * alt_vol**0.27, 
-    # 1/ umol/l
-    omegaP : 0.01, #0.1,
-    omegaH : 0.00001, #0.1,
-    
-    # ROS decay 
-    ROS_decay : 0.01,
-    
-    # antibiotic
-    # umolN/L
-    KABp : 0.17 * pro_vol**0.27 * 100, 
-    KABh : 0.17 * pro_vol**0.27 * 100, 
-    # umol/cell/d
-    EABp : 1e-20 / Qp / seconds_in_day, 
-    EABh : 1e-20 / Qh / seconds_in_day, 
-    # antibiotic decay (1/d)
-    decayABh : 0.01, 
-    decayABp : 0.01, 
-    
-    # 1/d (between -1 to 1)  / seconds_in_day
-    MABp : 0.01 / seconds_in_day, 
-    MABh : 0.01 / seconds_in_day,
-    # DIC (CO2) 
-    tau : h / Kg,
-    # dark respiration, sec-1 = 0.18 d-1, Geider & Osborne 1989 
-    r0p : 0.18 / seconds_in_day, 
-    r0h : 0.18 / seconds_in_day,  
-    # respiration coefficient, no units, Geider & Osborne 1989
-    bp  : 0.01, 
-    bh  : 0.01,
-    
-}
-param_vals = {str(k) : v for k,v in param_vals_with_symbols.items()}
 
 param_vals = get_param_vals(None)
 
+def get_param_tuning_values(model_name, organism_to_tune):
+    """ return 
+    params_to_update (list of strings)
+    bounds (list of pairs)
+    log_params (list of bools
+    """
+    param_df = pd.read_excel( 'Model_Parameters.xlsx',)
+    org_col = f'Tunable parameters ({organism_to_tune} fitting)'
 
-param_vals_neutral_with_symbols = {
-    # 1/d
-    Mh: 0.1/ seconds_in_day,
-    Mp : 0.1/ seconds_in_day,
-    # ratio
-    gammaDp : 0.8,         # pro death release 
-    gammaDh : 0.8,         # het death release
+    if model_name not in [None, 'FULL']:
+        # restrict to given model
+        model_col = f'{model_name} model hardcoded parameters'
+        tunable_param_df = param_df.loc[param_df[model_col].isna() & param_df[org_col].isin(['Yes'])] 
+    else: 
+        # take the full model
+        tunable_param_df = param_df.loc[param_df[org_col].isin(['Yes'])] 
+
+    params_to_update = list(tunable_param_df['parameter'])    
+    bounds = list(zip(tunable_param_df['lower bound'],tunable_param_df['upper bound']))    
     
-    # ratio
-    Rp : R_P,
-    Rh : R_H,
+    log_params = list(tunable_param_df['logscale fitting'].map({'Yes': True, 'No': 'False'}))                
+
+    return (params_to_update, bounds, log_params)
+
     
-    # 1/d
-    # EOp : 0.2 / seconds_in_day,        # move to income tax # pro organic leakiness 
-    # EIh : 0.2 / seconds_in_day,        # move to income tax # het inorganic leakiness 
-    EOp : 0.05 / seconds_in_day,        # pro organic leakiness 
-    EIp : 0 / seconds_in_day,          # pro inorganic leakiness
-    EOh : 0.05 / seconds_in_day,          # het organic leakiness 
-    EIh : 0 / seconds_in_day,        # het inorganic leakiness 
+
+    # K’s (affinity).
     # TODO - change k for organic/inorganic
     # umol/l
     # K = 0 --> 1
@@ -299,157 +218,11 @@ param_vals_neutral_with_symbols = {
     # K >> N --> >> 0 --> no uptake
     # K << N --> >> 1 --> max uptake
 
-    KONp : 0.17 * pro_vol**0.27, 
-    KINp : 0.17 * pro_vol**0.27, # x 5 based on sensitivity
-    KOCp : 0.17 * pro_vol**0.27, 
-    KICp : 0.17 * pro_vol**0.27, 
-    KONh : 0.17 * alt_vol**0.27, 
-    KINh : 0.17 * alt_vol**0.27, # / 10 based on sensitivity
-    KOCh : 0.17 * alt_vol**0.27, # x 5 based on sensitivity
-    KICh : 0.17 * alt_vol**0.27, 
-    # umol N/cell/d
-    # vmax = muinfp* VmaxIp * Qp
-    # 1/day  * umol/cell  * umol/cell/d # TODO - figure out units
-    VmaxONp : 0.7 * 1.9e-9 / Qp / seconds_in_day, 
-    VmaxINp : 0.7 * 1.9e-9 / Qp / seconds_in_day, 
-    VmaxOCp : 0.7 * 1.9e-9 * R_P / Qp / seconds_in_day, 
-    VmaxICp : 0.7 * 1.9e-9 * R_P / Qp / seconds_in_day, 
-    VmaxONh : 2 * 1.9e-9 / Qh / seconds_in_day, 
-    VmaxINh : 2 * 1.9e-9 / Qh / seconds_in_day, # x 3 based on sensitivity
-    VmaxOCh : 2 * 1.9e-9 * R_H / Qh / seconds_in_day, 
-    VmaxICh : 2 * 1.9e-9 / 10000 * R_H / Qh / seconds_in_day, 
-    
-    #Vmaxp : 0.8 * 1.9e-9 * pro_vol**0.67 /Qp / seconds_in_day, 
-    #Vmaxh : 3 * 1.9e-9 * alt_vol**0.67 / Qh / seconds_in_day, 
 
-    
-    # umol/cell/d
-    E_ROSp : 0, # 1e-10 / seconds_in_day, 
-    E_ROSh : 0, # 1e-10 / seconds_in_day, 
-    VROSmax : 1.9e-9 / Qh / seconds_in_day, 
-    # umol/l
-    K_ROSh : 0.17 * alt_vol**0.27, 
-    # 1/ umol/l 
-    # How much do the ROS affect growth
-
-    omegaP : 0.01, #0.1,
-    omegaH : 0.00001, #0.1,
-    
-    ROS_decay : 0.01, 
-    
-    # Signals
-    # umolN/L
-    KABp : 0.17 * pro_vol**0.27 * 100, 
-    KABh : 0.17 * pro_vol**0.27 * 100, 
-    # umol/cell/d
-    EABp : 0,  #1e-20 / Qp / seconds_in_day, 
-    EABh : 0, # 1e-20 / Qh / seconds_in_day, 
-    # 1/d (between -1 to 1)  / seconds_in_day
-    MABp : 0.01 / seconds_in_day, 
-    MABh : 0.01 / seconds_in_day,
-    # antibiotic decay (1/d)
-    decayABh : 0.01, 
-    decayABp : 0.01, 
-
-    # DIC (CO2) 
-    tau : h / Kg,
-    # dark respiration, sec-1 = 0.18 d-1, Geider & Osborne 1989 
-    r0p : 0.18 / seconds_in_day, 
-    r0h : 0.18 / seconds_in_day,  
-    # respiration coefficient, no units, Geider & Osborne 1989
-    bp  : 0.01, 
-    bh  : 0.01,
-    
-}
-param_vals_neutral = {str(k) : v for k,v in param_vals_neutral_with_symbols.items()}
+param_vals = get_param_vals(None)
 
 
 
-from enum import Flag, auto
-class DISABLE_MECHANISMS(Flag):
-    COMPETITION = auto()
-    P_RECYCLING = auto()
-    H_RECYCLING = auto()
-    P_EXUDATION = auto()
-    H_EXUDATION = auto()
-    P_OVERFLOW = auto()
-    H_OVERFLOW = auto()
-    MIXOTROPHY = auto()
-    DETOXIFICATION = auto()
-    P_SIGNAL = auto()
-    H_SIGNAL = auto()
-
-
-def disable_mechanism(mechanisms, param_vals):
-    ''' change the param vals to disable a given interaction mechanism
-    use | to disable multiple mechanisms
-    
-    '''
-    new_param_vals = param_vals.copy()
-    if DISABLE_MECHANISMS.COMPETITION in mechanisms:
-        new_param_vals[str(VmaxINh)] = new_param_vals[str(VmaxINh)] * 1e-3
-    if DISABLE_MECHANISMS.P_RECYCLING in mechanisms:
-        new_param_vals[str(gammaDp)] = 0
-    if DISABLE_MECHANISMS.H_RECYCLING in mechanisms:
-        new_param_vals[str(gammaDh)] = 0
-    if DISABLE_MECHANISMS.P_EXUDATION in mechanisms:
-        new_param_vals[str(EOp)] = 0
-        new_param_vals[str(EIp)] = 0
-    if DISABLE_MECHANISMS.H_EXUDATION in mechanisms:
-        new_param_vals[str(EOh)] = 0
-        new_param_vals[str(EIh)] = 0
-    if DISABLE_MECHANISMS.P_OVERFLOW in mechanisms:
-        new_param_vals[str(Op)] = 0
-    if DISABLE_MECHANISMS.H_OVERFLOW in mechanisms:
-        new_param_vals[str(Oh)] = 0
-    if DISABLE_MECHANISMS.MIXOTROPHY in mechanisms:
-        new_param_vals[str(VmaxONp)] = new_param_vals[str(VmaxONp)] * 50
-        new_param_vals[str(VmaxOCp)] = new_param_vals[str(VmaxOCp)] * 50
-    if DISABLE_MECHANISMS.DETOXIFICATION in mechanisms:
-        new_param_vals[str(omegaP)] = 0
-        new_param_vals[str(omegaH)] = 0
-    if DISABLE_MECHANISMS.P_SIGNAL in mechanisms:
-        new_param_vals[str(EABp)] = 0
-    if DISABLE_MECHANISMS.H_SIGNAL in mechanisms:
-        new_param_vals[str(EABh)] = 0
-
-    return new_param_vals
-
-
-
-# different model configurations
-DISABLE_ROS_SIGNAL = {
-    # ROS
-    str(E_ROSh), 
-    str(E_ROSp), 
-    str(VROSmax), 
-    str(K_ROSh), 
-    str(omegaP), #0.1,
-    str(omegaH), #0.1,
-    
-    # Signals
-    # umolN/L
-    str(KABp), 
-    str(KABh), 
-    # umol/cell/d
-    str(EABp), 
-    str(EABh), 
-    # 1/d (between 0 to 1)  / seconds_in_day
-    str(MABp), 
-    str(MABh),
-}
-
-DISABLE_MIXOTROPHY = {
-    str(VmaxONp), 
-    str(VmaxOCp), 
-}
-
-DISABLE_EXUDATION_OVERFLOW = {
-    str(EOp),
-    str(EIp),
-    str(EOh),
-    str(EIh),
-}
 
 
 def model_partial(disable_set, param_vals, params_to_update, bounds, log_params):
@@ -590,6 +363,10 @@ dic_air_water_exchange   = - (DIC - c_sat) / ((h * DIC) / (Kg * B * 0.01 * DIC))
 
 # M = M / Q
 
+# AB (antibiotics)
+ABreleasep = EABp * Bp 
+ABreleaseh = EABh * Bh
+
 # death = M * X = M * B /Q = M / Q * B
 # death rate should be between 0 - 1
 # Maximum death rate everyone dead in one sec
@@ -613,16 +390,12 @@ leakinessIh = EIh * Bh
 
 # ROS production depends on biomass
 # epsilon = epsilon / Q
-# VTMax = VROSmax / Q
+# VTMax = VmaxROSh / Q
 
 ROSreleasep = E_ROSp * Bp
 ROSreleaseh = E_ROSh * Bh
-ROSbreakdownh = VROSmax * ROS / (ROS + K_ROSh) * Bh
+ROSbreakdownh = VmaxROSh * ROS / (ROS + K_ROSh) * Bh
 
-# AB
-# TODO Change to antibiotic
-ABreleasep = EABp * Bp 
-ABreleaseh = EABh * Bh
 
 # We assume that the vast m,ajority of C and N biomass is in organic form, hence leakiness is to organic. We assume that overflow is also to organic in both organisms, as for the phototroph this is the release of fixed C (or inorganic N incorporated into e.g. AA) which cannot be used for growth. For the heterotrophs we assume overflow metabolism to be the inefficient use of organic C (e.g. not fully oxidized) to maximize growth rate (*citation E coli).
 
@@ -742,7 +515,7 @@ def print_equations():
         print(f'd{n}/dt')
         display(f)
 
-def get_main_data(param_vals_str=param_vals):
+def get_main_data(param_vals_str):
     sfunc_list = [dBpdt, dBhdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, dABpdt, dABhdt]
     var_list   = [ Bp,    Bh,    DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS,    ABp,    ABh]
     var_names  = ['Bp',  'Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS',   'ABp',  'ABh']
@@ -828,7 +601,7 @@ def get_main_data(param_vals_str=param_vals):
 
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
-def get_ponly_data(param_vals_str=param_vals):
+def get_ponly_data(param_vals_str):
     sfunc_list = [dBpdt,  dDONdt_ponly, dRDONdt_ponly, dDINdt_ponly, dDOCdt_ponly, dRDOCdt_ponly, dDICdt_ponly, dROSdt_ponly, dABpdt, dABhdt_ponly]
     var_list   = [ Bp,    DON,    RDON,    DIN,    DOC,    RDOC,  DIC,    ROS,    ABp,   ABh]
     var_names  = ['Bp',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
@@ -889,7 +662,7 @@ def get_ponly_data(param_vals_str=param_vals):
 
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
-def get_honly_data(param_vals_str=param_vals):
+def get_honly_data(param_vals_str):
     sfunc_list = [dBhdt, dDONdt_honly, dRDONdt_honly, dDINdt_honly, dDOCdt_honly, dRDOCdt_honly,dDICdt_honly, dROSdt_honly, dABpdt_honly, dABhdt]
     var_list   = [Bh,    DON,    RDON,    DIN,    DOC,    RDOC,   DIC,    ROS,    ABp,   ABh]
     var_names  = ['Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
@@ -992,7 +765,7 @@ def run_solver_ivp(calc_dydt, init_vars, days, t_eval):
     return sol
 
 
-def solver2df_ivp(sol, var_names, interm_names, intermediate_func):
+def solver2df_ivp(sol, var_names, interm_names, intermediate_func, param_vals):
     d = dict(zip(var_names, sol.y))
     d['t'] = sol.t
     df = pd.DataFrame(data=d)
@@ -1024,7 +797,7 @@ def run_solver_ode(calc_dydt, init_vars, days, t_eval):
     return t_eval, y
     #return solver2df_ode(sol, t_eval, var_names, interm_names, intermediate_func)
 
-def solver2df_ode(sol, var_names, interm_names, intermediate_func):
+def solver2df_ode(sol, var_names, interm_names, intermediate_func, param_vals):
     d = dict(zip(var_names, sol[1].T))
     d['t'] = sol[0]
     df = pd.DataFrame(data=d)
@@ -1050,8 +823,8 @@ def run_solver(calc_dydt, init_vars, days=140, t_eval=None):
     print ('simulation time', tend - tstart)
     return sol
     
-def solver2df(sol, var_names, interm_names, intermediate_func):
-    return solver2df_ode(sol, var_names, interm_names, intermediate_func)
+def solver2df(sol, var_names, interm_names, intermediate_func, param_vals):
+    return solver2df_ode(sol, var_names, interm_names, intermediate_func, param_vals)
 
 def get_t_eval(maxday, step = 3600*4, ref_times = None):
     tstart = 0
@@ -1088,7 +861,7 @@ def _rmse(refdf, df, refcol, col):
     return mean_squared_error(tdf[col], smallrefdf[refcol])
    
 
-def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix):
+def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, param_vals):
     perr = -1
     herr = -1
     new_params = json2params(param_vals, json_fpath)

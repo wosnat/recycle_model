@@ -34,114 +34,6 @@ from itertools import combinations
 
 from model_equations_separate_NC_sep_vmax import *
 
-def generate_samples():
-
-    problem = {
-        'num_vars': len(params_to_update),
-        'names': params_to_update,
-        'bounds': bounds,
-    }
-
-
-params_to_update = [
-    'M_h', 'M_p', 'gamma^D_p', 'gamma^D_h', 
-    #'R_p', 'R_h', 
-    'E^O_p', 'E^I_p', 'E^O_h', 'E^I_h', 
-    'K^ON_p', 'K^IN_p', 'K^OC_p', 'K^IC_p', 'K^ON_h', 'K^IN_h', 'K^OC_h', 'K^IC_h', 
-    'Vmax^ON_p', 
-    'Vmax^IN_p', 
-    'Vmax^OC_p', 
-    'Vmax^IC_p', 'Vmax^ON_h', 'Vmax^IN_h', 'Vmax^OC_h', 
-    #'Vmax^IC_h', 
-    'O_p', 'O_h', 'epsilon', 'VTmax', 'KT_h', 'omega',
-    'K^S_p', 'K^S_h', 'E^S_p', 'E^S_h', 'M^S_p', 'M^S_h', 
-
-]
-
-bounds = [
-    (0/ seconds_in_day,1/ seconds_in_day ), # 'M_h', 
-    (0/ seconds_in_day,1/ seconds_in_day ), # 'M_p', 
-    (0,1 ), # 'gamma^D_p', 
-    (0,1 ), # 'gamma^D_h', 
-    # ?? 'R_p', 'R_h', 
-    
-    (0/ seconds_in_day,0.9/ seconds_in_day ), # 'E^O_p', 
-    (0/ seconds_in_day,0.9/ seconds_in_day ), # 'E^I_p',
-    (0/ seconds_in_day,0.9/ seconds_in_day ), # 'E^O_h',
-    (0/ seconds_in_day,0.9/ seconds_in_day ), # 'E^I_h',
-    (param_vals_neutral[str(KONp)]/10,param_vals_neutral[str(KONp)]*10 ), # 'K^ON_p', 
-    (param_vals_neutral[str(KINp)]/10,param_vals_neutral[str(KINp)]*10 ), # 'K^IN_p', 
-    (param_vals_neutral[str(KOCp)]/10,param_vals_neutral[str(KOCp)]*10 ), # 'K^OC_p', 
-    (param_vals_neutral[str(KICp)]/10,param_vals_neutral[str(KICp)]*10 ), # 'K^IC_p', 
-    (param_vals_neutral[str(KONh)]/10,param_vals_neutral[str(KONh)]*10 ), # 'K^ON_h',  
-    (param_vals_neutral[str(KINh)]/10,param_vals_neutral[str(KINh)]*10 ), # 'K^IN_h', 
-    (param_vals_neutral[str(KOCh)]/10,param_vals_neutral[str(KOCh)]*10 ), # 'K^OC_h', 
-    (param_vals_neutral[str(KICh)]/10,param_vals_neutral[str(KICh)]*10 ), # 'K^IC_h', 
-    (param_vals_neutral[str(VmaxONp)]/10,param_vals_neutral[str(VmaxONp)]*10 ), #  'Vmax^ON_p',
-    (param_vals_neutral[str(VmaxINp)]/10,param_vals_neutral[str(VmaxINp)]*10 ), #  'Vmax^IN_p',
-    (param_vals_neutral[str(VmaxOCp)]/10,param_vals_neutral[str(VmaxOCp)]*10 ), # 'Vmax^OC_p', 
-    (param_vals_neutral[str(VmaxICp)]/10,param_vals_neutral[str(VmaxICp)]*10 ), # 'Vmax^IC_p', 
-    (param_vals_neutral[str(VmaxONh)]/10,param_vals_neutral[str(VmaxONh)]*10 ), # 'Vmax^ON_h', 
-    (param_vals_neutral[str(VmaxINh)]/10,param_vals_neutral[str(VmaxINh)]*10 ), # 'Vmax^IN_h', 
-    (param_vals_neutral[str(VmaxOCh)]/10,param_vals_neutral[str(VmaxOCh)]*10 ), # 'Vmax^OC_h', 
-    # 'Vmax^IC_h', 
-    (0, 1 ), # 'O_p', 
-    (0, 1 ), # 'O_h', 
-    (0/ seconds_in_day,1/ seconds_in_day ), # 'epsilon', 
-    (param_vals_neutral[str(VTmax)]/10,param_vals_neutral[str(VTmax)]*10 ), # 'VTmax', 
-    (param_vals_neutral[str(KTh)]/10,param_vals_neutral[str(KTh)]*10 ), # 'KT_h'
-    (0,2), # 'omega'
-    (param_vals_neutral[str(KSp)]/10,param_vals_neutral[str(KSp)]*10 ), # 'K^S_p', 
-    (param_vals_neutral[str(KSh)]/10,param_vals_neutral[str(KSh)]*10 ), # 'K^S_h'
-    (0/ seconds_in_day,0.9/ seconds_in_day  ), # 'E^S_p',
-    (0/ seconds_in_day,0.9/ seconds_in_day  ), # 'E^S_h', 
-    (-1/ seconds_in_day,1/ seconds_in_day  ), #  'M^S_p', 
-    (-1/ seconds_in_day,1/ seconds_in_day  ), #  'M^S_h', 
-    
-]
-
-log_params = [
-    False, # 'M_h', 
-    False, # 'M_p', 
-    False, # 'gamma^D_p', 
-    False, # 'gamma^D_h', 
-    # ?? 'R_p', 'R_h', 
-    
-    False, # 'E^O_p', 
-    False, # 'E^I_p',
-    False, # 'E^O_h',
-    False, # 'E^I_h',
-    True, # 'K^ON_p', 
-    True, # 'K^IN_p', 
-    True, # 'K^OC_p', 
-    True, # 'K^IC_p', 
-    True, # 'K^ON_h',  
-    True, # 'K^IN_h', 
-    True, # 'K^OC_h', 
-    True, # 'K^IC_h', 
-    True, # 'Vmax^ON_p',
-    True, #  'Vmax^IN_p',
-    True, # 'Vmax^OC_p', 
-    True, # 'Vmax^IC_p', 
-    True, # 'Vmax^ON_h', 
-    True, # 'Vmax^IN_h', 
-    True, # 'Vmax^OC_h', 
-    # 'Vmax^IC_h', 
-    False, # 'O_p', 
-    False, # 'O_h', 
-    False, # 'epsilon', 
-    True, # 'VTmax', 
-    True, # 'KT_h'
-    False, # 'omega'
-    True, # 'K^S_p', 
-    True, # 'K^S_h'
-    False, # 'E^S_p',
-    False, # 'E^S_h', 
-    False, #  'M^S_p', 
-    False, #  'M^S_h', 
-    
-]
-
 
 if __name__ == '__main__':
     import argparse
@@ -167,7 +59,9 @@ if __name__ == '__main__':
                         action="store_true")
     parser.add_argument("--disable_mechanism", help="run with mechanisms disabled",
                         action="store_true")
-    parser.add_argument("--model", help="model to run", choices=['min', 'full', 'exu', 'mix'], default='full')
+    parser.add_argument("--model", help="model to run", choices=['MIN', 'FULL', 'LEAK', 'MIXO'], default='FULL')
+    parser.add_argument("--organism_to_tune", help="which organism to tune", choices=['PRO', 'HET'], default='PRO')
+    organism_to_tune
                         
     
     args = parser.parse_args()
@@ -177,8 +71,9 @@ if __name__ == '__main__':
     os.makedirs(args.json_dpath, exist_ok=True)
     
     refdf = pd.read_csv(args.ref_csv)
+    param_vals = get_param_vals(args.model)
 
-    param_vals, params_to_update, bounds, log_params = set_model(args.model, param_vals_neutral, params_to_update, bounds, log_params)
+    params_to_update, bounds, log_params = get_param_tuning_values(args.model, args.organism_to_tune)
     run_id = f"{args.run_id}_{args.model}"
 
 
