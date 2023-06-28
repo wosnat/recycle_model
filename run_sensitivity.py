@@ -29,8 +29,8 @@ from scipy.optimize import differential_evolution
 from itertools import combinations
 
 
-# from SALib.sample import saltelli
-# from SALib.analyze import sobol
+from SALib.sample import saltelli
+from SALib.analyze import sobol
 
 from model_equations_separate_NC_sep_vmax import *
 
@@ -61,7 +61,6 @@ if __name__ == '__main__':
                         action="store_true")
     parser.add_argument("--model", help="model to run", choices=['MIN', 'FULL', 'LEAK', 'MIXO'], default='FULL')
     parser.add_argument("--organism_to_tune", help="which organism to tune", choices=['PRO', 'HET'], default='PRO')
-    organism_to_tune
                         
     
     args = parser.parse_args()

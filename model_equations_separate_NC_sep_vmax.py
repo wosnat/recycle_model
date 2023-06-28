@@ -861,7 +861,7 @@ def _rmse(refdf, df, refcol, col):
     return mean_squared_error(tdf[col], smallrefdf[refcol])
    
 
-def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, param_vals):
+def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix):
     perr = -1
     herr = -1
     new_params = json2params(param_vals, json_fpath)
@@ -879,7 +879,7 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, param_
     #if sol.status != 0:
     #    sumdf['message'] = sol.message
     #if sol.success:
-    df, mdf = solver2df(sol, var_names, interm_names, intermediate_func)
+    df, mdf = solver2df(sol, var_names, interm_names, intermediate_func, new_params)
     df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip')
 
     if refdf is not None:
