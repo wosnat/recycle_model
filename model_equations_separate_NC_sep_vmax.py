@@ -505,8 +505,6 @@ limONh = (DON / (DON + KONh))
 limICh = (DIC / (DIC + KICh))
 limOCh = (DOC / (DOC + KOCh))
 
-limABh = (ABh / (ABh + KABh))
-limABp = (ABp / (ABp + KABp))
 
 
 # gross uptake (regardless of C:N ratio)
@@ -585,8 +583,9 @@ dic_air_water_exchange   = - (DIC - c_sat) / ((h * DIC) / (Kg * B * 0.01 * DIC))
 # Maximum death rate everyone dead in one sec
 # minimum death rate - 0
 # If only AB then effect of AB on mortality is only positive
-death_ratep = Min(Mp + MABp*limABh, 1 )
-death_rateh = Min(Mh + MABh*limABp, 1 )
+
+death_ratep = Min(Mp + MABp*(ABh / (ABh + KABp)), 1 )
+death_rateh = Min(Mh + MABh*(ABp / (ABp + KABh)), 1 )
 
 
 # Need to explain why we used exponential decay – in ISMEJ we show that other formulations are better for co-cuiltures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
