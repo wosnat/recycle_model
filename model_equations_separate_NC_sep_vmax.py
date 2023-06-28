@@ -162,6 +162,16 @@ INIT_ROS = 0.2 # Morris, J. Jeffrey, et al. "Dependence of the cyanobacterium Pr
 INIT_SP = 0
 INIT_SH = 0
 
+def get_param_vals(model_name):
+    param_df = pd.read_excel( 'Model_Parameters.xlsx',)
+    param_df['values'] = param_df['full model']
+    if model_name is not None:
+        model_col = f'param hardcoded (disabled) {model_name} model'
+        param_df.loc[~param_df[model_col].isna(), 'values'] = param_df.loc[~param_df[model_col].isna(), model_col] 
+    param_vals1 = param_df['values']
+    param_vals1.index = param_df.parameter
+    return param_vals1.to_dict()
+    
 
 param_vals_with_symbols = {
     # Mortality and refractoriness
@@ -259,6 +269,8 @@ param_vals_with_symbols = {
     
 }
 param_vals = {str(k) : v for k,v in param_vals_with_symbols.items()}
+
+param_vals = get_param_vals(None)
 
 
 param_vals_neutral_with_symbols = {
