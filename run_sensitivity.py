@@ -29,8 +29,8 @@ from scipy.optimize import differential_evolution
 from itertools import combinations
 
 
-# from SALib.sample import saltelli
-# from SALib.analyze import sobol
+from SALib.sample import saltelli
+from SALib.analyze import sobol
 
 from model_equations_separate_NC_sep_vmax import *
 
@@ -61,7 +61,7 @@ if __name__ == '__main__':
                         action="store_true")
     parser.add_argument("--model", help="model to run", choices=['MIN', 'FULL', 'LEAK', 'MIXO'], default='FULL')
     parser.add_argument("--organism_to_tune", help="which organism to tune", choices=['PRO', 'HET'], default='PRO')
-    organism_to_tune
+    parser.add_argument("--which_organism", help="which organism to run", choices=['ponly', 'honly', 'all'], default='all')
                         
     
     args = parser.parse_args()
@@ -91,7 +91,7 @@ if __name__ == '__main__':
         func = lambda X :  generate_json_and_run_from_X(
             X, params_to_update, param_vals, 
             args.ref_csv, args.json_dpath, args.out_dpath, run_id, 
-            timeout=args.timeout, log_params=log_params)
+            timeout=args.timeout, log_params=log_params, which_organism=args.which_organism)
         print (
             params_to_update, param_vals, 
             args.ref_csv, args.json_dpath, args.out_dpath, run_id, 
@@ -116,27 +116,16 @@ if __name__ == '__main__':
     elif args.param_sensitivity != -1:
         idx = args.param_sensitivity
         run_sensitivity_per_parameter(param_vals, params_to_update[idx], bounds[idx], args.number_of_runs, 
-            run_id, args.ref_csv, args.json_dpath, args.out_dpath, args.timeout, log_param=log_params[idx]
+            run_id, args.ref_csv, args.json_dpath, args.out_dpath, args.timeout, log_param=log_params[idx], 
+            which_organism=args.which_organism,
         )
-    elif args.disable_mechanism:
-        comb2 = [i | j for i,j in (combinations(DISABLE_MECHANISMS, 2))]
-        dislist = [DISABLE_MECHANISMS(0)] + list(DISABLE_MECHANISMS) + comb2
-        for m in dislist:
-            print(m)
-            id = str(m).replace('DISABLE_MECHANISMS.', '').replace('|','-')
-            if id == '0':
-                id = 'default'
-            run_id = f"{run_id}_dis_{id}"
-            new_params = disable_mechanism(m, param_vals)
-            err = generate_json_and_run(new_params, args.ref_csv, args.json_dpath, args.out_dpath, run_id, args.timeout)
-            print (m, err)
         
     else:
         param_values = np.loadtxt(args.params_txt)
         run_chunk(param_vals, 
             param_values, params_to_update, args.chunk, args.number_of_runs, 
             run_id, args.ref_csv, args.json_dpath, args.out_dpath, 
-            args.timeout, log_params=log_params
+            args.timeout, log_params=log_params, which_organism=args.which_organism
         )
 
 

@@ -861,11 +861,16 @@ def _rmse(refdf, df, refcol, col):
     return mean_squared_error(tdf[col], smallrefdf[refcol])
    
 
-def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, param_vals):
+def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_organism):
     perr = -1
     herr = -1
     new_params = json2params(param_vals, json_fpath)
-    var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_main_data(param_vals_str=new_params)
+    if which_organism is 'ponly':
+        var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_ponly_data(param_vals_str=new_params)
+    elif which_organism is 'ponly':
+        var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_honly_data(param_vals_str=new_params)
+    else:
+        var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_main_data(param_vals_str=new_params)
     if refdf is not None:
         ref_t = np.rint(refdf['t'])
         t_eval = get_t_eval(days, ref_times = ref_t)
@@ -879,14 +884,20 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, param_
     #if sol.status != 0:
     #    sumdf['message'] = sol.message
     #if sol.success:
-    df, mdf = solver2df(sol, var_names, interm_names, intermediate_func)
+    df, mdf = solver2df(sol, var_names, interm_names, intermediate_func, new_params)
     df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip')
 
     if refdf is not None:
-        perr =  _rmse(refdf, df, refcol = 'cc Bp[N]', col='Bp')
-        herr =  _rmse(refdf, df, refcol = 'cc Bh[N]', col='Bh')
-        sumdf['h_err'] = herr
-        sumdf['p_err'] = perr
+        try:
+            perr =  _rmse(refdf, df, refcol = 'cc Bp[N]', col='Bp')
+            herr =  _rmse(refdf, df, refcol = 'cc Bh[N]', col='Bh')
+            sumdf['h_err'] = herr
+            sumdf['p_err'] = perr
+
+
+        except Exception as inst:
+            print(inst)
+            pass
     sumdf.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'), compression='gzip')
     return perr + herr
    
@@ -906,9 +917,9 @@ def get_params(X, params_to_update, param_vals, log_params=None):
     new_param_vals.update({k : v for k,v in zip(params_to_update, X)})
     return new_param_vals
 
-def generate_json_and_run_from_X(X, params_to_update, param_vals, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60, log_params=None):
+def generate_json_and_run_from_X(X, params_to_update, param_vals, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60, log_params=None, which_organism='all'):
     params = get_params(X, params_to_update, param_vals, log_params)
-    return generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout)
+    return generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout, which_organism)
 
 
 
@@ -941,7 +952,7 @@ def run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout=10*60):
         print("stderr:", err.stderr)
     return 1e50
 
-def run_chunk(param_vals, param_values, params_to_update, chunk, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_params=None):
+def run_chunk(param_vals, param_values, params_to_update, chunk, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_params=None, which_organism='all'):
     start_line = (chunk  - 1) * number_of_runs
     end_line = min(param_values.shape[0], start_line + number_of_runs)
     if start_line >= end_line:
@@ -957,10 +968,10 @@ def run_chunk(param_vals, param_values, params_to_update, chunk, number_of_runs,
         if len(files) == 0:
             generate_json_and_run_from_X(
                 param_values[i], params_to_update, param_vals, 
-                ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=log_params)
+                ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=log_params, which_organism=which_organism)
             
 
-def run_sensitivity_per_parameter(param_vals, parameter, bound, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_param=False):
+def run_sensitivity_per_parameter(param_vals, parameter, bound, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_param=False, which_organism='all'):
     if log_param:
         bound = (np.log(bound[0]), np.log(bound[1]))
     for i,v in enumerate(np.linspace(bound[0], bound[1],num=number_of_runs)):
@@ -968,7 +979,7 @@ def run_sensitivity_per_parameter(param_vals, parameter, bound, number_of_runs, 
         print(out_fprefix)
         generate_json_and_run_from_X(
             [v], [parameter], param_vals, 
-            ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=[log_param])
+            ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=[log_param], which_organism=which_organism)
 
 
     
@@ -984,7 +995,8 @@ if __name__ == '__main__':
 
     parser.add_argument("--outdpath", help="output dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
-
+    parser.add_argument("--which_organism", help="which organism to run", choices=['ponly', 'honly', 'all'], default='all')
+    
     args = parser.parse_args()
     dpath = args.outdpath
     if dpath != '':
@@ -992,5 +1004,5 @@ if __name__ == '__main__':
     refdf = pd.read_csv(args.ref_csv)
     model_name = args.run_id
 
-    MSE_err = run_with_params_json(args.json, args.maxday, refdf, dpath, args.run_id)
+    MSE_err = run_with_params_json(args.json, args.maxday, refdf, dpath, args.run_id, args.which_organism)
     print ('\nMSE:', MSE_err)
