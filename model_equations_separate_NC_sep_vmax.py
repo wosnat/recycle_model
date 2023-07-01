@@ -802,7 +802,8 @@ def solver2df_ode(sol, var_names, interm_names, intermediate_func, param_vals):
     d['t'] = sol[0]
     df = pd.DataFrame(data=d)
     df['day'] = df['t']/seconds_in_day
-    df[interm_names] = df[var_names].apply(lambda x : intermediate_func(*x), axis=1, 
+    if (interm_names):
+        df[interm_names] = df[var_names].apply(lambda x : intermediate_func(*x), axis=1, 
                                            result_type='expand')
     if 'Bp' in df.columns:
         df['Bp[C]'] = df['Bp']*param_vals[str(Rp)]
@@ -902,7 +903,7 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_
     #if sol.status != 0:
     #    sumdf['message'] = sol.message
     #if sol.success:
-    df, mdf = solver2df(sol, var_names, interm_names, intermediate_func, new_params)
+    df, mdf = solver2df(sol, var_names, None, intermediate_func, new_params)
     df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip')
 
     if refdf is not None:
@@ -1018,7 +1019,7 @@ if __name__ == '__main__':
     dpath = args.outdpath
     if dpath != '':
         os.makedirs(dpath, exist_ok=True)
-    refdf = pd.read_csv(args.ref_csv)
+    refdf = pd.read_excel(args.ref_csv)
     model_name = args.run_id
 
     MSE_err = run_with_params_json(args.json, args.maxday, refdf, dpath, args.run_id, args.which_organism)
