@@ -204,7 +204,7 @@ def get_param_tuning_values(model_name, organism_to_tune):
     params_to_update = list(tunable_param_df['parameter'])    
     bounds = list(zip(tunable_param_df['lower bound'],tunable_param_df['upper bound']))    
     
-    log_params = list(tunable_param_df['logscale fitting'].map({'Yes': True, 'No': 'False'}))                
+    log_params = list(tunable_param_df['logscale fitting'].map({'Yes': True, 'No': False})) 
 
     return (params_to_update, bounds, log_params)
 
