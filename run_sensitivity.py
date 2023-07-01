@@ -70,7 +70,7 @@ if __name__ == '__main__':
         os.makedirs(dpath, exist_ok=True)
     os.makedirs(args.json_dpath, exist_ok=True)
     
-    refdf = pd.read_csv(args.ref_csv)
+    #refdf = pd.read_excel(args.ref_csv)
     param_vals = get_param_vals(args.model)
 
     params_to_update, bounds, log_params = get_param_tuning_values(args.model, args.organism_to_tune)

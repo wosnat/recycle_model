@@ -802,7 +802,8 @@ def solver2df_ode(sol, var_names, interm_names, intermediate_func, param_vals):
     d['t'] = sol[0]
     df = pd.DataFrame(data=d)
     df['day'] = df['t']/seconds_in_day
-    df[interm_names] = df[var_names].apply(lambda x : intermediate_func(*x), axis=1, 
+    if (interm_names):
+        df[interm_names] = df[var_names].apply(lambda x : intermediate_func(*x), axis=1, 
                                            result_type='expand')
     if 'Bp' in df.columns:
         df['Bp[C]'] = df['Bp']*param_vals[str(Rp)]
@@ -885,7 +886,7 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_
     new_params = json2params(param_vals, json_fpath)
     if which_organism == 'ponly':
         var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_ponly_data(param_vals_str=new_params)
-    elif which_organism == 'ponly':
+    elif which_organism == 'honly':
         var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_honly_data(param_vals_str=new_params)
     else:
         var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_main_data(param_vals_str=new_params)
@@ -902,7 +903,7 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_
     #if sol.status != 0:
     #    sumdf['message'] = sol.message
     #if sol.success:
-    df, mdf = solver2df(sol, var_names, interm_names, intermediate_func, new_params)
+    df, mdf = solver2df(sol, var_names, None, intermediate_func, new_params)
     df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip')
 
     if refdf is not None:
@@ -917,12 +918,12 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_
     sumdf.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'), compression='gzip')
     return perr 
    
-def generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60):
+def generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60, which_organism='all'):
     hash_val = str(hash(tuple(params.values())))
     run_id = f'{out_fprefix}_h{hash_val}'
     json_fpath = os.path.join(json_dpath, f'{run_id}_params.json')
     params2json(params, json_fpath)
-    return run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout)
+    return run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout, which_organism)
 
 
 def get_params(X, params_to_update, param_vals, log_params=None): 
@@ -935,11 +936,11 @@ def get_params(X, params_to_update, param_vals, log_params=None):
 
 def generate_json_and_run_from_X(X, params_to_update, param_vals, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60, log_params=None, which_organism='all'):
     params = get_params(X, params_to_update, param_vals, log_params)
-    return generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout, which_organism)
+    return generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout, which_organism=which_organism)
 
 
 
-def run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout=10*60):
+def run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout=10*60, which_organism='all'):
     try:
         result = subprocess.run(
             [sys.executable, __file__, 
@@ -947,6 +948,7 @@ def run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout=10*60):
              '--ref_csv', ref_csv, 
              '--run_id', run_id,
              '--outdpath', out_dpath,
+             '--which_organism', which_organism,
             ], 
             capture_output=True, text=True, check=True, timeout=timeout,
         )
@@ -1017,7 +1019,7 @@ if __name__ == '__main__':
     dpath = args.outdpath
     if dpath != '':
         os.makedirs(dpath, exist_ok=True)
-    refdf = pd.read_csv(args.ref_csv)
+    refdf = pd.read_excel(args.ref_csv)
     model_name = args.run_id
 
     MSE_err = run_with_params_json(args.json, args.maxday, refdf, dpath, args.run_id, args.which_organism)
