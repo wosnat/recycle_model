@@ -559,7 +559,7 @@ def get_main_data(param_vals_str):
         leakinessOp, leakinessIp, leakinessOh, leakinessIh, 
         ROSreleasep, ROSbreakdownh,
         respirationp, respirationh, dic_air_water_exchange,
-        limICp,  exp(-omegaP*ROS),
+        #limICp,  exp(-omegaP*ROS),
     ]
     interm_names = [
         'Xp', 'Xh',
@@ -593,7 +593,7 @@ def get_main_data(param_vals_str):
         'ROSreleasep', 'ROSbreakdownh',    
         'respirationp', 'respirationh', 'dic_air_water_exchange',
         
-        'limICp',  'exp(-omegaP*ROS)',
+        #'limICp',  'exp(-omegaP*ROS)',
     ]
 
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
@@ -854,16 +854,34 @@ def json2params(default_params, fpath):
     return new_param_vals
 
 
-def _rmse(refdf, df, refcol, col):
-    smallrefdf = refdf.dropna(subset=[refcol])
-    ref_t = np.rint(smallrefdf['t'])
-    tdf = df.loc[df.t.isin(ref_t)]
-    return mean_squared_error(tdf[col], smallrefdf[refcol])
+#def _rmse(df, refdf, refcol, col):
+#    smallrefdf = refdf.dropna(subset=[refcol])
+#    ref_t = np.rint(smallrefdf['t'])
+#    tdf = df.loc[df.t.isin(ref_t)]
+#    return mean_squared_error(tdf[col], smallrefdf[refcol])
    
+def _mse(x, refdf, refcol, col, timecol, tolerance):
+    #print(x.columns)
+    tdf = pd.merge_asof(x[[timecol, col]].dropna(), refdf[[timecol, refcol]], on=timecol, direction='nearest', tolerance=tolerance).dropna()
+    return pd.Series({
+        'compare_points': tdf.shape[0], 
+        'MSE': mean_squared_error(tdf[col], tdf[refcol])}
+    )
+def compute_mse(df, refdf, refcol= 'ref_Bp', col='Bp', timecol='t', tolerance=100):
+    #print (x)
+    mse_df = refdf.groupby(['Sample', 'id', 'full name', 'Group',]
+                        ).apply(lambda y : _mse(df,y, refcol= refcol, col=col, timecol=timecol, tolerance=tolerance))
+    mse_df = mse_df.reset_index()
+    return mse_df
+
+# this is sensitivity specific
+# def compute_mse(df, refdf, refcol= 'ref_Bp', col='Bp', timecol='t', tolerance=100):
+# return df.groupby(['sen_param', 'model', 'idx', 'run_id' ]
+# ).apply(lambda x : _mse_all(x, refdf, refcol= refcol, col=col, timecol=timecol, tolerance=tolerance))    
+
 
 def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_organism):
     perr = -1
-    herr = -1
     new_params = json2params(param_vals, json_fpath)
     if which_organism == 'ponly':
         var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_ponly_data(param_vals_str=new_params)
@@ -889,17 +907,15 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_
 
     if refdf is not None:
         try:
-            perr =  _rmse(refdf, df, refcol = 'cc Bp[N]', col='Bp')
-            herr =  _rmse(refdf, df, refcol = 'cc Bh[N]', col='Bh')
-            sumdf['h_err'] = herr
-            sumdf['p_err'] = perr
-
+            mse_df = compute_mse(df, refdf, refcol= 'ref_Bp', col='Bp', timecol='t', tolerance=100)
+            mse_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_mse.csv.gz'), compression='gzip')
+            perr = mse_df['MSE'].min()
 
         except Exception as inst:
             print(inst)
             pass
     sumdf.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'), compression='gzip')
-    return perr + herr
+    return perr 
    
 def generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60, which_organism='all'):
     hash_val = str(hash(tuple(params.values())))
@@ -973,7 +989,7 @@ def run_chunk(param_vals, param_values, params_to_update, chunk, number_of_runs,
             
 
 def run_sensitivity_per_parameter(param_vals, parameter, bound, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_param=False, which_organism='all'):
-    if log_param:
+    if log_param == True:
         bound = (np.log(bound[0]), np.log(bound[1]))
     for i,v in enumerate(np.linspace(bound[0], bound[1],num=number_of_runs)):
         out_fprefix = f'{run_id}_{parameter}_{i}'
