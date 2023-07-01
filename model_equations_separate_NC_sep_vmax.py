@@ -1013,6 +1013,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--outdpath", help="output dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
+    parser.add_argument("--model", help="model to run", choices=['MIN', 'FULL', 'LEAK', 'MIXO'], default='FULL')
     parser.add_argument("--which_organism", help="which organism to run", choices=['ponly', 'honly', 'all'], default='all')
     
     args = parser.parse_args()
@@ -1020,7 +1021,8 @@ if __name__ == '__main__':
     if dpath != '':
         os.makedirs(dpath, exist_ok=True)
     refdf = pd.read_excel(args.ref_csv)
-    model_name = args.run_id
+    param_vals = get_param_vals(args.model)
 
+    
     MSE_err = run_with_params_json(args.json, args.maxday, refdf, dpath, args.run_id, args.which_organism)
     print ('\nMSE:', MSE_err)
