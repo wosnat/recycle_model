@@ -88,28 +88,6 @@ Qp = 25  * 1e-9 / 14
 Qh = 40 * 1e-9 / 14
 
 
-# initial concentrations
-INIT_DIN = 100
-INIT_DON = 20
-INIT_RDON = 0
-INIT_RDOC = 0
-# Dalit DIC: 1618.825333  or 1.62E+03 uM
-INIT_DIC = 3000
-
-# Dalit: DOC 0.047155376888899 nM ?
-# Dalit init TOC 16 mM
-INIT_DOC = INIT_DON * R_CN
-INIT_BP = 1e9 * Qp
-INIT_BH = 1e10 * Qh
-INIT_BH_CC = 5e9 * Qh # the actual concentration in the measurements
-INIT_ROS = 0.2 # Morris, J. Jeffrey, et al. "Dependence of the cyanobacterium Prochlorococcus on hydrogen peroxide scavenging microbes for growth at the ocean's surface." PloS one 6.2 (2011): e16805.‏
-INIT_SP = 0
-INIT_SH = 0
-
-
-
-
-
 
 # DIC exchange
 h = 0.115 # height in m of media in the tube
@@ -146,6 +124,7 @@ c_sat = csatd * 1e6 / rhoref;
 
 # initial concentrations
 INIT_DIN = 100
+INIT_DIN_PRO99 = 800
 INIT_DON = 20
 INIT_RDON = 0
 INIT_RDOC = 0
@@ -515,11 +494,14 @@ def print_equations():
         print(f'd{n}/dt')
         display(f)
 
-def get_main_data(param_vals_str):
+def get_main_data(param_vals_str, pro99_mode):
     sfunc_list = [dBpdt, dBhdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, dABpdt, dABhdt]
     var_list   = [ Bp,    Bh,    DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS,    ABp,    ABh]
     var_names  = ['Bp',  'Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS',   'ABp',  'ABh']
-    init_vars = [INIT_BP,INIT_BH_CC,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+    if pro99_mode:        
+        init_vars = [INIT_BP,INIT_BH_CC,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+    else:
+        init_vars = [INIT_BP,INIT_BH_CC,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
@@ -601,11 +583,14 @@ def get_main_data(param_vals_str):
 
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
-def get_ponly_data(param_vals_str):
+def get_ponly_data(param_vals_str, pro99_mode):
     sfunc_list = [dBpdt,  dDONdt_ponly, dRDONdt_ponly, dDINdt_ponly, dDOCdt_ponly, dRDOCdt_ponly, dDICdt_ponly, dROSdt_ponly, dABpdt, dABhdt_ponly]
     var_list   = [ Bp,    DON,    RDON,    DIN,    DOC,    RDOC,  DIC,    ROS,    ABp,   ABh]
     var_names  = ['Bp',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
-    init_vars = [INIT_BP,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+    if pro99_mode:        
+        init_vars = [INIT_BP,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+    else:
+        init_vars = [INIT_BP,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
@@ -662,11 +647,14 @@ def get_ponly_data(param_vals_str):
 
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
-def get_honly_data(param_vals_str):
+def get_honly_data(param_vals_str, pro99_mode):
     sfunc_list = [dBhdt, dDONdt_honly, dRDONdt_honly, dDINdt_honly, dDOCdt_honly, dRDOCdt_honly,dDICdt_honly, dROSdt_honly, dABpdt_honly, dABhdt]
     var_list   = [Bh,    DON,    RDON,    DIN,    DOC,    RDOC,   DIC,    ROS,    ABp,   ABh]
     var_names  = ['Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
-    init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+    if pro99_mode:        
+        init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+    else:
+        init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
@@ -881,15 +869,15 @@ def compute_mse(df, refdf, refcol= 'ref_Bp', col='Bp', timecol='t', tolerance=10
 # ).apply(lambda x : _mse_all(x, refdf, refcol= refcol, col=col, timecol=timecol, tolerance=tolerance))    
 
 
-def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_organism):
+def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_organism, pro99_mode):
     perr = -1
     new_params = json2params(param_vals, json_fpath)
     if which_organism == 'ponly':
-        var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_ponly_data(param_vals_str=new_params)
+        var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_ponly_data(param_vals_str=new_params, pro99_mode=pro99_mode)
     elif which_organism == 'honly':
-        var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_honly_data(param_vals_str=new_params)
+        var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_honly_data(param_vals_str=new_params, pro99_mode=pro99_mode)
     else:
-        var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_main_data(param_vals_str=new_params)
+        var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_main_data(param_vals_str=new_params, pro99_mode=pro99_mode)
     if refdf is not None:
         ref_t = np.rint(refdf['t'])
         t_eval = get_t_eval(days, ref_times = ref_t)
@@ -918,12 +906,16 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_
     sumdf.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'), compression='gzip')
     return perr 
    
-def generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60, which_organism='all'):
+def generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60, which_organism='all', pro99_mode=False):
+    if pro99_mode:
+        out_fprefix = f'{out_fprefix}_pro99'
+    
     hash_val = str(hash(tuple(params.values())))
     run_id = f'{out_fprefix}_h{hash_val}'
+    
     json_fpath = os.path.join(json_dpath, f'{run_id}_params.json')
     params2json(params, json_fpath)
-    return run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout, which_organism)
+    return run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout, which_organism, pro99_mode)
 
 
 def get_params(X, params_to_update, param_vals, log_params=None): 
@@ -934,22 +926,26 @@ def get_params(X, params_to_update, param_vals, log_params=None):
     new_param_vals.update({k : v for k,v in zip(params_to_update, X)})
     return new_param_vals
 
-def generate_json_and_run_from_X(X, params_to_update, param_vals, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60, log_params=None, which_organism='all'):
+def generate_json_and_run_from_X(X, params_to_update, param_vals, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60, log_params=None, which_organism='all', pro99_mode=False):
     params = get_params(X, params_to_update, param_vals, log_params)
-    return generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout, which_organism=which_organism)
+    return generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout, which_organism=which_organism, pro99_mode=pro99_mode)
 
 
 
-def run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout=10*60, which_organism='all'):
+def run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout=10*60, which_organism='all', pro99_mode=False):
     try:
-        result = subprocess.run(
-            [sys.executable, __file__, 
+        run_args = [
+             sys.executable, __file__, 
              '--json', json_fpath,
              '--ref_csv', ref_csv, 
              '--run_id', run_id,
              '--outdpath', out_dpath,
              '--which_organism', which_organism,
-            ], 
+        ]
+        if pro99_mode:
+            run_args += ['--pro99_mode']
+         
+        result = subprocess.run(run_args,
             capture_output=True, text=True, check=True, timeout=timeout,
         )
         print("stdout:", result.stdout)
@@ -970,7 +966,7 @@ def run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout=10*60, which
         print("stderr:", err.stderr)
     return 1e50
 
-def run_chunk(param_vals, param_values, params_to_update, chunk, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_params=None, which_organism='all'):
+def run_chunk(param_vals, param_values, params_to_update, chunk, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_params=None, which_organism='all', pro99_mode=False):
     start_line = (chunk  - 1) * number_of_runs
     end_line = min(param_values.shape[0], start_line + number_of_runs)
     if start_line >= end_line:
@@ -986,10 +982,10 @@ def run_chunk(param_vals, param_values, params_to_update, chunk, number_of_runs,
         if len(files) == 0:
             generate_json_and_run_from_X(
                 param_values[i], params_to_update, param_vals, 
-                ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=log_params, which_organism=which_organism)
+                ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=log_params, which_organism=which_organism, pro99_mode=pro99_mode)
             
 
-def run_sensitivity_per_parameter(param_vals, parameter, bound, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_param=False, which_organism='all'):
+def run_sensitivity_per_parameter(param_vals, parameter, bound, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_param=False, which_organism='all', pro99_mode=False):
     if log_param == True:
         bound = (np.log(bound[0]), np.log(bound[1]))
     for i,v in enumerate(np.linspace(bound[0], bound[1],num=number_of_runs)):
@@ -997,7 +993,7 @@ def run_sensitivity_per_parameter(param_vals, parameter, bound, number_of_runs, 
         print(out_fprefix)
         generate_json_and_run_from_X(
             [v], [parameter], param_vals, 
-            ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=[log_param], which_organism=which_organism)
+            ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=[log_param], which_organism=which_organism, pro99_mode=pro99_mode)
 
 
     
@@ -1015,6 +1011,8 @@ if __name__ == '__main__':
     parser.add_argument("--run_id", help="run id", required=True)
     parser.add_argument("--model", help="model to run", choices=['MIN', 'FULL', 'LEAK', 'MIXO'], default='FULL')
     parser.add_argument("--which_organism", help="which organism to run", choices=['ponly', 'honly', 'all'], default='all')
+    parser.add_argument("--pro99_mode", help="run on pro99 media",
+                        action="store_true")
     
     args = parser.parse_args()
     dpath = args.outdpath
@@ -1024,5 +1022,5 @@ if __name__ == '__main__':
     param_vals = get_param_vals(args.model)
 
     
-    MSE_err = run_with_params_json(args.json, args.maxday, refdf, dpath, args.run_id, args.which_organism)
+    MSE_err = run_with_params_json(args.json, args.maxday, refdf, dpath, args.run_id, args.which_organism, pro99_mode)
     print ('\nMSE:', MSE_err)

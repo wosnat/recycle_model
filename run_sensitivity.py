@@ -62,6 +62,8 @@ if __name__ == '__main__':
     parser.add_argument("--model", help="model to run", choices=['MIN', 'FULL', 'LEAK', 'MIXO'], default='FULL')
     parser.add_argument("--organism_to_tune", help="which organism to tune", choices=['PRO', 'HET'], default='PRO')
     parser.add_argument("--which_organism", help="which organism to run", choices=['ponly', 'honly', 'all'], default='all')
+    parser.add_argument("--pro99_mode", help="run on pro99 media",
+                        action="store_true")
                         
     
     args = parser.parse_args()
@@ -91,7 +93,7 @@ if __name__ == '__main__':
         func = lambda X :  generate_json_and_run_from_X(
             X, params_to_update, param_vals, 
             args.ref_csv, args.json_dpath, args.out_dpath, run_id, 
-            timeout=args.timeout, log_params=log_params, which_organism=args.which_organism)
+            timeout=args.timeout, log_params=log_params, which_organism=args.which_organism, pro99_mode=args.pro99_mode)
         print (
             params_to_update, param_vals, 
             args.ref_csv, args.json_dpath, args.out_dpath, run_id, 
@@ -117,7 +119,7 @@ if __name__ == '__main__':
         idx = args.param_sensitivity
         run_sensitivity_per_parameter(param_vals, params_to_update[idx], bounds[idx], args.number_of_runs, 
             run_id, args.ref_csv, args.json_dpath, args.out_dpath, args.timeout, log_param=log_params[idx], 
-            which_organism=args.which_organism,
+            which_organism=args.which_organism, pro99_mode=args.pro99_mode,
         )
         
     else:
@@ -125,7 +127,7 @@ if __name__ == '__main__':
         run_chunk(param_vals, 
             param_values, params_to_update, args.chunk, args.number_of_runs, 
             run_id, args.ref_csv, args.json_dpath, args.out_dpath, 
-            args.timeout, log_params=log_params, which_organism=args.which_organism
+            args.timeout, log_params=log_params, which_organism=args.which_organism, pro99_mode=args.pro99_mode
         )
 
 
