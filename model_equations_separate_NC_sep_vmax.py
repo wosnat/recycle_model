@@ -858,7 +858,7 @@ def _mse(x, refdf, refcol, col, timecol, tolerance):
     )
 def compute_mse(df, refdf, refcol= 'ref_Bp', col='Bp', timecol='t', tolerance=100):
     #print (x)
-    mse_df = refdf.groupby(['Sample', 'id', 'full name', 'Group',]
+    mse_df = refdf.groupby(['Sample', 'full name', 'Group',]
                         ).apply(lambda y : _mse(df,y, refcol= refcol, col=col, timecol=timecol, tolerance=tolerance))
     mse_df = mse_df.reset_index()
     return mse_df
@@ -1022,5 +1022,5 @@ if __name__ == '__main__':
     param_vals = get_param_vals(args.model)
 
     
-    MSE_err = run_with_params_json(args.json, args.maxday, refdf, dpath, args.run_id, args.which_organism, pro99_mode)
+    MSE_err = run_with_params_json(args.json, args.maxday, refdf, dpath, args.run_id, args.which_organism, args.pro99_mode)
     print ('\nMSE:', MSE_err)
