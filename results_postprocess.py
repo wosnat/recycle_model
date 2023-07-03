@@ -45,9 +45,10 @@ def concat_csvs(dpaths, out_dpath, out_fprefix):
 
 
     mse_dfs = [ _read_csv_df(f) for dpath in dpaths for f in glob.glob(os.path.join(dpath,mse_glob_pattern ))] 
-    mse_df = pd.concat ( [ d for d in mse_dfs if d is not None])
-    mse_df.drop(columns=['Unnamed: 0',], inplace=True)
-    mse_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_mse.csv.gz'), compression='gzip')
+    if mse_dfs:
+        mse_df = pd.concat ( [ d for d in mse_dfs if d is not None])
+        mse_df.drop(columns=['Unnamed: 0',], inplace=True)
+        mse_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_mse.csv.gz'), compression='gzip')
 
     data_dfs = [ _read_csv_df(f) for dpath in dpaths for f in glob.glob(os.path.join(dpath,res_glob_pattern ))] 
     data_df = pd.concat ( [ d for d in data_dfs if d is not None])
