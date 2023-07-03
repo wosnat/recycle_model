@@ -494,14 +494,18 @@ def print_equations():
         print(f'd{n}/dt')
         display(f)
 
-def get_main_data(param_vals_str, pro99_mode):
-    sfunc_list = [dBpdt, dBhdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, dABpdt, dABhdt]
-    var_list   = [ Bp,    Bh,    DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS,    ABp,    ABh]
-    var_names  = ['Bp',  'Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS',   'ABp',  'ABh']
+def get_main_init_vars(pro99_mode):
     if pro99_mode:        
         init_vars = [INIT_BP,INIT_BH_CC,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     else:
         init_vars = [INIT_BP,INIT_BH_CC,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+    return init_vars
+
+def get_main_data(param_vals_str, pro99_mode):
+    sfunc_list = [dBpdt, dBhdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, dABpdt, dABhdt]
+    var_list   = [ Bp,    Bh,    DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS,    ABp,    ABh]
+    var_names  = ['Bp',  'Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS',   'ABp',  'ABh']
+    init_vars = get_main_init_vars(pro99_mode)
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
@@ -583,14 +587,18 @@ def get_main_data(param_vals_str, pro99_mode):
 
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
-def get_ponly_data(param_vals_str, pro99_mode):
-    sfunc_list = [dBpdt,  dDONdt_ponly, dRDONdt_ponly, dDINdt_ponly, dDOCdt_ponly, dRDOCdt_ponly, dDICdt_ponly, dROSdt_ponly, dABpdt, dABhdt_ponly]
-    var_list   = [ Bp,    DON,    RDON,    DIN,    DOC,    RDOC,  DIC,    ROS,    ABp,   ABh]
-    var_names  = ['Bp',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
+def get_ponly_init_vars(pro99_mode):
     if pro99_mode:        
         init_vars = [INIT_BP,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     else:
         init_vars = [INIT_BP,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+    return init_vars
+    
+def get_ponly_data(param_vals_str, pro99_mode):
+    sfunc_list = [dBpdt,  dDONdt_ponly, dRDONdt_ponly, dDINdt_ponly, dDOCdt_ponly, dRDOCdt_ponly, dDICdt_ponly, dROSdt_ponly, dABpdt, dABhdt_ponly]
+    var_list   = [ Bp,    DON,    RDON,    DIN,    DOC,    RDOC,  DIC,    ROS,    ABp,   ABh]
+    var_names  = ['Bp',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
+    init_vars = get_ponly_init_vars(pro99_mode)
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
@@ -647,14 +655,18 @@ def get_ponly_data(param_vals_str, pro99_mode):
 
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
-def get_honly_data(param_vals_str, pro99_mode):
-    sfunc_list = [dBhdt, dDONdt_honly, dRDONdt_honly, dDINdt_honly, dDOCdt_honly, dRDOCdt_honly,dDICdt_honly, dROSdt_honly, dABpdt_honly, dABhdt]
-    var_list   = [Bh,    DON,    RDON,    DIN,    DOC,    RDOC,   DIC,    ROS,    ABp,   ABh]
-    var_names  = ['Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
+def get_honly_init_vars(pro99_mode):
     if pro99_mode:        
         init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     else:
         init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+    return init_vars
+    
+def get_honly_data(param_vals_str, pro99_mode):
+    sfunc_list = [dBhdt, dDONdt_honly, dRDONdt_honly, dDINdt_honly, dDOCdt_honly, dRDOCdt_honly,dDICdt_honly, dROSdt_honly, dABpdt_honly, dABhdt]
+    var_list   = [Bh,    DON,    RDON,    DIN,    DOC,    RDOC,   DIC,    ROS,    ABp,   ABh]
+    var_names  = ['Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
+    init_vars = get_honly_init_vars(pro99_mode)
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
@@ -742,9 +754,11 @@ def biomass_diff0_honly(calc_dydt, var_names, init_vars):
 
 def run_solver_ivp(calc_dydt, init_vars, days, t_eval):
     tstart = 0
-    tend = days*seconds_in_day
     if t_eval is None: 
+        tend = days*seconds_in_day
         t_eval = np.arange(tstart, tend, 3600*4)
+    else:
+        tend= np.max(t_eval)
     sol = solve_ivp(
         fun=calc_dydt, y0=init_vars,
         t_span=[tstart, tend], t_eval=t_eval, max_step=100, first_step=1)
@@ -773,9 +787,9 @@ def solver2df_ivp(sol, var_names, interm_names, intermediate_func, param_vals):
 
 
 def run_solver_ode(calc_dydt, init_vars, days, t_eval):
-    tstart = 0
-    tend = days*seconds_in_day
     if t_eval is None: 
+        tstart = 0
+        tend = days*seconds_in_day
         t_eval = np.arange(tstart, tend, 3600*4)
     y = odeint(
         func=calc_dydt, y0=init_vars,
