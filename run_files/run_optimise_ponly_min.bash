@@ -2,8 +2,8 @@
 
 for m in MIN 
 do
-       #for i in  0.1 1 10 20 100
-       for i in 1
+       for i in  0.1 0.01  10 20 100
+       #for i in 1
        do
 	       echo $m $i
 mkdir -p ~/work/RECYCLE_MODEL/results/least_square_${i}/log

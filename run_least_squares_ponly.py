@@ -124,7 +124,7 @@ def jac(X):
 def fun(X):
     return wrap_run_model(X) - Y
 
-f_scale=1
+f_scale=args.f_scale
 res = least_squares(fun, x0, jac=jac, bounds=param_bounds,  verbose=2,  loss='soft_l1', f_scale=f_scale)
 print(res)
 
