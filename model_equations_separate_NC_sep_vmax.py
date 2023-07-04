@@ -887,6 +887,7 @@ def compute_mse(df, refdf, refcol= 'ref_Bp', col='Bp', timecol='t', tolerance=10
 
 def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_organism, pro99_mode, t_eval):
     perr = -1
+    orig_t_eval = t_eval
     new_params = json2params(param_vals, json_fpath)
     if which_organism == 'ponly':
         var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_ponly_data(param_vals_str=new_params, pro99_mode=pro99_mode)
@@ -911,7 +912,7 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_
     #if sol.status != 0:
     #    sumdf['message'] = sol.message
     #if sol.success:
-    df = solver2df(sol, var_names, None, intermediate_func, new_params, t_eval=t_eval)
+    df = solver2df(sol, var_names, None, intermediate_func, new_params, t_eval=orig_t_eval)
     df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip')
 
     if refdf is not None:

@@ -54,7 +54,7 @@ timeout= args.timeout
 ref_fpath =  'reference_10cc_axenic.xlsx'
 ref_pro99_fpath =  'refence_pro99_axenic.xlsx'
 ref_fpath =  args.ref_csv
-ref_pro99_fpath =  ref_pro99_csv
+ref_pro99_fpath =  args.ref_pro99_csv
 
 ref_df = pd.read_excel(ref_fpath)
 ref_pro99_df = pd.read_excel(ref_pro99_fpath)
@@ -101,7 +101,7 @@ def run_model(X):
     fpath = os.path.join(out_dpath, f'{pro99_run}_df.csv.gz')
     pro99_df = pd.read_csv(fpath)
     result_pro99 = pd.merge_asof(ref_pro99_df, pro99_df, on='t', tolerance=1, direction='nearest')['Bp']
-    return pd.concat([result_lowN, result_pro99]).clip(min=4).values
+    return pd.concat([result_lowN, result_pro99]).values.clip(min=4)
 
 # this wrap is to cache run_model results
 run_model = lru_cache(run_model)
