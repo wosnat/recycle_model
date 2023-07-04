@@ -800,10 +800,12 @@ def run_solver_ode(calc_dydt, init_vars, days, t_eval):
     return t_eval, y
     #return solver2df_ode(sol, t_eval, var_names, interm_names, intermediate_func)
 
-def solver2df_ode(sol, var_names, interm_names, intermediate_func, param_vals):
+def solver2df_ode(sol, var_names, interm_names, intermediate_func, param_vals, t_eval):
     d = dict(zip(var_names, sol[1].T))
     d['t'] = sol[0]
     df = pd.DataFrame(data=d)
+    if t_eval is not None:
+        df = df.loc[np.rint(df.t).isin(np.rint(t_eval))]
     df['day'] = df['t']/seconds_in_day
     if (interm_names):
         df[interm_names] = df[var_names].apply(lambda x : intermediate_func(*x), axis=1, 
@@ -826,10 +828,10 @@ def run_solver(calc_dydt, init_vars, days=140, t_eval=None):
     print ('simulation time', tend - tstart)
     return sol
     
-def solver2df(sol, var_names, interm_names, intermediate_func, param_vals):
-    return solver2df_ode(sol, var_names, interm_names, intermediate_func, param_vals)
+def solver2df(sol, var_names, interm_names, intermediate_func, param_vals, t_eval=None):
+    return solver2df_ode(sol, var_names, interm_names, intermediate_func, param_vals, t_eval)
 
-def get_t_eval(maxday, step = 3600*4, ref_times = None):
+def get_t_eval(maxday, step = 1000, ref_times = None):
     tstart = 0
     tend = maxday*seconds_in_day
     sim_times = np.arange(tstart, tend, step)
@@ -909,7 +911,7 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_
     #if sol.status != 0:
     #    sumdf['message'] = sol.message
     #if sol.success:
-    df = solver2df(sol, var_names, None, intermediate_func, new_params)
+    df = solver2df(sol, var_names, None, intermediate_func, new_params, t_eval=t_eval)
     df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip')
 
     if refdf is not None:

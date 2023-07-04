@@ -30,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument("--run_id", help="run id", required=True)
     parser.add_argument("--timeout", help="timeout",  type=int, default=2*60)
     parser.add_argument("--model", help="model to run", choices=['MIN', 'FULL', 'LEAK', 'MIXO'], default='MIN')
-    parser.add_argument("--f_scale", help="f_scale",  type=int, default=1)
+    parser.add_argument("--f_scale", help="f_scale",  type=float, default=1)
                         
     
     args = parser.parse_args()
@@ -63,7 +63,7 @@ ref_pro99_df = ref_pro99_df.sort_values(['t','Sample'])
 ref_df = ref_df.loc[ref_df['day'] < 60]
 ref_pro99_df = ref_pro99_df.loc[ref_pro99_df['day'] < 60]
 Y = pd.concat([ref_df['ref_Bp'], ref_pro99_df['ref_Bp']]).values
-
+Y = Y.clip(min=4)
 
 
 param_vals = get_param_vals(model)
@@ -101,7 +101,7 @@ def run_model(X):
     fpath = os.path.join(out_dpath, f'{pro99_run}_df.csv.gz')
     pro99_df = pd.read_csv(fpath)
     result_pro99 = pd.merge_asof(ref_pro99_df, pro99_df, on='t', tolerance=1, direction='nearest')['Bp']
-    return pd.concat([result_lowN, result_pro99]).values
+    return pd.concat([result_lowN, result_pro99]).clip(min=4).values
 
 # this wrap is to cache run_model results
 run_model = lru_cache(run_model)
