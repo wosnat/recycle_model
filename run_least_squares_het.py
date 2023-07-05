@@ -55,15 +55,15 @@ timeout= args.timeout
 ref_fpath =  args.ref_csv
 
 ref_df = pd.read_excel(ref_fpath)
-ref_df = ref_df.loc[ref_df['id'].isin([args.ref_sample_id])
+ref_df = ref_df.loc[ref_df['id'].isin([args.ref_sample_id])]
 ref_df = ref_df.sort_values(['t','Sample'])
 ref_df = ref_df.loc[ref_df['day'] < 60]
-Y = [ref_df['ref_Bp'].values
+Y = ref_df['ref_Bp'].values
 Y = Y.clip(min=4)
 
 
 param_vals = get_param_vals(model)
-param_vals = json2params(param_vals, json_fpath)
+param_vals = json2params(param_vals, args.vpro_json)
 
 params_to_update, bounds, log_params = get_param_tuning_values(model, organism_to_tune)
 
