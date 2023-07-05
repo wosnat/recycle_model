@@ -53,11 +53,7 @@ if __name__ == '__main__':
     parser.add_argument("--number_of_runs", help="number of simulations to run",  type=int, default=1000)
     parser.add_argument("--chunk", help="which of the chunks to run ",  type=int, default=1)
     parser.add_argument("--param_sensitivity", help="index of param to update (0 based) ",  type=int, default=-1)
-    parser.add_argument("--optimize", help="run optimization (default: run model)",
-                        action="store_true")
     parser.add_argument("--gen_sensitivity", help="generate sensitivity",
-                        action="store_true")
-    parser.add_argument("--disable_mechanism", help="run with mechanisms disabled",
                         action="store_true")
     parser.add_argument("--model", help="model to run", choices=['MIN', 'FULL', 'LEAK', 'MIXO'], default='FULL')
     parser.add_argument("--organism_to_tune", help="which organism to tune", choices=['PRO', 'HET'], default='PRO')
@@ -89,31 +85,6 @@ if __name__ == '__main__':
         print(param_values.shape)
         np.savetxt(args.params_txt, param_values)
 
-    elif args.optimize:
-        func = lambda X :  generate_json_and_run_from_X(
-            X, params_to_update, param_vals, 
-            args.ref_csv, args.json_dpath, args.out_dpath, run_id, 
-            timeout=args.timeout, log_params=log_params, which_organism=args.which_organism, pro99_mode=args.pro99_mode)
-        print (
-            params_to_update, param_vals, 
-            args.ref_csv, args.json_dpath, args.out_dpath, run_id, 
-            args.timeout)
-        bounds_logged = [(np.log(b[0]),  np.log(b[1]))  if lg else b for b,lg in zip(bounds, log_params)]
-
-        result = differential_evolution(func, bounds_logged, disp=True, init='latinhypercube')
-        print(result.message)
-        print(result.x, result.fun)
-        print(zip (params_to_update, result.x))
-        res_dict = {
-            'fun': result.fun,
-             'message': result.message,
-             'nfev': result.nfev,
-             'nit': result.nit,
-             'success': result.success,
-            'run_id' : run_id,
-        }
-        res_dict.update({i:v for i,v in zip (params_to_update, result.x)})
-        pd.DataFrame([res_dict]).to_csv(os.path.join(dpath, f'{run_id}_differential_evolution.csv.gz'))
         
     elif args.param_sensitivity != -1:
         idx = args.param_sensitivity
