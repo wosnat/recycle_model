@@ -897,8 +897,8 @@ def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_
         var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_main_data(param_vals_str=new_params, pro99_mode=pro99_mode)
     if t_eval is None:
         if refdf is not None:
-            ref_t = np.rint(refdf['t'])
-            t_eval = get_t_eval(days, ref_times = ref_t)
+            orig_t_eval = np.rint(refdf['t'].drop_duplicates().sort_values()).values
+            t_eval = get_t_eval(days, ref_times = orig_t_eval)
         else:
             t_eval = get_t_eval(days)
     else:

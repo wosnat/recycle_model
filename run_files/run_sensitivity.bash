@@ -1,4 +1,5 @@
 
+mkdir -p ~/work/RECYCLE_MODEL/results/sensitivity/log
 
 for m in MIN LEAK MIXO FULL
 do

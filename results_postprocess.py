@@ -37,23 +37,32 @@ def concat_csvs(dpaths, out_dpath, out_fprefix):
     res_glob_pattern = '*_df.csv.gz'
     sum_glob_pattern = '*_sum.csv.gz'
     mse_glob_pattern = '*_mse.csv.gz'
+    lsq_glob_pattern = '*_least_square.csv'
 
+    print(dpaths)
     sum_dfs = [_read_csv_try(f) for dpath in dpaths for f in glob.glob(os.path.join(dpath,sum_glob_pattern )) ]
     sum_df = pd.concat ( [ d for d in sum_dfs if d is not None])
     sum_df.drop(columns=['Unnamed: 0',], inplace=True)
-    sum_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'), compression='gzip')
+    sum_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'), compression='gzip', index=False)
 
 
     mse_dfs = [ _read_csv_df(f) for dpath in dpaths for f in glob.glob(os.path.join(dpath,mse_glob_pattern ))] 
     if mse_dfs:
         mse_df = pd.concat ( [ d for d in mse_dfs if d is not None])
         mse_df.drop(columns=['Unnamed: 0',], inplace=True)
-        mse_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_mse.csv.gz'), compression='gzip')
+        mse_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_mse.csv.gz'), compression='gzip', index=False)
+
+    lsq_dfs = [ _read_csv_df(f) for dpath in dpaths for f in glob.glob(os.path.join(dpath,lsq_glob_pattern ))] 
+    if lsq_dfs:
+        lsq_df = pd.concat ( [ d for d in lsq_dfs if d is not None])
+        #lsq_df.drop(columns=['Unnamed: 0',], inplace=True)
+        lsq_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_lsq.csv.gz'), compression='gzip', index=False)
+
 
     data_dfs = [ _read_csv_df(f) for dpath in dpaths for f in glob.glob(os.path.join(dpath,res_glob_pattern ))] 
     data_df = pd.concat ( [ d for d in data_dfs if d is not None])
     data_df.drop(columns=['Unnamed: 0',], inplace=True)
-    data_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip')
+    data_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip', index=False)
 
 
 def run_umap_hdbscan(df, sum_df):
@@ -83,7 +92,8 @@ if __name__ == '__main__':
     import pprint
 
     parser = argparse.ArgumentParser(description='post process results')
-    parser.add_argument('--dpath', action='append', help='paths to load from', required=True)
+    parser.add_argument('--dpath', #action='append', 
+            help='paths to load from', required=True, nargs="+")
     parser.add_argument("--outdpath", help="output dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
 

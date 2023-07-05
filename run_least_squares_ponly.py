@@ -129,11 +129,12 @@ res = least_squares(fun, x0, jac=jac, bounds=param_bounds,  verbose=2,  loss='so
 print(res)
 
 finalX = res.x
-actual_finalX = [np.exp(i) if lg else i for i,lg in zip(finalX, log_params)]
-res_df = pd.DataFrame.from_records(data=[actual_finalX], columns=params_to_update, index=[run_id])
-res_df.index.name = "run_id"
-res_fpath = os.path.join(out_dpath, f'{run_id}_least_square.csv')
-res_df.to_csv(res_fpath)
+actual_finalX = {p: np.exp(i) if lg else i for i,lg,p in zip(finalX, log_params, params_to_update)}
+
+
+res_fpath = os.path.join(out_dpath, f'{run_id}.json')
+params2json(actual_finalX, res_fpath)
+
 
 
 
