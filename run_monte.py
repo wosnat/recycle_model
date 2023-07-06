@@ -17,21 +17,13 @@ from functools import lru_cache
 from model_equations_separate_NC_sep_vmax import *
 
 
-def run_model(random_params, random_values):
+def run_model(idx, random_params, random_values):
     lowN_run = generate_json_and_run_from_X(
         random_values, random_params, param_vals, 
-        ref_fpath, json_dpath, out_dpath, run_id, 
+        ref_fpath, json_dpath, out_dpath, f'{run_id}_{idx}', 
             timeout=timeout, log_params=log_params,
         which_organism=which_organism, pro99_mode=False,
     )
-
-# this wrap is to cache run_model results
-run_model = lru_cache(run_model)
-
-def wrap_run_model(X):
-    return(run_model(tuple(X)))
-
-
 
 def create_random_param_vals(i):
     random_number_of_parameters = i[0]
@@ -47,9 +39,10 @@ def run_monte_carlo(number_of_runs):
     rng = np.random.default_rng()
     number_of_params = rng.integers(low=2,high=6, size=number_of_runs)
     random_param_values = [rng.uniform(low=l, high=h, size=number_of_runs) for l,h in bounds_logged]
-    for i in zip(number_of_params, *random_param_values):
+    for idx,i in enumerate(zip(number_of_params, *random_param_values)):
         random_params, random_values = create_random_param_vals(i)
-        print (random_params, random_values)
+        print (idx,random_params, random_values)
+        wrap_run_model(idx, random_params, random_values)
             
 
 
