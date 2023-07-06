@@ -50,20 +50,20 @@ run_id = args.run_id
 json_dpath = args.json_dpath
 out_dpath = args.out_dpath
 timeout= args.timeout
-
+vpro_json = args.vpro_json
 
 ref_fpath =  args.ref_csv
+ref_sample_id = args.ref_sample_id
 
 ref_df = pd.read_excel(ref_fpath)
-ref_df = ref_df.loc[ref_df['id'].isin([args.ref_sample_id])]
+ref_df = ref_df.loc[ref_df['id'].isin([ref_sample_id])]
 ref_df = ref_df.sort_values(['t','Sample'])
-ref_df = ref_df.loc[ref_df['day'] < 60]
 Y = ref_df['ref_Bp'].values
 Y = Y.clip(min=4)
 
 
 param_vals = get_param_vals(model)
-param_vals = json2params(param_vals, args.vpro_json)
+param_vals = json2params(param_vals, vpro_json)
 
 params_to_update, bounds, log_params = get_param_tuning_values(model, organism_to_tune)
 
@@ -95,18 +95,30 @@ run_model = lru_cache(run_model)
 def wrap_run_model(X):
     return(run_model(tuple(X)))
 
-
 def jac(X):
     delta = 1e-8
     base = wrap_run_model(X)
     J = np.empty((base.size, X.size))
     for i in range(X.size):
+        delta_i = X[i]*delta
         deltaX = np.array(X)
-        deltaX[i] = deltaX[i] +  delta
+        deltaX[i] = deltaX[i] +  delta_i
         delta_Bp = wrap_run_model(deltaX)
-        J[:, i] = (delta_Bp - base) / delta
+        J[:, i] = (delta_Bp - base) / delta_i
 
     return J    
+    
+# def jac(X):
+    # delta = 1e-8
+    # base = wrap_run_model(X)
+    # J = np.empty((base.size, X.size))
+    # for i in range(X.size):
+        # deltaX = np.array(X)
+        # deltaX[i] = deltaX[i] +  delta
+        # delta_Bp = wrap_run_model(deltaX)
+        # J[:, i] = (delta_Bp - base) / delta
+
+    # return J    
 
 def fun(X):
     return wrap_run_model(X) - Y
