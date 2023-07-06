@@ -95,30 +95,30 @@ run_model = lru_cache(run_model)
 def wrap_run_model(X):
     return(run_model(tuple(X)))
 
+#def jac(X):
+#    delta = 1e-8
+#    base = wrap_run_model(X)
+#    J = np.empty((base.size, X.size))
+#    for i in range(X.size):
+#        delta_i = X[i]*delta
+#        deltaX = np.array(X)
+#        deltaX[i] = deltaX[i] +  delta_i
+#        delta_Bp = wrap_run_model(deltaX)
+#        J[:, i] = (delta_Bp - base) / delta_i
+#
+#    return J    
+    
 def jac(X):
     delta = 1e-8
     base = wrap_run_model(X)
     J = np.empty((base.size, X.size))
     for i in range(X.size):
-        delta_i = X[i]*delta
         deltaX = np.array(X)
-        deltaX[i] = deltaX[i] +  delta_i
+        deltaX[i] = deltaX[i] +  delta
         delta_Bp = wrap_run_model(deltaX)
-        J[:, i] = (delta_Bp - base) / delta_i
+        J[:, i] = (delta_Bp - base) / delta
 
     return J    
-    
-# def jac(X):
-    # delta = 1e-8
-    # base = wrap_run_model(X)
-    # J = np.empty((base.size, X.size))
-    # for i in range(X.size):
-        # deltaX = np.array(X)
-        # deltaX[i] = deltaX[i] +  delta
-        # delta_Bp = wrap_run_model(deltaX)
-        # J[:, i] = (delta_Bp - base) / delta
-
-    # return J    
 
 def fun(X):
     return wrap_run_model(X) - Y
