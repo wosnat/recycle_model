@@ -17,22 +17,23 @@ from functools import lru_cache
 from model_equations_separate_NC_sep_vmax import *
 
 
-def run_model(idx, random_params, random_values):
+def run_model(idx, random_params, random_values, random_log_params):
     lowN_run = generate_json_and_run_from_X(
         random_values, random_params, param_vals, 
         ref_fpath, json_dpath, out_dpath, f'{run_id}_{idx}', 
-            timeout=timeout, log_params=log_params,
+            timeout=timeout, log_params=random_log_params,
         which_organism=which_organism, pro99_mode=False,
     )
 
-def create_random_param_vals(i):
+def create_random_param_vals(rng, i):
     random_number_of_parameters = i[0]
     random_parameter_values = i[1:]
     random_params_to_update = rng.choice(
         len(params_to_update), replace=False, size=random_number_of_parameters)
-    random_params = [params_to_update[j] for j in random_params_to_update ]
-    random_values = [random_parameter_values[j] for j in random_params_to_update ]
-    return random_params, random_values
+    random_params     = [params_to_update[j]        for j in random_params_to_update ]
+    random_log_params = [log_params[j]              for j in random_params_to_update ]
+    random_values     = [random_parameter_values[j] for j in random_params_to_update ]
+    return random_params, random_values, random_log_params
 
     
 def run_monte_carlo(number_of_runs):
@@ -40,9 +41,9 @@ def run_monte_carlo(number_of_runs):
     number_of_params = rng.integers(low=2,high=6, size=number_of_runs)
     random_param_values = [rng.uniform(low=l, high=h, size=number_of_runs) for l,h in bounds_logged]
     for idx,i in enumerate(zip(number_of_params, *random_param_values)):
-        random_params, random_values = create_random_param_vals(i)
-        print (idx,random_params, random_values)
-        wrap_run_model(idx, random_params, random_values)
+        random_params, random_values, random_log_params = create_random_param_vals(rng, i)
+        print (idx,random_params, random_values, random_log_params)
+        run_model(idx, random_params, random_values, random_log_params)
             
 
 
