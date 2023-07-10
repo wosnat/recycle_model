@@ -32,14 +32,37 @@ def _read_csv_df(f):
         df['run_id'] = os.path.basename(f) .replace('_df.csv.gz', '') .replace('_mse.csv.gz', '') .replace('_sum.csv.gz', '')
     return df
 
+def create_mse_df(df_fpath, df, refdf):
+    if (df is None) or (refdf is None):
+        return(0)
+    mse_fpath = df_fpath.replace('_df.csv.gz', '_mse.csv.gz')
+    if os.path.exists(mse_fpath):
+        return(0)
+    try:
+        mse_df = compute_mse(df, refdf, refcol= 'ref_Bp', col='Bp', timecol='t', tolerance=100)
+        mse_df.to_csv(mse_fpath, compression='gzip')
+    except BaseException as err:
+        print(f"Unexpected {err}, {type(err)}")
+        print('failed to create mse:', df_fpath)
+        return None
 
-def concat_csvs(dpaths, out_dpath, out_fprefix):
+
+def concat_csvs(dpaths, out_dpath, out_fprefix, refdf):
     res_glob_pattern = '*_df.csv.gz'
     sum_glob_pattern = '*_sum.csv.gz'
     mse_glob_pattern = '*_mse.csv.gz'
     lsq_glob_pattern = '*_least_square.csv'
 
     print(dpaths)
+
+    data_dfs = [ f,_read_csv_df(f) for dpath in dpaths for f in glob.glob(os.path.join(dpath,res_glob_pattern ))] 
+    # create mse file if not found
+    if refdf is not None:
+        [ create_mse_df(f, d, refdf) for f,d in data_dfs if d is not None]
+    data_df = pd.concat ( [ d for f,d in data_dfs if d is not None])
+    data_df.drop(columns=['Unnamed: 0',], inplace=True)
+    data_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip', index=False)
+
     sum_dfs = [_read_csv_try(f) for dpath in dpaths for f in glob.glob(os.path.join(dpath,sum_glob_pattern )) ]
     sum_df = pd.concat ( [ d for d in sum_dfs if d is not None])
     sum_df.drop(columns=['Unnamed: 0',], inplace=True)
@@ -59,10 +82,6 @@ def concat_csvs(dpaths, out_dpath, out_fprefix):
         lsq_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_lsq.csv.gz'), compression='gzip', index=False)
 
 
-    data_dfs = [ _read_csv_df(f) for dpath in dpaths for f in glob.glob(os.path.join(dpath,res_glob_pattern ))] 
-    data_df = pd.concat ( [ d for d in data_dfs if d is not None])
-    data_df.drop(columns=['Unnamed: 0',], inplace=True)
-    data_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip', index=False)
 
 
 def run_umap_hdbscan(df, sum_df):
@@ -96,10 +115,16 @@ if __name__ == '__main__':
             help='paths to load from', required=True, nargs="+")
     parser.add_argument("--outdpath", help="output dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
+    parser.add_argument('--ref_csv', help='reference CSV', default='None')
 
     args = parser.parse_args()
     dpath = args.outdpath
     if dpath != '':
         os.makedirs(dpath, exist_ok=True)
         
-    concat_csvs(args.dpath, args.outdpath, args.run_id)
+    if args.ref_csv == 'None':
+        refdf = None
+    else:
+        refdf = pd.read_excel(args.ref_csv)
+
+    concat_csvs(args.dpath, args.outdpath, args.run_id, refdf)
