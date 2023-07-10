@@ -14,6 +14,7 @@ from scipy.integrate import solve_ivp
 import glob
 import os
 
+from model_equations_separate_NC_sep_vmax import *
 
 def _read_csv_try(f):
     try:
@@ -55,7 +56,7 @@ def concat_csvs(dpaths, out_dpath, out_fprefix, refdf):
 
     print(dpaths)
 
-    data_dfs = [ f,_read_csv_df(f) for dpath in dpaths for f in glob.glob(os.path.join(dpath,res_glob_pattern ))] 
+    data_dfs = [ (f,_read_csv_df(f)) for dpath in dpaths for f in glob.glob(os.path.join(dpath,res_glob_pattern ))] 
     # create mse file if not found
     if refdf is not None:
         [ create_mse_df(f, d, refdf) for f,d in data_dfs if d is not None]
