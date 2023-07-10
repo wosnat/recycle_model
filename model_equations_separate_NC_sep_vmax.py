@@ -1027,7 +1027,7 @@ if __name__ == '__main__':
     import pprint
 
     parser = argparse.ArgumentParser(description='Run models - nutrients recycle with separate N/C and quotas.')
-    parser.add_argument('--ref_csv', help='reference CSV', default='prelim bottle.csv')
+    parser.add_argument('--ref_csv', help='reference CSV', default='None')
     parser.add_argument('--json', help='json with param vals', nargs="+")
     parser.add_argument('--maxday', help='max day of simulation', type=int, default=140)
 
