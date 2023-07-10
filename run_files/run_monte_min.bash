@@ -1,6 +1,6 @@
 
 
-for m in MIN 
+for m in MIXO
 do
        #for i in  0.1 0.01  10 20 100
        for j in $(ls PRO_JSON/*_${m}*.json) 

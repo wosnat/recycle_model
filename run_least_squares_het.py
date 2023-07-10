@@ -25,7 +25,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run models - nutrients recycle with separate N/C and quotas.')
     parser.add_argument('--ref_csv', help='reference CSV', required=True)
     parser.add_argument('--ref_sample_id', help='reference sample id for fitting', required=True, type=int)
-    parser.add_argument('--vpro_json', help='json file used for pro params', required=True)
+    parser.add_argument('--vpro_json', help='json file used for pro params', required=True, nargs="+")
     parser.add_argument('--json_dpath', help='folder to put json files with param vals', default='.')
     parser.add_argument("--out_dpath", help="output dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
@@ -63,7 +63,8 @@ Y = Y.clip(min=4)
 
 
 param_vals = get_param_vals(model)
-param_vals = json2params(param_vals, vpro_json)
+for vjson in vpro_json:
+    param_vals = json2params(param_vals, vjson)
 
 params_to_update, bounds, log_params = get_param_tuning_values(model, organism_to_tune)
 

@@ -885,10 +885,12 @@ def compute_mse(df, refdf, refcol= 'ref_Bp', col='Bp', timecol='t', tolerance=10
 # ).apply(lambda x : _mse_all(x, refdf, refcol= refcol, col=col, timecol=timecol, tolerance=tolerance))    
 
 
-def run_with_params_json(json_fpath, days, refdf, out_dpath, out_fprefix, which_organism, pro99_mode, t_eval):
+def run_with_params_json(json_fpath_list, days, refdf, out_dpath, out_fprefix, which_organism, pro99_mode, t_eval):
     perr = -1
     orig_t_eval = t_eval
-    new_params = json2params(param_vals, json_fpath)
+    new_params = param_vals
+    for json_fpath in json_fpath_list:
+        new_params = json2params(new_params, json_fpath)
     if which_organism == 'ponly':
         var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_ponly_data(param_vals_str=new_params, pro99_mode=pro99_mode)
     elif which_organism == 'honly':
@@ -1026,7 +1028,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Run models - nutrients recycle with separate N/C and quotas.')
     parser.add_argument('--ref_csv', help='reference CSV', default='prelim bottle.csv')
-    parser.add_argument('--json', help='json with param vals', default=None)
+    parser.add_argument('--json', help='json with param vals', nargs="+")
     parser.add_argument('--maxday', help='max day of simulation', type=int, default=140)
 
     parser.add_argument("--outdpath", help="output dir", default='.')
