@@ -5,7 +5,7 @@ do
        #for i in  0.1 0.01  10 20 100
        for i in 1
        do
-	       for s in 7
+	       for s in 2
 	       do
 		       for j in $(ls PRO_JSON/*_${m}*.json) 
 		       do
