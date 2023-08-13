@@ -23,6 +23,9 @@ import time
 
 import calc_csat
 
+from numba import jit
+
+
 # variables
 Bp, Bh, DOC, RDOC, DIC, DON, RDON, DIN, ROS, ABp, ABh = symbols('Bp Bh DOC RDOC DIC DON RDON DIN ROS ABp ABh')
 
@@ -510,7 +513,8 @@ def get_main_data(param_vals_str, pro99_mode):
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
     final_func = lambdify(var_list, subs_funclist)
-    calc_dydt = lambda t, y : final_func(*y)
+    final_func_jit = jit(final_func, nopython=True)  
+    calc_dydt = lambda t, y : final_func_jit(*y)
 
     interm_sfunc_list = [
         Xp, Xh,
@@ -584,6 +588,7 @@ def get_main_data(param_vals_str, pro99_mode):
 
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
     intermediate_func = lambdify(var_list, interm_funclist)
+    intermediate_func = jit(intermediate_func, nopython=True)  
 
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
@@ -603,7 +608,8 @@ def get_ponly_data(param_vals_str, pro99_mode):
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
     final_func = lambdify(var_list, subs_funclist)
-    calc_dydt = lambda t, y : final_func(*y)
+    final_func_jit = jit(final_func, nopython=True)  
+    calc_dydt = lambda t, y : final_func_jit(*y)
 
     interm_sfunc_list = [
         Xp, 
@@ -652,6 +658,7 @@ def get_ponly_data(param_vals_str, pro99_mode):
     ]
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
     intermediate_func = lambdify(var_list, interm_funclist)
+    intermediate_func = jit(intermediate_func, nopython=True)  
 
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
@@ -671,7 +678,8 @@ def get_honly_data(param_vals_str, pro99_mode):
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
     final_func = lambdify(var_list, subs_funclist)
-    calc_dydt = lambda t, y : final_func(*y)
+    final_func_jit = jit(final_func, nopython=True)  
+    calc_dydt = lambda t, y : final_func_jit(*y)
 
     interm_sfunc_list = [
         Xh,
@@ -720,6 +728,7 @@ def get_honly_data(param_vals_str, pro99_mode):
 
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
     intermediate_func = lambdify(var_list, interm_funclist)
+    intermediate_func = jit(intermediate_func, nopython=True)  
 
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
