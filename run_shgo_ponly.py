@@ -16,6 +16,9 @@ from functools import lru_cache
 
 from model_equations_separate_NC_sep_vmax import *
 
+from scipy.optimize import minimize
+from scipy.optimize import shgo
+
 
 if __name__ == '__main__':
     import argparse
@@ -73,7 +76,7 @@ params_to_update, bounds, log_params = get_param_tuning_values(model, organism_t
 x0 = np.array([np.log(param_vals[i]) if lg else param_vals[i] for i, lg in zip(params_to_update, log_params)])
 
 bounds_logged = [(np.log(b[0]),  np.log(b[1]))  if lg else b for b,lg in zip(bounds, log_params)]
-param_bounds =  list(zip(*bounds_logged))
+param_bounds =  bounds_logged
 
 t_eval = np.rint(ref_df['t'].drop_duplicates().sort_values()).values
 t_eval_pro99 = np.rint(ref_pro99_df['t'].drop_duplicates().sort_values()).values
@@ -148,6 +151,15 @@ def hess_for_minimize(X):
 
 
 
+print('shgo(',
+    fun, param_bounds, 
+    #minimizer_kwargs=dict(
+        #jac=jac_for_minimize, 
+#        hess=hess_for_minimize, 
+#        options=dict(disp=True, maxiter=3), method='L-BFGS-B'),
+#    options=dict(jac=
+            jac_for_minimize)
+
 res = shgo(
     fun, param_bounds, 
     minimizer_kwargs=dict(
@@ -159,7 +171,7 @@ res = shgo(
 
 print(res)
 
-for idx, finalX in enumerate(result.xl, start=1):
+for idx, finalX in enumerate(res.xl, start=1):
     actual_finalX = {p: np.exp(i) if lg else i for i,lg,p in zip(finalX, log_params, params_to_update)}
     res_fpath = os.path.join(out_dpath, f'{run_id}_{idx}.json')
     params2json(actual_finalX, res_fpath)
