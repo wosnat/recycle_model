@@ -512,7 +512,7 @@ def get_main_data(param_vals_str, pro99_mode):
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
-    final_func = lambdify(var_list, subs_funclist)
+    final_func = lambdify(var_list, subs_funclist, modules=['math'])
     final_func_jit = jit(final_func, nopython=True)  
     calc_dydt = lambda t, y : final_func_jit(*y)
 
@@ -587,7 +587,7 @@ def get_main_data(param_vals_str, pro99_mode):
     ]
 
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
-    intermediate_func = lambdify(var_list, interm_funclist)
+    intermediate_func = lambdify(var_list, interm_funclist, modules=['math'])
     intermediate_func = jit(intermediate_func, nopython=True)  
 
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
@@ -607,7 +607,7 @@ def get_ponly_data(param_vals_str, pro99_mode):
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
-    final_func = lambdify(var_list, subs_funclist)
+    final_func = lambdify(var_list, subs_funclist, modules=['math'])
     final_func_jit = jit(final_func, nopython=True)  
     calc_dydt = lambda t, y : final_func_jit(*y)
 
@@ -657,7 +657,7 @@ def get_ponly_data(param_vals_str, pro99_mode):
         
     ]
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
-    intermediate_func = lambdify(var_list, interm_funclist)
+    intermediate_func = lambdify(var_list, interm_funclist, modules=['math'])
     intermediate_func = jit(intermediate_func, nopython=True)  
 
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
@@ -677,7 +677,7 @@ def get_honly_data(param_vals_str, pro99_mode):
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
-    final_func = lambdify(var_list, subs_funclist)
+    final_func = lambdify(var_list, subs_funclist, modules=['math'])
     final_func_jit = jit(final_func, nopython=True)  
     calc_dydt = lambda t, y : final_func_jit(*y)
 
@@ -727,7 +727,7 @@ def get_honly_data(param_vals_str, pro99_mode):
     ]
 
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
-    intermediate_func = lambdify(var_list, interm_funclist)
+    intermediate_func = lambdify(var_list, interm_funclist, modules=['math'])
     intermediate_func = jit(intermediate_func, nopython=True)  
 
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
