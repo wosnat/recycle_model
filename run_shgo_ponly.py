@@ -63,8 +63,8 @@ ref_df = pd.read_excel(ref_fpath)
 ref_pro99_df = pd.read_excel(ref_pro99_fpath)
 ref_df = ref_df.sort_values(['t','Sample'])
 ref_pro99_df = ref_pro99_df.sort_values(['t','Sample'])
-ref_df = ref_df.loc[ref_df['day'] < 60]
-ref_pro99_df = ref_pro99_df.loc[ref_pro99_df['day'] < 60]
+#ref_df = ref_df.loc[ref_df['day'] < 60]
+#ref_pro99_df = ref_pro99_df.loc[ref_pro99_df['day'] < 60]
 Y = pd.concat([ref_df['ref_Bp'], ref_pro99_df['ref_Bp']]).values
 Y = Y.clip(min=4)
 
@@ -162,6 +162,7 @@ print('shgo(',
 
 res = shgo(
     fun, param_bounds, 
+    n=100, iters=1, sampling_method='sobol',
     minimizer_kwargs=dict(
         #jac=jac_for_minimize, 
         hess=hess_for_minimize, 

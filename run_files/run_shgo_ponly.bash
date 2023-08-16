@@ -1,6 +1,6 @@
 
 
-for m in MIN LEAK MIXO
+for m in MIXO
 do
 	       echo $m 
 mkdir -p ~/work/RECYCLE_MODEL/results/shgo_${m}/log
