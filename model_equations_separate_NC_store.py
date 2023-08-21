@@ -28,6 +28,7 @@ from numba import jit
 
 # variables
 Bp, Bh, DOC, RDOC, DIC, DON, RDON, DIN, ROS, ABp, ABh = symbols('Bp Bh DOC RDOC DIC DON RDON DIN ROS ABp ABh')
+Cp, Np, Ch, Nh = symbols('Cp Np Ch Nh')
 
 
 # parameters
@@ -44,7 +45,8 @@ VmaxONp, VmaxINp, VmaxOCp, VmaxICp, VmaxONh, VmaxINh, VmaxOCh, VmaxICh = symbols
 
 tau, r0p, r0h, bp, bh = symbols('tau r0p r0h bp bh')
 
-
+QNmaxp, QNminp, QNmaxh, QNminh = symbols('QNmaxp QNminp QNmaxh QNminh')
+Kmtbp, Kmtbh = symbols('Kmtbp Kmtbh')
 
 # Redfield ratio
 R_CN = 6.625
@@ -272,31 +274,42 @@ limONh = (DON / (DON + KONh))
 limICh = (DIC / (DIC + KICh))
 limOCh = (DOC / (DOC + KOCh))
 
+QNp = (Np + Bp) / (Cp + Bp / R_P)
+QNh = (Nh + Bh) / (Ch + Bh / R_H)
+regQNp = (QNmaxp - QNp) / (QNmaxp - QNminp)
+#regQCp = (QCmaxp - QCp) / (QCmaxp - QCminp)
+regQNh = (QNmaxh - QNh) / (QNmaxh - QNminh)
+#regQCh = (QCmaxh - QCh) / (QCmaxh - QCminh)
 
 
 # gross uptake (regardless of C:N ratio)
 # vmax = muinfp* VmaxIp / Qp
 # umol N /L 
-gross_uptakeINp = VmaxINp * limINp * exp(-omegaP*ROS) * Bp
-gross_uptakeONp = VmaxONp * limONp * exp(-omegaP*ROS) * Bp
-gross_uptakeINh = VmaxINh * limINh * exp(-omegaH*ROS) * Bh
-gross_uptakeONh = VmaxONh * limONh * exp(-omegaH*ROS) * Bh
+gross_uptakeINp = VmaxINp * limINp * regQNp * exp(-omegaP*ROS) * Bp
+gross_uptakeONp = VmaxONp * limONp * regQNp * exp(-omegaP*ROS) * Bp
+gross_uptakeINh = VmaxINh * limINh * regQNh * exp(-omegaH*ROS) * Bh
+gross_uptakeONh = VmaxONh * limONh * regQNh * exp(-omegaH*ROS) * Bh
 # umol C /L
 gross_uptakeICp = VmaxICp * limICp * exp(-omegaP*ROS) * Bp 
 gross_uptakeOCp = VmaxOCp * limOCp * exp(-omegaP*ROS) * Bp 
 gross_uptakeICh = VmaxICh * limICh * exp(-omegaH*ROS) * Bh 
 gross_uptakeOCh = VmaxOCh * limOCh * exp(-omegaH*ROS) * Bh 
 
+# ODE - TODO
+deltaNp = gross_uptakeINp + gross_uptakeONp
+deltaNh = gross_uptakeINh + gross_uptakeONh
+deltaCp = gross_uptakeICp + gross_uptakeOCp
+deltaCh = gross_uptakeICh + gross_uptakeOCh
+
 # net uptake (maintains C:N ratios)
 # umol N / L
-net_uptakeNp = Min(gross_uptakeINp + gross_uptakeONp, 
-                     (gross_uptakeICp + gross_uptakeOCp) / Rp)
+bio_synthesis_p = Min(Np + deltaNp, (Cp + deltaCp) / Rp) * Kmtbp
+bio_synthesis_h = Min(Nh + deltaNh, (Ch + deltaCh) / Rh) * Kmtbh
 
-net_uptakeNh = Min(gross_uptakeINh + gross_uptakeONh, 
-                     (gross_uptakeICh + gross_uptakeOCh) / Rh)
 
 # inorganic to organic uptake ratio
 # used to restrict uptake when overflow is disabled
+# TODO
 IOuptakeRateNp = gross_uptakeONp / (gross_uptakeINp + gross_uptakeONp)
 IOuptakeRateCp = gross_uptakeOCp / (gross_uptakeICp + gross_uptakeOCp)
 IOuptakeRateNh = gross_uptakeONh / (gross_uptakeINh + gross_uptakeONh)
@@ -333,8 +346,8 @@ overflowICh =                   (1 - Oh) * overflowCh * (1 - IOuptakeRateCh)
 
 # Respiration – growth associated bp/bh and maintenance associated r0p/r0h
 # b * growth + r0 * biomass
-respirationp =  bp* net_uptakeNp + Bp * r0p
-respirationh =  bh* net_uptakeNh + Bh * r0h
+respirationp =  bp* bio_synthesis_p + Bp * r0p
+respirationh =  bh* bio_synthesis_h + Bh * r0h
 
 
 
@@ -383,8 +396,14 @@ ROSbreakdownh = VmaxROSh * ROS / (ROS + K_ROSh) * Bh
 
 ####################################################
 # final equation - coculture
-dBpdt = net_uptakeNp - deathp - leakinessOp - respirationp - ABreleasep
-dBhdt = net_uptakeNh - deathh - leakinessOh - respirationh - ABreleaseh
+dBpdt = bio_synthesis_p - deathp - leakinessOp - ABreleasep
+dBhdt = bio_synthesis_h - deathh - leakinessOh - ABreleaseh
+
+dNpdt = deltaNp - bio_synthesis_p
+dCpdt = deltaCp - bio_synthesis_p - respirationp
+dNhdt = deltaNh - bio_synthesis_h
+dChdt = deltaCh - bio_synthesis_h - respirationh
+
 
 # todo disable overflow
 dDONdt = (
