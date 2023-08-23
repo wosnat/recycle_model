@@ -142,7 +142,7 @@ INIT_DOC = INIT_DON * R_CN
 INIT_BP = 1e9 * Qp
 INIT_BH = 1e10 * Qh
 INIT_BH_CC = 5e9 * Qh # the actual concentration in the measurements
-INIT_ROS = 0.2 # Morris, J. Jeffrey, et al. "Dependence of the cyanobacterium Prochlorococcus on hydrogen peroxide scavenging microbes for growth at the ocean's surface." PloS one 6.2 (2011): e16805.‏
+INIT_ROS = 0.2 # Morris, J. Jeffrey, et al. "Dependence of the cyanobacterium Prochlorococcus on hydrogen peroxide scavenging microbes for growth at the ocean's surface." PloS one 6.2 (2011): e16805.
 INIT_SP = 0
 INIT_SH = 0
 
@@ -274,12 +274,26 @@ limONh = (DON / (DON + KONh))
 limICh = (DIC / (DIC + KICh))
 limOCh = (DOC / (DOC + KOCh))
 
-QNp = (Np + Bp) / (Cp + Bp / R_P)
-QNh = (Nh + Bh) / (Ch + Bh / R_H)
-regQNp = (QNmaxp - QNp) / (QNmaxp - QNminp)
-#regQCp = (QCmaxp - QCp) / (QCmaxp - QCminp)
-regQNh = (QNmaxh - QNh) / (QNmaxh - QNminh)
-#regQCh = (QCmaxh - QCh) / (QCmaxh - QCminh)
+# regulate uptake by not letting the stores grow too large 
+
+# QC = C:N ratio
+QCp = (Cp + Bp / Rp) / (Np + Bp) 
+QCh = (Ch + Bh / Rh) / (Nh + Bh)
+# restrict C uptake when N:C ratio approaches QNminh, 
+# i.e. when C:N ratio approaches QCmax
+QCmaxp = 1 / QNminp
+QCmaxh = 1 / QNminh
+regQCp = max(0.0, min(1.0, 1.0 - QCp / QCmaxp))
+regQCh = max(0.0, min(1.0, 1.0 - QCh / QCmaxh))
+
+# restrict N uptake when N:C ratio approaches QNmax
+# C:N should be higher than QNmaxp
+QNp = 1 / QCp
+QNh = 1 / QCh
+
+regQNp = max(0.0, min(1.0, 1.0 - QNp / QNmaxp))
+regQNh = max(0.0, min(1.0, 1.0 - QNh / QNmaxh))
+
 
 
 # gross uptake (regardless of C:N ratio)
@@ -290,10 +304,12 @@ gross_uptakeONp = VmaxONp * limONp * regQNp * exp(-omegaP*ROS) * Bp
 gross_uptakeINh = VmaxINh * limINh * regQNh * exp(-omegaH*ROS) * Bh
 gross_uptakeONh = VmaxONh * limONh * regQNh * exp(-omegaH*ROS) * Bh
 # umol C /L
-gross_uptakeICp = VmaxICp * limICp * exp(-omegaP*ROS) * Bp 
-gross_uptakeOCp = VmaxOCp * limOCp * exp(-omegaP*ROS) * Bp 
-gross_uptakeICh = VmaxICh * limICh * exp(-omegaH*ROS) * Bh 
-gross_uptakeOCh = VmaxOCh * limOCh * exp(-omegaH*ROS) * Bh 
+
+# question: is DIC uptake by photosynthesis regulated?
+gross_uptakeICp = VmaxICp * limICp * regQCp * exp(-omegaP*ROS) * Bp 
+gross_uptakeOCp = VmaxOCp * limOCp * regQCp * exp(-omegaP*ROS) * Bp 
+gross_uptakeICh = VmaxICh * limICh * regQCh * exp(-omegaH*ROS) * Bh 
+gross_uptakeOCh = VmaxOCh * limOCh * regQCh * exp(-omegaH*ROS) * Bh 
 
 # ODE - TODO
 deltaNp = gross_uptakeINp + gross_uptakeONp
@@ -303,26 +319,36 @@ deltaCh = gross_uptakeICh + gross_uptakeOCh
 
 # net uptake (maintains C:N ratios)
 # umol N / L
-bio_synthesis_p = Min(Np + deltaNp, (Cp + deltaCp) / Rp) * Kmtbp
-bio_synthesis_h = Min(Nh + deltaNh, (Ch + deltaCh) / Rh) * Kmtbh
+bio_synthesisN_p = Min(Np + deltaNp, (Cp + deltaCp) / Rp) * Kmtbp
+bio_synthesisN_h = Min(Nh + deltaNh, (Ch + deltaCh) / Rh) * Kmtbh
+
+# Respiration – growth associated bp/bh and maintenance associated r0p/r0h
+# b * growth + r0 * biomass
+# umol C/L
+respirationCp = (bp* bio_synthesis_p + Bp * r0p) * Rp
+respirationCh = (bh* bio_synthesis_h + Bh * r0h) * Rh
 
 
-# inorganic to organic uptake ratio
-# used to restrict uptake when overflow is disabled
-# TODO
-IOuptakeRateNp = gross_uptakeONp / (gross_uptakeINp + gross_uptakeONp)
-IOuptakeRateCp = gross_uptakeOCp / (gross_uptakeICp + gross_uptakeOCp)
-IOuptakeRateNh = gross_uptakeONh / (gross_uptakeINh + gross_uptakeONh)
-IOuptakeRateCh = gross_uptakeOCh / (gross_uptakeICh + gross_uptakeOCh)
+netDeltaNp = deltaNp - bio_synthesisN_p
+netDeltaNh = deltaNh - bio_synthesisN_h
+netDeltaCp = deltaCp - bio_synthesisN_p * Rp - respirationCp
+netDeltaCh = deltaCh - bio_synthesisN_h * Rh - respirationCh
+
+# if C store is not big enough, break some of the biomass into the stores
+# make sure Cp is not negative
+# umol C/L
+biomass_breakdown_for_respirationCp = Min(0, Cp + netDeltaCp))
+biomass_breakdown_for_respirationCh = Min(0, Ch + netDeltaCh))
 
 
 # Overflow quantity 
+# Oh/Op: enable overflow (0 or 1)
 # umol N / L
-overflowNp = gross_uptakeINp + gross_uptakeONp - net_uptakeNp 
-overflowNh = gross_uptakeINh + gross_uptakeONh - net_uptakeNh
+overflowNp = Op * Min(netDeltaNp, 0)
+overflowNh = Oh * Min(netDeltaNh, 0)
 # umol C /L
-overflowCp = gross_uptakeICp + gross_uptakeOCp - net_uptakeNp * Rp
-overflowCh = gross_uptakeICh + gross_uptakeOCh - net_uptakeNh * Rh
+overflowCp = Op * Min(netDeltaCp, 0)
+overflowCh = Oh * Min(netDeltaCh, 0)
 
 
 # if overflow is disabled, Oh/Op is 0 and the overflow goes back to the source 
@@ -331,24 +357,6 @@ overflowCh = gross_uptakeICh + gross_uptakeOCh - net_uptakeNh * Rh
 # and O/I preference is based on the organic/inorganic gross uptake ratio)
 # If overflow is enabled, Oh/Op is 1 and we use the second half of the formula, 
 # all overflow goes out as organic compounds
-overflowONp = Op * overflowNp + (1 - Op) * overflowNp * IOuptakeRateNp
-overflowINp =                   (1 - Op) * overflowNp * (1 - IOuptakeRateNp)
-overflowOCp = Op * overflowCp + (1 - Op) * overflowCp * IOuptakeRateCp
-overflowICp =                   (1 - Op) * overflowCp * (1 - IOuptakeRateCp)
-
-overflowONh = Oh * overflowNh + (1 - Oh) * overflowNh * IOuptakeRateNh
-overflowINh =                   (1 - Oh) * overflowNh * (1 - IOuptakeRateNh)
-overflowOCh = Oh * overflowCh + (1 - Oh) * overflowCh * IOuptakeRateCh
-overflowICh =                   (1 - Oh) * overflowCh * (1 - IOuptakeRateCh)
-
-
-# umol N / L
-
-# Respiration – growth associated bp/bh and maintenance associated r0p/r0h
-# b * growth + r0 * biomass
-respirationp =  bp* bio_synthesis_p + Bp * r0p
-respirationh =  bh* bio_synthesis_h + Bh * r0h
-
 
 
 #dic_air_water_exchange   =  - (DIC - c_sat) / tau
@@ -372,7 +380,7 @@ death_ratep = Min(Mp + MABp*(ABh / (ABh + KABp)), 1 )
 death_rateh = Min(Mh + MABh*(ABp / (ABp + KABh)), 1 )
 
 
-# Need to explain why we used exponential decay – in ISMEJ we show that other formulations are better for co-cuiltures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
+# Need to explain why we used exponential decay – in ISMEJ we show that other formulations are better for co-cultures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
 
 deathp = death_ratep * Bp 
 deathh = death_rateh * Bh 
@@ -392,27 +400,26 @@ ROSreleaseh = E_ROSh * Bh
 ROSbreakdownh = VmaxROSh * ROS / (ROS + K_ROSh) * Bh
 
 
-# We assume that the vast m,ajority of C and N biomass is in organic form, hence leakiness is to organic. We assume that overflow is also to organic in both organisms, as for the phototroph this is the release of fixed C (or inorganic N incorporated into e.g. AA) which cannot be used for growth. For the heterotrophs we assume overflow metabolism to be the inefficient use of organic C (e.g. not fully oxidized) to maximize growth rate (*citation E coli).
+# We assume that the vast majority of C and N biomass is in organic form, hence leakiness is to organic. We assume that overflow is also to organic in both organisms, as for the phototroph this is the release of fixed C (or inorganic N incorporated into e.g. AA) which cannot be used for growth. For the heterotrophs we assume overflow metabolism to be the inefficient use of organic C (e.g. not fully oxidized) to maximize growth rate (*citation E coli).
 
 ####################################################
 # final equation - coculture
-dBpdt = bio_synthesis_p - deathp - leakinessOp - ABreleasep
-dBhdt = bio_synthesis_h - deathh - leakinessOh - ABreleaseh
+dBpdt = bio_synthesisN_p - biomass_breakdown_for_respirationCp / Rp - deathp - leakinessOp - ABreleasep
+dBhdt = bio_synthesisN_h - biomass_breakdown_for_respirationCh / Rh - deathh - leakinessOh - ABreleaseh
 
-dNpdt = deltaNp - bio_synthesis_p
-dCpdt = deltaCp - bio_synthesis_p - respirationp
-dNhdt = deltaNh - bio_synthesis_h
-dChdt = deltaCh - bio_synthesis_h - respirationh
+dNpdt = netDeltaNp + biomass_breakdown_for_respirationCp / Rp - overflowNp 
+dNpht = netDeltaNh + biomass_breakdown_for_respirationCh / Rh - overflowNh 
+dCpdt = netDeltaCp + biomass_breakdown_for_respirationCp - overflowCp 
+dChdt = netDeltaCh + biomass_breakdown_for_respirationCh - overflowCh 
 
 
-# todo disable overflow
 dDONdt = (
-    deathp * gammaDp + leakinessOp + overflowONp - gross_uptakeONp +
-    deathh * gammaDh + leakinessOh + overflowONh - gross_uptakeONh
+    deathp * gammaDp + leakinessOp + overflowNp - gross_uptakeONp +
+    deathh * gammaDh + leakinessOh + overflowNh - gross_uptakeONh
     ) 
 dDOCdt = (
-    deathp * gammaDp * Rp + leakinessOp * Rp + overflowOCp - gross_uptakeOCp +
-    deathh * gammaDh * Rh + leakinessOh * Rh + overflowOCh - gross_uptakeOCh)
+    deathp * gammaDp * Rp + leakinessOp * Rp + overflowCp - gross_uptakeOCp +
+    deathh * gammaDh * Rh + leakinessOh * Rh + overflowCh - gross_uptakeOCh)
 
 
 # In discussion can state that if DIN is produced also through overflow or leakiness then this could support Pro growth, but this is not encoded into our model.
@@ -429,14 +436,12 @@ dRDOCdt = (
 # Respiration of N is not a biological reality in this case (no NO3 respiration), and is used to maintain C:N ratio. It can be thought of as the release of NH4/urea for example during AA degradation
 
 # Point for discussion with Mick 
-dDINdt = (
-    respirationp + overflowINp - gross_uptakeINp +
-    respirationh + overflowINh - gross_uptakeINh)
+dDINdt = - gross_uptakeINp - gross_uptakeINh
 # leakiness of inorganic
 dDICdt = (
     dic_air_water_exchange +
-    respirationp * Rp + overflowICp - gross_uptakeICp +
-    respirationh * Rh + overflowICh - gross_uptakeICh)
+    respirationCp - gross_uptakeICp +
+    respirationCh - gross_uptakeICh)
 
 # TODO Need to explain why Max and not just ROS dynamics
 dROSdt = Max( -ROS*ROS_decay + ROSreleasep + ROSreleaseh - ROSbreakdownh, -ROS)
@@ -448,9 +453,9 @@ dABhdt = ABreleaseh - ABh*decayABh
 ####################################################
 # PRO only model
 dDONdt_ponly = (
-    deathp * gammaDp + leakinessOp + overflowONp - gross_uptakeONp) 
+    deathp * gammaDp + leakinessOp + overflowNp - gross_uptakeONp) 
 dDOCdt_ponly = (
-    deathp * gammaDp * Rp + leakinessOp * Rp + overflowOCp - gross_uptakeOCp)
+    deathp * gammaDp * Rp + leakinessOp * Rp + overflowCp - gross_uptakeOCp)
 
 
 # In discussion can state that if DIN is produced also through overflow or leakiness then this could support Pro growth, but this is not encoded into our model.
@@ -465,12 +470,11 @@ dRDOCdt_ponly = (
 # Respiration of N is not a biological reality in this case (no NO3 respiration), and is used to maintain C:N ratio. It can be thought of as the release of NH4/urea for example during AA degradation
 
 # Point for discussion with Mick 
-dDINdt_ponly = (
-    respirationp  + overflowINp - gross_uptakeINp)
+dDINdt_ponly = - gross_uptakeINp
 # leakiness of inorganic
 dDICdt_ponly = (
     dic_air_water_exchange +
-    respirationp * Rp  + overflowICp - gross_uptakeICp)
+    respirationCp - gross_uptakeICp)
 
 # TODO Need to explain why Max and not just ROS dynamics
 dROSdt_ponly = Max( -ROS*ROS_decay + ROSreleasep, -ROS)
@@ -479,10 +483,10 @@ dABhdt_ponly = Integer(0)
 ####################################################
 # HET only model
 dDONdt_honly = (
-    deathh * gammaDh + leakinessOh + overflowONh - gross_uptakeONh
+    deathh * gammaDh + leakinessOh + overflowNh - gross_uptakeONh
     ) 
 dDOCdt_honly = (
-    deathh * gammaDh * Rh + leakinessOh * Rh + overflowOCh - gross_uptakeOCh)
+    deathh * gammaDh * Rh + leakinessOh * Rh + overflowCh - gross_uptakeOCh)
 
 
 # In discussion can state that if DIN is produced also through overflow or leakiness then this could support Pro growth, but this is not encoded into our model.
@@ -497,12 +501,11 @@ dRDOCdt_honly = (
 # Respiration of N is not a biological reality in this case (no NO3 respiration), and is used to maintain C:N ratio. It can be thought of as the release of NH4/urea for example during AA degradation
 
 # Point for discussion with Mick 
-dDINdt_honly = (
-    respirationh + overflowINh - gross_uptakeINh)
+dDINdt_honly = - gross_uptakeINh
 # leakiness of inorganic
 dDICdt_honly = (
     dic_air_water_exchange +
-    respirationh * Rh + overflowICh - gross_uptakeICh)
+    respirationCh + overflowICh - gross_uptakeICh)
 
 # TODO Need to explain why Max and not just ROS dynamics
 dROSdt_honly = Max( -ROS*ROS_decay + ROSreleaseh - ROSbreakdownh, -ROS)
