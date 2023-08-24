@@ -299,17 +299,17 @@ regQNh = max(0.0, min(1.0, 1.0 - QNh / QNmaxh))
 # gross uptake (regardless of C:N ratio)
 # vmax = muinfp* VmaxIp / Qp
 # umol N /L 
-gross_uptakeINp = VmaxINp * limINp * regQNp * exp(-omegaP*ROS) * Bp
-gross_uptakeONp = VmaxONp * limONp * regQNp * exp(-omegaP*ROS) * Bp
-gross_uptakeINh = VmaxINh * limINh * regQNh * exp(-omegaH*ROS) * Bh
-gross_uptakeONh = VmaxONh * limONh * regQNh * exp(-omegaH*ROS) * Bh
+gross_uptakeINp = VmaxINp * limINp * regQNp * Bp
+gross_uptakeONp = VmaxONp * limONp * regQNp * Bp
+gross_uptakeINh = VmaxINh * limINh * regQNh * Bh
+gross_uptakeONh = VmaxONh * limONh * regQNh * Bh
 # umol C /L
 
 # question: is DIC uptake by photosynthesis regulated?
-gross_uptakeICp = VmaxICp * limICp * regQCp * exp(-omegaP*ROS) * Bp 
-gross_uptakeOCp = VmaxOCp * limOCp * regQCp * exp(-omegaP*ROS) * Bp 
-gross_uptakeICh = VmaxICh * limICh * regQCh * exp(-omegaH*ROS) * Bh 
-gross_uptakeOCh = VmaxOCh * limOCh * regQCh * exp(-omegaH*ROS) * Bh 
+gross_uptakeICp = VmaxICp * limICp * regQCp * Bp 
+gross_uptakeOCp = VmaxOCp * limOCp * regQCp * Bp 
+gross_uptakeICh = VmaxICh * limICh * regQCh * Bh 
+gross_uptakeOCh = VmaxOCh * limOCh * regQCh * Bh 
 
 # ODE - TODO
 deltaNp = gross_uptakeINp + gross_uptakeONp
@@ -376,8 +376,8 @@ ABreleaseh = EABh * Bh
 # minimum death rate - 0
 # If only AB then effect of AB on mortality is only positive
 
-death_ratep = Min(Mp + MABp*(ABh / (ABh + KABp)), 1 )
-death_rateh = Min(Mh + MABh*(ABp / (ABp + KABh)), 1 )
+death_ratep = Min(Mp + MABp*(ABh / (ABh + KABp)) + MROSp*(ROS / (ROS + MKROSp)), 1 )
+death_rateh = Min(Mh + MABh*(ABp / (ABp + KABh)) + MROSh*(ROS / (ROS + MKROSh)), 1 )
 
 
 # Need to explain why we used exponential decay – in ISMEJ we show that other formulations are better for co-cultures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
@@ -399,6 +399,9 @@ ROSreleasep = E_ROSp * Bp
 ROSreleaseh = E_ROSh * Bh
 ROSbreakdownh = VmaxROSh * ROS / (ROS + K_ROSh) * Bh
 
+# DIN breakdown due to exoenzymes
+DON2DIN = gamma_DON2DINh * Bh * DON + gamma_DON2DINp * Bp * DON
+
 
 # We assume that the vast majority of C and N biomass is in organic form, hence leakiness is to organic. We assume that overflow is also to organic in both organisms, as for the phototroph this is the release of fixed C (or inorganic N incorporated into e.g. AA) which cannot be used for growth. For the heterotrophs we assume overflow metabolism to be the inefficient use of organic C (e.g. not fully oxidized) to maximize growth rate (*citation E coli).
 
@@ -414,8 +417,9 @@ dChdt = netDeltaCh + biomass_breakdown_for_respirationCh - overflowCh
 
 
 dDONdt = (
-    deathp * gammaDp + leakinessOp + overflowNp - gross_uptakeONp +
-    deathh * gammaDh + leakinessOh + overflowNh - gross_uptakeONh
+    deathp * gammaDp + leakinessOp - gross_uptakeONp +
+    deathh * gammaDh + leakinessOh + overflowNh - gross_uptakeONh 
+    - DON2DIN
     ) 
 dDOCdt = (
     deathp * gammaDp * Rp + leakinessOp * Rp + overflowCp - gross_uptakeOCp +
@@ -436,7 +440,11 @@ dRDOCdt = (
 # Respiration of N is not a biological reality in this case (no NO3 respiration), and is used to maintain C:N ratio. It can be thought of as the release of NH4/urea for example during AA degradation
 
 # Point for discussion with Mick 
-dDINdt = - gross_uptakeINp - gross_uptakeINh
+dDINdt = (
+    overflowNp - gross_uptakeINp +
+    overflowNh - gross_uptakeINh +
+    DON2DIN
+)
 # leakiness of inorganic
 dDICdt = (
     dic_air_water_exchange +
