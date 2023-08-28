@@ -47,6 +47,8 @@ tau, r0p, r0h, bp, bh = symbols('tau r0p r0h bp bh')
 
 QNmaxp, QNminp, QNmaxh, QNminh = symbols('QNmaxp QNminp QNmaxh QNminh')
 Kmtbp, Kmtbh = symbols('Kmtbp Kmtbh')
+MROSp, MKROSp, MROSh, MKROSh = symbols('MROSp MKROSp MROSh MKROSh')
+gamma_DON2DINp, gamma_DON2DINh = symbols('gamma_DON2DINp gamma_DON2DINh')
 
 # Redfield ratio
 R_CN = 6.625
@@ -141,6 +143,11 @@ INIT_DIC = c_sat
 INIT_DOC = INIT_DON * R_CN
 INIT_BP = 1e9 * Qp
 INIT_BH = 1e10 * Qh
+INIT_CP = 0
+INIT_CH = 0
+INIT_NP = 0
+INIT_NH = 0
+
 INIT_BH_CC = 5e9 * Qh # the actual concentration in the measurements
 INIT_ROS = 0.2 # Morris, J. Jeffrey, et al. "Dependence of the cyanobacterium Prochlorococcus on hydrogen peroxide scavenging microbes for growth at the ocean's surface." PloS one 6.2 (2011): e16805.
 INIT_SP = 0
@@ -283,16 +290,16 @@ QCh = (Ch + Bh / Rh) / (Nh + Bh)
 # i.e. when C:N ratio approaches QCmax
 QCmaxp = 1 / QNminp
 QCmaxh = 1 / QNminh
-regQCp = max(0.0, min(1.0, 1.0 - QCp / QCmaxp))
-regQCh = max(0.0, min(1.0, 1.0 - QCh / QCmaxh))
+regQCp = Max(0.0, Min(1.0, 1.0 - QCp / QCmaxp))
+regQCh = Max(0.0, Min(1.0, 1.0 - QCh / QCmaxh))
 
 # restrict N uptake when N:C ratio approaches QNmax
 # C:N should be higher than QNmaxp
 QNp = 1 / QCp
 QNh = 1 / QCh
 
-regQNp = max(0.0, min(1.0, 1.0 - QNp / QNmaxp))
-regQNh = max(0.0, min(1.0, 1.0 - QNh / QNmaxh))
+regQNp = Max(0.0, Min(1.0, 1.0 - QNp / QNmaxp))
+regQNh = Max(0.0, Min(1.0, 1.0 - QNh / QNmaxh))
 
 
 
@@ -325,14 +332,14 @@ bio_synthesisN_h = Min(Nh + uptakeNh, (Ch + uptakeCh) / Rh) * Kmtbh
 # Respiration – growth associated bp/bh and maintenance associated r0p/r0h
 # b * growth + r0 * biomass
 # umol C/L
-respirationCp = (bp* bio_synthesis_p + Bp * r0p) * Rp
-respirationCh = (bh* bio_synthesis_h + Bh * r0h) * Rh
+respirationCp = (bp* bio_synthesisN_p + Bp * r0p) * Rp
+respirationCh = (bh* bio_synthesisN_h + Bh * r0h) * Rh
 
 # if C store is not big enough, break some of the biomass into the stores
 # make sure Cp is not negative
 # umol C/L
-biomass_breakdown_for_respirationCp = Max(0, Cp + uptakeCp - bio_synthesisN_p * Rp - respirationCp))
-biomass_breakdown_for_respirationCh = Max(0, Ch + uptakeCh - bio_synthesisN_h * Rh - respirationCh))
+biomass_breakdown_for_respirationCp = Max(0, Cp + uptakeCp - bio_synthesisN_p * Rp - respirationCp)
+biomass_breakdown_for_respirationCh = Max(0, Ch + uptakeCh - bio_synthesisN_h * Rh - respirationCh)
 
 # store change - uptake minus biosynthesis and respiration
 netDeltaNp = uptakeNp - bio_synthesisN_p + biomass_breakdown_for_respirationCp / Rp
@@ -407,17 +414,18 @@ DON2DIN = gamma_DON2DINh * Bh * DON + gamma_DON2DINp * Bp * DON
 dBpdt = bio_synthesisN_p - biomass_breakdown_for_respirationCp / Rp - deathp - leakinessOp - ABreleasep
 dBhdt = bio_synthesisN_h - biomass_breakdown_for_respirationCh / Rh - deathh - leakinessOh - ABreleaseh
 
-dNpdt = netDeltaNp + biomass_breakdown_for_respirationCp / Rp - overflowNp 
-dNpht = netDeltaNh + biomass_breakdown_for_respirationCh / Rh - overflowNh 
-dCpdt = netDeltaCp + biomass_breakdown_for_respirationCp - overflowCp 
-dChdt = netDeltaCh + biomass_breakdown_for_respirationCh - overflowCh 
+dNpdt = netDeltaNp - overflowNp 
+dNhdt = netDeltaNh - overflowNh 
+dCpdt = netDeltaCp - overflowCp 
+dChdt = netDeltaCh - overflowCh 
 
 
 dDONdt = (
     deathp * gammaDp + leakinessOp - gross_uptakeONp +
-    deathh * gammaDh + leakinessOh + overflowNh - gross_uptakeONh 
+    deathh * gammaDh + leakinessOh - gross_uptakeONh 
     - DON2DIN
     ) 
+
 dDOCdt = (
     deathp * gammaDp * Rp + leakinessOp * Rp + overflowCp - gross_uptakeOCp +
     deathh * gammaDh * Rh + leakinessOh * Rh + overflowCh - gross_uptakeOCh)
@@ -430,6 +438,7 @@ dDOCdt = (
 dRDONdt = (
     deathp * (1 - gammaDp) + 
     deathh * (1 - gammaDh))
+
 dRDOCdt = (
     deathp * (1 - gammaDp) * Rp + 
     deathh * (1 - gammaDh) * Rh)
@@ -510,7 +519,7 @@ dDINdt_honly = - gross_uptakeINh
 # leakiness of inorganic
 dDICdt_honly = (
     dic_air_water_exchange +
-    respirationCh + overflowICh - gross_uptakeICh)
+    respirationCh + overflowCh - gross_uptakeICh)
 
 # TODO Need to explain why Max and not just ROS dynamics
 dROSdt_honly = Max( -ROS*ROS_decay + ROSreleaseh - ROSbreakdownh, -ROS)
@@ -526,97 +535,100 @@ def print_equations():
 
 def get_main_init_vars(pro99_mode):
     if pro99_mode:        
-        init_vars = [INIT_BP,INIT_BH_CC,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+        init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_BH,INIT_NH,INIT_CH,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     else:
-        init_vars = [INIT_BP,INIT_BH_CC,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+        init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_BH,INIT_NH,INIT_CH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     return init_vars
 
 def get_main_data(param_vals_str, pro99_mode):
-    sfunc_list = [dBpdt, dBhdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, dABpdt, dABhdt]
-    var_list   = [ Bp,    Bh,    DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS,    ABp,    ABh]
-    var_names  = ['Bp',  'Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS',   'ABp',  'ABh']
+    sfunc_list = [dBpdt, dNpdt, dCpdt, dBhdt, dNhdt, dChdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, dABpdt, dABhdt]
+    var_list   = [ Bp,   Np,    Cp,    Bh,    Nh,    Ch,     DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS,    ABp,    ABh]
+    var_names  = ['Bp', 'Np',  'Cp',  'Bh',  'Nh',  'Ch',   'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS',   'ABp',  'ABh']
     init_vars = get_main_init_vars(pro99_mode)
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
-    final_func = lambdify(var_list, subs_funclist, modules=['math'])
-    final_func_jit = jit(final_func, nopython=True)  
+    #final_func = lambdify(var_list, subs_funclist, modules=['math'])
+    #final_func_jit = jit(final_func, nopython=True)  
+    final_func_jit = lambdify(var_list, subs_funclist)
     calc_dydt = lambda t, y : final_func_jit(*y)
 
-    interm_sfunc_list = [
-        Xp, Xh,
+    # interm_sfunc_list = [
+        # Xp, Xh,
 
-        limINp,
-        limONp,
-        limICp,
-        limOCp,
-        limINh,
-        limONh,
-        limICh,
-        limOCh,
+        # limINp,
+        # limONp,
+        # limICp,
+        # limOCp,
+        # limINh,
+        # limONh,
+        # limICh,
+        # limOCh,
 
-        gross_uptakeINp,
-        gross_uptakeONp,
-        gross_uptakeICp,
-        gross_uptakeOCp,
-        gross_uptakeINh,
-        gross_uptakeONh,
-        gross_uptakeICh,
-        gross_uptakeOCh,
+        # gross_uptakeINp,
+        # gross_uptakeONp,
+        # gross_uptakeICp,
+        # gross_uptakeOCp,
+        # gross_uptakeINh,
+        # gross_uptakeONh,
+        # gross_uptakeICh,
+        # gross_uptakeOCh,
 
-        net_uptakeNp,
-        net_uptakeNh,
+        # net_uptakeNp,
+        # net_uptakeNh,
 
-        overflowNp,
-        overflowCp,
-        overflowNh,
-        overflowCh,
+        # overflowNp,
+        # overflowCp,
+        # overflowNh,
+        # overflowCh,
 
-        deathp , deathh ,
-        leakinessOp, leakinessIp, leakinessOh, leakinessIh, 
-        ROSreleasep, ROSbreakdownh,
-        respirationp, respirationh, dic_air_water_exchange,
-        #limICp,  exp(-omegaP*ROS),
-    ]
-    interm_names = [
-        'Xp', 'Xh',
-        'limINp',
-        'limONp',
-        'limICp',
-        'limOCp',
-        'limINh',
-        'limONh',
-        'limICh',
-        'limOCh',
+        # deathp , deathh ,
+        # leakinessOp, leakinessIp, leakinessOh, leakinessIh, 
+        # ROSreleasep, ROSbreakdownh,
+        # respirationp, respirationh, dic_air_water_exchange,
+        # #limICp,  exp(-omegaP*ROS),
+    # ]
+    # interm_names = [
+        # 'Xp', 'Xh',
+        # 'limINp',
+        # 'limONp',
+        # 'limICp',
+        # 'limOCp',
+        # 'limINh',
+        # 'limONh',
+        # 'limICh',
+        # 'limOCh',
 
-        'gross_uptakeINp',
-        'gross_uptakeONp',
-        'gross_uptakeICp',
-        'gross_uptakeOCp',
-        'gross_uptakeINh',
-        'gross_uptakeONh',
-        'gross_uptakeICh',
-        'gross_uptakeOCh',
+        # 'gross_uptakeINp',
+        # 'gross_uptakeONp',
+        # 'gross_uptakeICp',
+        # 'gross_uptakeOCp',
+        # 'gross_uptakeINh',
+        # 'gross_uptakeONh',
+        # 'gross_uptakeICh',
+        # 'gross_uptakeOCh',
 
-        'net_uptakeNp',
-        'net_uptakeNh',
+        # 'net_uptakeNp',
+        # 'net_uptakeNh',
 
-        'overflowNp',
-        'overflowCp',
-        'overflowNh',
-        'overflowCh',
-        'deathp' , 'deathh' ,
-        'leakinessOp', 'leakinessIp', 'leakinessOh', 'leakinessIh', 
-        'ROSreleasep', 'ROSbreakdownh',    
-        'respirationp', 'respirationh', 'dic_air_water_exchange',
+        # 'overflowNp',
+        # 'overflowCp',
+        # 'overflowNh',
+        # 'overflowCh',
+        # 'deathp' , 'deathh' ,
+        # 'leakinessOp', 'leakinessIp', 'leakinessOh', 'leakinessIh', 
+        # 'ROSreleasep', 'ROSbreakdownh',    
+        # 'respirationp', 'respirationh', 'dic_air_water_exchange',
         
-        #'limICp',  'exp(-omegaP*ROS)',
-    ]
+        # #'limICp',  'exp(-omegaP*ROS)',
+    # ]
 
-    interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
-    intermediate_func = lambdify(var_list, interm_funclist, modules=['math'])
-    intermediate_func = jit(intermediate_func, nopython=True)  
-
+    #interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
+    #intermediate_func = lambdify(var_list, interm_funclist, modules=['math'])
+    #intermediate_func = jit(intermediate_func, nopython=True)  
+    #intermediate_func = lambdify(var_list, interm_funclist)
+    interm_names = []
+    intermediate_func = None
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
 def get_ponly_init_vars(pro99_mode):
@@ -774,7 +786,7 @@ def print_intermediate0(intermediate_func, interm_names, init_vars):
 def biomass_diff0(calc_dydt, var_names, init_vars):
     dydt0 = calc_dydt(0, init_vars)
     V = dict(zip(var_names, dydt0))
-    print (f"dBp/dt + dBh/dt + dDON/dt + dRDON/dt + dDIN/dt = { V['Bp'] + V['Bh'] + V['DON'] + V['RDON'] + V['DIN'] }")
+    print (f"dBp/dt + dBh/dt + dDON/dt + dRDON/dt + dDIN/dt = { V['Bp'] + V['Np'] + V['Bh'] + V['Nh'] + V['DON'] + V['RDON'] + V['DIN'] }")
 
 def biomass_diff0_ponly(calc_dydt, var_names, init_vars):
     dydt0 = calc_dydt(0, init_vars)
