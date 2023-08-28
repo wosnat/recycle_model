@@ -312,15 +312,15 @@ gross_uptakeICh = VmaxICh * limICh * regQCh * Bh
 gross_uptakeOCh = VmaxOCh * limOCh * regQCh * Bh 
 
 # ODE - TODO
-deltaNp = gross_uptakeINp + gross_uptakeONp
-deltaNh = gross_uptakeINh + gross_uptakeONh
-deltaCp = gross_uptakeICp + gross_uptakeOCp
-deltaCh = gross_uptakeICh + gross_uptakeOCh
+uptakeNp = gross_uptakeINp + gross_uptakeONp
+uptakeNh = gross_uptakeINh + gross_uptakeONh
+uptakeCp = gross_uptakeICp + gross_uptakeOCp
+uptakeCh = gross_uptakeICh + gross_uptakeOCh
 
 # net uptake (maintains C:N ratios)
 # umol N / L
-bio_synthesisN_p = Min(Np + deltaNp, (Cp + deltaCp) / Rp) * Kmtbp
-bio_synthesisN_h = Min(Nh + deltaNh, (Ch + deltaCh) / Rh) * Kmtbh
+bio_synthesisN_p = Min(Np + uptakeNp, (Cp + uptakeCp) / Rp) * Kmtbp
+bio_synthesisN_h = Min(Nh + uptakeNh, (Ch + uptakeCh) / Rh) * Kmtbh
 
 # Respiration – growth associated bp/bh and maintenance associated r0p/r0h
 # b * growth + r0 * biomass
@@ -328,35 +328,32 @@ bio_synthesisN_h = Min(Nh + deltaNh, (Ch + deltaCh) / Rh) * Kmtbh
 respirationCp = (bp* bio_synthesis_p + Bp * r0p) * Rp
 respirationCh = (bh* bio_synthesis_h + Bh * r0h) * Rh
 
-
-netDeltaNp = deltaNp - bio_synthesisN_p
-netDeltaNh = deltaNh - bio_synthesisN_h
-netDeltaCp = deltaCp - bio_synthesisN_p * Rp - respirationCp
-netDeltaCh = deltaCh - bio_synthesisN_h * Rh - respirationCh
-
 # if C store is not big enough, break some of the biomass into the stores
 # make sure Cp is not negative
 # umol C/L
-biomass_breakdown_for_respirationCp = Min(0, Cp + netDeltaCp))
-biomass_breakdown_for_respirationCh = Min(0, Ch + netDeltaCh))
+biomass_breakdown_for_respirationCp = Max(0, Cp + uptakeCp - bio_synthesisN_p * Rp - respirationCp))
+biomass_breakdown_for_respirationCh = Max(0, Ch + uptakeCh - bio_synthesisN_h * Rh - respirationCh))
 
+# store change - uptake minus biosynthesis and respiration
+netDeltaNp = uptakeNp - bio_synthesisN_p + biomass_breakdown_for_respirationCp / Rp
+netDeltaNh = uptakeNh - bio_synthesisN_h + biomass_breakdown_for_respirationCh / Rh
+netDeltaCp = uptakeCp - bio_synthesisN_p * Rp - respirationCp + biomass_breakdown_for_respirationCp 
+netDeltaCh = uptakeCh - bio_synthesisN_h * Rh - respirationCh + biomass_breakdown_for_respirationCh
+
+# overflow -
+# make the store maintain the C:N ratio and exude the rest
+store_keepNp = Min(Np + netDeltaNp, (Cp + netDeltaCp) / Rp) 
+store_keepNh = Min(Nh + netDeltaNh, (Ch + netDeltaCh) / Rh) 
 
 # Overflow quantity 
 # Oh/Op: enable overflow (0 or 1)
 # umol N / L
-overflowNp = Op * Min(netDeltaNp, 0)
-overflowNh = Oh * Min(netDeltaNh, 0)
+overflowNp = Op * (netDeltaNp - store_keepNp)
+overflowNh = Oh * (netDeltaNh - store_keepNh)
+
 # umol C /L
-overflowCp = Op * Min(netDeltaCp, 0)
-overflowCh = Oh * Min(netDeltaCh, 0)
-
-
-# if overflow is disabled, Oh/Op is 0 and the overflow goes back to the source 
-# using the second half of the formulas below
-# (i.e. some of the non-limited nutrient is just not uptaken, 
-# and O/I preference is based on the organic/inorganic gross uptake ratio)
-# If overflow is enabled, Oh/Op is 1 and we use the second half of the formula, 
-# all overflow goes out as organic compounds
+overflowCp = Op * (netDeltaCp - store_keepNp * Rp)
+overflowCh = Oh * (netDeltaCh - store_keepNh * Rh)
 
 
 #dic_air_water_exchange   =  - (DIC - c_sat) / tau
