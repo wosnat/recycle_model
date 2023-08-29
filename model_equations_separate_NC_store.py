@@ -409,7 +409,8 @@ ROSreleaseh = E_ROSh * Bh
 ROSbreakdownh = VmaxROSh * ROS / (ROS + K_ROSh) * Bh
 
 # DIN breakdown due to exoenzymes
-DON2DIN = gamma_DON2DINh * Bh * DON + gamma_DON2DINp * Bp * DON
+DON2DINp = gamma_DON2DINp * Bp * DON
+DON2DINh = gamma_DON2DINh * Bh * DON 
 
 
 # We assume that the vast majority of C and N biomass is in organic form, hence leakiness is to organic. We assume that overflow is also to organic in both organisms, as for the phototroph this is the release of fixed C (or inorganic N incorporated into e.g. AA) which cannot be used for growth. For the heterotrophs we assume overflow metabolism to be the inefficient use of organic C (e.g. not fully oxidized) to maximize growth rate (*citation E coli).
@@ -426,9 +427,8 @@ dChdt = netDeltaCh - overflowCh
 
 
 dDONdt = (
-    deathp * gammaDp + leakinessOp - gross_uptakeONp +
-    deathh * gammaDh + leakinessOh - gross_uptakeONh 
-    - DON2DIN
+    deathp * gammaDp + leakinessOp - gross_uptakeONp - DON2DINp +
+    deathh * gammaDh + leakinessOh - gross_uptakeONh - DON2DINh
     ) 
 
 dDOCdt = (
@@ -452,9 +452,8 @@ dRDOCdt = (
 
 # Point for discussion with Mick 
 dDINdt = (
-    overflowNp - gross_uptakeINp +
-    overflowNh - gross_uptakeINh +
-    DON2DIN
+    overflowNp - gross_uptakeINp + DON2DINp +
+    overflowNh - gross_uptakeINh + DON2DINh
 )
 # leakiness of inorganic
 dDICdt = (
@@ -472,9 +471,12 @@ dABhdt = ABreleaseh - ABh*decayABh
 ####################################################
 # PRO only model
 dDONdt_ponly = (
-    deathp * gammaDp + leakinessOp + overflowNp - gross_uptakeONp) 
+    deathp * gammaDp + leakinessOp - gross_uptakeONp - DON2DINp
+    ) 
+
 dDOCdt_ponly = (
-    deathp * gammaDp * Rp + leakinessOp * Rp + overflowCp - gross_uptakeOCp)
+    deathp * gammaDp * Rp + leakinessOp * Rp + overflowCp - gross_uptakeOCp
+    )
 
 
 # In discussion can state that if DIN is produced also through overflow or leakiness then this could support Pro growth, but this is not encoded into our model.
@@ -482,28 +484,37 @@ dDOCdt_ponly = (
 # Assuming RDON/RDOC is recalcitrant to both organisms
 
 dRDONdt_ponly = (
-    deathp * (1 - gammaDp))
+    deathp * (1 - gammaDp) 
+    )
+
 dRDOCdt_ponly = (
-    deathp * (1 - gammaDp) * Rp)
+    deathp * (1 - gammaDp) * Rp 
+    )
 
 # Respiration of N is not a biological reality in this case (no NO3 respiration), and is used to maintain C:N ratio. It can be thought of as the release of NH4/urea for example during AA degradation
 
 # Point for discussion with Mick 
-dDINdt_ponly = - gross_uptakeINp
+dDINdt_ponly = (
+    overflowNp - gross_uptakeINp + DON2DINp
+)
 # leakiness of inorganic
 dDICdt_ponly = (
     dic_air_water_exchange +
-    respirationCp - gross_uptakeICp)
+    respirationCp - gross_uptakeICp 
+    )
 
 # TODO Need to explain why Max and not just ROS dynamics
 dROSdt_ponly = Max( -ROS*ROS_decay + ROSreleasep, -ROS)
 dABhdt_ponly = Integer(0)
 
+
 ####################################################
 # HET only model
+
 dDONdt_honly = (
-    deathh * gammaDh + leakinessOh + overflowNh - gross_uptakeONh
+    deathh * gammaDh + leakinessOh - gross_uptakeONh - DON2DINh
     ) 
+
 dDOCdt_honly = (
     deathh * gammaDh * Rh + leakinessOh * Rh + overflowCh - gross_uptakeOCh)
 
@@ -514,17 +525,20 @@ dDOCdt_honly = (
 
 dRDONdt_honly = (
     deathh * (1 - gammaDh))
+
 dRDOCdt_honly = (
     deathh * (1 - gammaDh) * Rh)
 
 # Respiration of N is not a biological reality in this case (no NO3 respiration), and is used to maintain C:N ratio. It can be thought of as the release of NH4/urea for example during AA degradation
 
 # Point for discussion with Mick 
-dDINdt_honly = - gross_uptakeINh
+dDINdt_honly = (
+    overflowNh - gross_uptakeINh + DON2DINh
+)
 # leakiness of inorganic
 dDICdt_honly = (
     dic_air_water_exchange +
-    respirationCh + overflowCh - gross_uptakeICh)
+    respirationCh - gross_uptakeICh)
 
 # TODO Need to explain why Max and not just ROS dynamics
 dROSdt_honly = Max( -ROS*ROS_decay + ROSreleaseh - ROSbreakdownh, -ROS)
@@ -605,7 +619,8 @@ def get_main_data(param_vals_str, pro99_mode):
         ROSreleasep,
         ROSreleaseh, 
         ROSbreakdownh, 
-        DON2DIN, 
+        DON2DINp, 
+        DON2DINh, 
     ]
     interm_names = [
         'gross_uptakeINp', 
@@ -654,7 +669,8 @@ def get_main_data(param_vals_str, pro99_mode):
         'ROSreleasep',
         'ROSreleaseh', 
         'ROSbreakdownh', 
-        'DON2DIN', 
+        'DON2DINp', 
+        'DON2DINh', 
     ]
 
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
@@ -667,15 +683,15 @@ def get_main_data(param_vals_str, pro99_mode):
 
 def get_ponly_init_vars(pro99_mode):
     if pro99_mode:        
-        init_vars = [INIT_BP,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+        init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     else:
-        init_vars = [INIT_BP,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+        init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     return init_vars
     
 def get_ponly_data(param_vals_str, pro99_mode):
-    sfunc_list = [dBpdt,  dDONdt_ponly, dRDONdt_ponly, dDINdt_ponly, dDOCdt_ponly, dRDOCdt_ponly, dDICdt_ponly, dROSdt_ponly, dABpdt, dABhdt_ponly]
-    var_list   = [ Bp,    DON,    RDON,    DIN,    DOC,    RDOC,  DIC,    ROS,    ABp,   ABh]
-    var_names  = ['Bp',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
+    sfunc_list = [dBpdt,  dNpdt, dCpdt, dDONdt_ponly, dRDONdt_ponly, dDINdt_ponly, dDOCdt_ponly, dRDOCdt_ponly, dDICdt_ponly, dROSdt_ponly, dABpdt, dABhdt_ponly]
+    var_list   = [ Bp,    Np,    Cp,    DON,    RDON,    DIN,    DOC,    RDOC,  DIC,    ROS,    ABp,   ABh]
+    var_names  = ['Bp',  'Np',  'Cp',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
     init_vars = get_ponly_init_vars(pro99_mode)
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
@@ -685,50 +701,58 @@ def get_ponly_data(param_vals_str, pro99_mode):
     calc_dydt = lambda t, y : final_func_jit(*y)
 
     interm_sfunc_list = [
-        Xp, 
-
-        limINp,
-        limONp,
-        limICp,
-        limOCp,
-
-        gross_uptakeINp,
-        gross_uptakeONp,
-        gross_uptakeICp,
-        gross_uptakeOCp,
-
-        net_uptakeNp,
-
-        overflowNp,
-        overflowCp,
-
-        deathp ,
-        leakinessOp, leakinessIp, 
-        ROSreleasep, 
-        respirationp, dic_air_water_exchange,
-
+        gross_uptakeINp, 
+        gross_uptakeONp, 
+        gross_uptakeICp, 
+        gross_uptakeOCp, 
+        uptakeNp, 
+        uptakeCp, 
+        regQCp,
+        regQNp,
+        bio_synthesisN_p, 
+        respirationCp, 
+        biomass_breakdown_for_respirationCp, 
+        netDeltaNp, 
+        netDeltaCp, 
+        store_keepNp,
+        overflowNp, 
+        overflowCp, 
+        dic_air_water_exchange,
+        ABreleasep,
+        death_ratep, 
+        deathp, 
+        leakinessOp, 
+        leakinessIp, 
+        ROSreleasep,
+        DON2DINp, 
     ]
     interm_names = [
-        'Xp', 
-        'limINp',
-        'limONp',
-        'limICp',
-        'limOCp',
-
-        'gross_uptakeINp',
-        'gross_uptakeONp',
-        'gross_uptakeICp',
-        'gross_uptakeOCp',
-        'net_uptakeNp',
-
-        'overflowNp',
-        'overflowCp',
-        'deathp' , 
-        'leakinessOp', 'leakinessIp', 
-        'ROSreleasep',  
-        'respirationp', 'dic_air_water_exchange',
-        
+        'gross_uptakeINp', 
+        'gross_uptakeONp', 
+        'gross_uptakeICp', 
+        'gross_uptakeOCp', 
+        'uptakeNp', 
+        'uptakeCp', 
+        'regQCp',
+        'regQNp',
+        'bio_synthesisN_p', 
+        'respirationCp', 
+        'biomass_breakdown_for_respirationCp', 
+        'netDeltaNp', 
+        'netDeltaCp', 
+        'store_keepNp',
+        'overflowNp', 
+        'overflowCp', 
+        'dic_air_water_exchange',
+        'ABreleasep',
+        'death_ratep', 
+        'deathp', 
+        'leakinessOp', 
+        'leakinessIp', 
+        'ROSreleasep',
+        'DON2DINp', 
     ]
+
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
     intermediate_func = lambdify(var_list, interm_funclist, modules=['math'])
     intermediate_func = jit(intermediate_func, nopython=True)  
@@ -743,9 +767,10 @@ def get_honly_init_vars(pro99_mode):
     return init_vars
     
 def get_honly_data(param_vals_str, pro99_mode):
-    sfunc_list = [dBhdt, dDONdt_honly, dRDONdt_honly, dDINdt_honly, dDOCdt_honly, dRDOCdt_honly,dDICdt_honly, dROSdt_honly, dABpdt_honly, dABhdt]
-    var_list   = [Bh,    DON,    RDON,    DIN,    DOC,    RDOC,   DIC,    ROS,    ABp,   ABh]
-    var_names  = ['Bh',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
+
+    sfunc_list = [dBhdt, dNhdt, dChdt, dDONdt_honly, dRDONdt_honly, dDINdt_honly, dDOCdt_honly, dRDOCdt_honly,dDICdt_honly, dROSdt_honly, dABpdt_honly, dABhdt]
+    var_list   = [Bh,    DON,    Nh,    Ch,     RDON,    DIN,    DOC,    RDOC,   DIC,    ROS,    ABp,   ABh]
+    var_names  = ['Bh',  'DON', 'Nh',  'Ch',   'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
     init_vars = get_honly_init_vars(pro99_mode)
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
@@ -755,54 +780,14 @@ def get_honly_data(param_vals_str, pro99_mode):
     calc_dydt = lambda t, y : final_func_jit(*y)
 
     interm_sfunc_list = [
-        Xh,
-
-        limINh,
-        limONh,
-        limICh,
-        limOCh,
-
-        gross_uptakeINh,
-        gross_uptakeONh,
-        gross_uptakeICh,
-        gross_uptakeOCh,
-
-        net_uptakeNh,
-
-        overflowNh,
-        overflowCh,
-
-         deathh ,
-        leakinessOh, leakinessIh, 
-        ROSbreakdownh,
-        respirationh, dic_air_water_exchange,
     ]
     interm_names = [
-        'Xh',
-        'limINh',
-        'limONh',
-        'limICh',
-        'limOCh',
-
-        'gross_uptakeINh',
-        'gross_uptakeONh',
-        'gross_uptakeICh',
-        'gross_uptakeOCh',
-
-        'net_uptakeNh',
-
-        'overflowNh',
-        'overflowCh',
-        'deathh' ,
-        'leakinessOh', 'leakinessIh', 
-        'ROSbreakdownh',    
-        'respirationh', 'dic_air_water_exchange',
     ]
 
-    interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
-    intermediate_func = lambdify(var_list, interm_funclist, modules=['math'])
-    intermediate_func = jit(intermediate_func, nopython=True)  
-
+    #interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
+    #intermediate_func = lambdify(var_list, interm_funclist, modules=['math'])
+    #intermediate_func = jit(intermediate_func, nopython=True)  
+    intermediate_func = None
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
 
