@@ -360,12 +360,12 @@ store_keepNh = Min(Nh + netDeltaNh, (Ch + netDeltaCh) / Rh)
 # Overflow quantity 
 # Oh/Op: enable overflow (0 or 1)
 # umol N / L
-overflowNp = Op * (netDeltaNp - store_keepNp)
-overflowNh = Oh * (netDeltaNh - store_keepNh)
+overflowNp = Op * (Np + netDeltaNp - store_keepNp)
+overflowNh = Oh * (Nh + netDeltaNh - store_keepNh)
 
 # umol C /L
-overflowCp = Op * (netDeltaCp - store_keepNp * Rp)
-overflowCh = Oh * (netDeltaCh - store_keepNh * Rh)
+overflowCp = Op * (Cp + netDeltaCp - store_keepNp * Rp)
+overflowCh = Oh * (Ch + netDeltaCh - store_keepNh * Rh)
 
 
 #dic_air_water_exchange   =  - (DIC - c_sat) / tau
@@ -696,8 +696,9 @@ def get_ponly_data(param_vals_str, pro99_mode):
     param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
 
     subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
-    final_func = lambdify(var_list, subs_funclist, modules=['math'])
-    final_func_jit = jit(final_func, nopython=True)  
+    #final_func = lambdify(var_list, subs_funclist, modules=['math'])
+    #final_func_jit = jit(final_func, nopython=True)  
+    final_func_jit = lambdify(var_list, subs_funclist)
     calc_dydt = lambda t, y : final_func_jit(*y)
 
     interm_sfunc_list = [
@@ -754,8 +755,9 @@ def get_ponly_data(param_vals_str, pro99_mode):
     ]
 
     interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
-    intermediate_func = lambdify(var_list, interm_funclist, modules=['math'])
-    intermediate_func = jit(intermediate_func, nopython=True)  
+    #intermediate_func = lambdify(var_list, interm_funclist, modules=['math'])
+    #intermediate_func = jit(intermediate_func, nopython=True)  
+    intermediate_func = lambdify(var_list, interm_funclist)
 
     return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
@@ -807,7 +809,7 @@ def biomass_diff0(calc_dydt, var_names, init_vars, param_vals):
     R_P = param_vals['Rp']
     V = dict(zip(var_names, dydt0))
     print (f"dBp/dt + dBh/dt + dDON/dt + dRDON/dt + dDIN/dt = { V['Bp'] + V['Np'] + V['Bh'] + V['Nh'] + V['DON'] + V['RDON'] + V['DIN'] }")
-    print (f"dBp/dt + dBh/dt + dDOC/dt + dRDOC/dt + dDIC/dt = { V['Bp']*R_P + V['Cp'] + V['Bh']*R_P + V['Ch'] + V['DOC'] + V['RDOC'] + V['DIC'] }")
+    print (f"dBp/dt + dBh/dt + dDOC/dt + dRDOC/dt + dDIC/dt = { V['Bp']*R_P + V['Cp'] + V['Bh']*R_H + V['Ch'] + V['DOC'] + V['RDOC'] + V['DIC'] }")
 
 def biomass_diff0_ponly(calc_dydt, var_names, init_vars):
     dydt0 = calc_dydt(0, init_vars)
