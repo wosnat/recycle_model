@@ -236,7 +236,6 @@ def basic_model_ode_cc_jit(
 ):
     # variables
     Bp,   Np,    Cp,    Bh,    Nh,    Ch,     DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS = var_vals
-
     
     DIN_IDX = 0
     DON_IDX = 1
@@ -334,12 +333,11 @@ def basic_model_ode_cc_jit(
 
     # In discussion can state that if DIN is produced also through overflow or leakiness then this could support Pro growth, but this is not encoded into our model.
     # Assuming that recalcitrant DON isd released only during mortality (discuss release through leakiness)
-    # Assuming RDON/RDOC is recalcitrant to both organisms    dRDONdt = sum(deathN * (1 - paramgammaD))
-    dRDOCdt = np.sum(deathN * paramCN * (1 - paramgammaD))
+    # Assuming RDON/RDOC is recalcitrant to both organisms   
     dDINdt = np.sum(overflowN + DON2DIN - gross_growth[DIN_IDX,:])
     dDICdt = dic_air_water_exchange + np.sum(respirationC - gross_growth[DIC_IDX,:])
     dROSdt = np.sum(ROSrelease) - ROSdecay - ROSbreakdownh
-    #return dBdt
+    
     return (dBdt, dNdt, dCdt, 
              dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt)
 
