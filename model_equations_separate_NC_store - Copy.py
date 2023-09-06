@@ -158,7 +158,7 @@ def get_param_tuning_values(model_name, organism_to_tune):
     bounds (list of pairs)
     log_params (list of bools
     """
-    param_df = pd.read_excel( 'Model_Parameters.xlsx',)
+    param_df = pd.read_excel( 'Model_Parameters Store model.xlsx',)
     org_col = f'Tunable parameters ({organism_to_tune} fitting)'
 
     if model_name not in [None, 'FULL']:
@@ -194,62 +194,61 @@ def print_params(param_vals=param_vals):
     for i in param_vals:
         print(i, f' = {param_vals[i]:.2e}, {param_vals[i] * seconds_in_day:.2e}')
 
-def basic_model_ode(time, var_vals, param_vals):
-    # parameters
+
+
+def prepare_params(param_vals):
     pars = param_vals
-    paramCN  = np.array([pars['Rp'], pars['Rh']])
-    paramQCmax  = np.array([pars['QCmaxp'], pars['QCmaxh']])
-    paramQCmin  = np.array([pars['QCminp'], pars['QCminh']])
-    paramKmtb  = np.array([pars['Kmtbp'], pars['Kmtbh']])
-    paramb  = np.array([pars['bp'], pars['bh']])
-    paramr0  = np.array([pars['r0p'], pars['r0h']])
-    paramM = np.array([pars['Mp'], pars['Mh']])
-    paramE_leak = np.array([pars['E_leakp'], pars['E_leakh']])
-    paramE_ROS = np.array([pars['E_ROSp'], pars['E_ROSp']])
+    paramCN  = np.array([pars['Rp'], pars['Rh']], dtype=np.float64)
+    paramQCmax  = np.array([pars['QCmaxp'], pars['QCmaxh']], dtype=np.float64)
+    paramQCmin  = np.array([pars['QCminp'], pars['QCminh']], dtype=np.float64)
+    paramKmtb  = np.array([pars['Kmtbp'], pars['Kmtbh']], dtype=np.float64)
+    paramb  = np.array([pars['bp'], pars['bh']], dtype=np.float64)
+    paramr0  = np.array([pars['r0p'], pars['r0h']], dtype=np.float64)
+    paramM = np.array([pars['Mp'], pars['Mh']], dtype=np.float64)
+    paramOverflow = np.array([pars['Op'], pars['Oh']], dtype=np.float64)
+    paramE_leak = np.array([pars['E_leakp'], pars['E_leakh']], dtype=np.float64)
+    paramE_ROS = np.array([pars['E_ROSp'], pars['E_ROSp']], dtype=np.float64)
     paramVmaxROSh = pars['VmaxROSh']
     paramK_ROSh = pars['K_ROSh']
-    paramgamma_DON2DIN = np.array([pars['gamma_DON2DINp'], pars['gamma_DON2DINh']])
-    paramgammaD = np.array([pars['gammaDp'], pars['gammaDh']])
+    paramgamma_DON2DIN = np.array([pars['gamma_DON2DINp'], pars['gamma_DON2DINh']], dtype=np.float64)
+    paramgammaD = np.array([pars['gammaDp'], pars['gammaDh']], dtype=np.float64)
     paramROS_decay = pars['ROS_decay']
     kns = np.array(
         [[pars['KINp'], pars['KONp'], pars['KICp'], pars['KOCp']],
-        [pars['KINh'], pars['KONh'], pars['KICh'], pars['KOCh'], ]]
+        [pars['KINh'], pars['KONh'], pars['KICh'], pars['KOCh'], ]], dtype=np.float64
     ).T
     vmax = np.array(
         [[pars['VmaxINp'], pars['VmaxONp'], pars['VmaxICp'], pars['VmaxOCp']],
-        [pars['VmaxINh'], pars['VmaxONh'], pars['VmaxICh'], pars['VmaxOCh'], ]]
+        [pars['VmaxINh'], pars['VmaxONh'], pars['VmaxICh'], pars['VmaxOCh'], ]], dtype=np.float64
     ).T
+    return (
+        paramCN, paramQCmax, paramQCmin, kns, vmax, paramKmtb,paramOverflow, 
+        paramb, paramr0, paramM, paramE_leak, paramE_ROS, paramVmaxROSh, paramK_ROSh,
+        paramgamma_DON2DIN, paramgammaD, paramROS_decay)
 
+
+@njit
+def basic_model_ode_cc_jit(
+    time, var_vals,         
+    paramCN, paramQCmax, paramQCmin, paramkns, paramvmax, paramKmtb,paramOverflow,
+    paramb, paramr0, paramM, paramE_leak, paramE_ROS, paramVmaxROSh, paramK_ROSh,
+    paramgamma_DON2DIN, paramgammaD, paramROS_decay    
+):
     # variables
-    var_names  = ['Bp', 'Np',  'Cp',  'Bh',  'Nh',  'Ch',   'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS']
-    vars = {n:v for n,v in zip(var_names,var_vals)}
-    DIC = vars['DIC']
-    Bp = vars['Bp']
-    Np = vars['Np']
-    Cp = vars['Cp']
-    Bh = vars['Bh']
-    Nh = vars['Nh']
-    Ch = vars['Ch']
-    DIN = vars['DIN']
-    DON = vars['DON']
-    RDON = vars['RDON']
-    DIC = vars['DIC']
-    DOC = vars['DOC']
-    RDOC = vars['RDOC']
-    ROS = vars['ROS']
+    Bp,   Np,    Cp,    Bh,    Nh,    Ch,     DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS = var_vals
+
     
-    resources = np.array(
-        [DIN, DON, DIC, DOC, ]
-    ).reshape(4, 1)
     DIN_IDX = 0
     DON_IDX = 1
     DIC_IDX = 2
     DOC_IDX = 3
-    
 
-    biomass = np.array([Bp, Bh])
-    storeN  = np.array([Np, Nh])
-    storeC  = np.array([Cp, Ch])
+    resources = np.array(
+        [DIN, DON, DIC, DOC, ], dtype=np.float64
+    ).reshape(4, 1)
+    biomass = np.array([Bp, Bh], dtype=np.float64)
+    storeN  = np.array([Np, Nh], dtype=np.float64)
+    storeC  = np.array([Cp, Ch], dtype=np.float64)
 
     ROSdecay = ROS * paramROS_decay
     netROS = ROS - ROSdecay
@@ -257,26 +256,29 @@ def basic_model_ode(time, var_vals, param_vals):
     QC = (storeC + biomass * paramCN) / (storeN + biomass)
   
     # monod ratios
-    limits = resources / (resources + kns)
+    limits = resources / (resources + paramkns)
     # regulate uptake by not letting the stores grow too large 
     # question: is DIC uptake by photosynthesis regulated?
     regC = 1 - (QC / paramQCmax)
+    regC = np.atleast_2d(regC)
     regN = 1 - (paramQCmin / QC)
-    reg =  np.vstack([
-        np.atleast_2d(regN).repeat(repeats=2, axis=0), 
-        np.atleast_2d(regC).repeat(repeats=2, axis=0)
-    ])
+    regN = np.atleast_2d(regN)
+    reg =  np.vstack((regN, regN, regC, regC))
     reg_clipped = np.clip(reg, a_min =0.0, a_max=1.0)
     # gross uptake (regardless of C:N ratio)
     # vmax = muinfp* VmaxIp / Qp
     # umol N /L  or umol C /L  
-    gross_growth = biomass * vmax * limits  * reg_clipped 
-    uptakeN = gross_growth[DIN_IDX,:] + gross_growth[DON_IDX,: ],   
-    uptakeC = gross_growth[DIC_IDX,:] + gross_growth[DOC_IDX,: ],   
+    gross_growth = biomass * paramvmax * limits  * reg_clipped 
+    uptakeN = gross_growth[DIN_IDX,:] + gross_growth[DON_IDX,: ]
+    uptakeC = gross_growth[DIC_IDX,:] + gross_growth[DOC_IDX,: ]   
 
     # net uptake (maintains C:N ratios)
     # umol N / L
     biosynthesisN = np.minimum(storeN + uptakeN, (storeC + uptakeC) / paramCN)* paramKmtb
+    # workaround for numba
+    #totstoreN = storeN + uptakeN
+    #totstoreC = (storeC + uptakeC) / paramCN
+    #biosynthesisN = np.array([min(totstoreN[0][0], totstoreC[0][0]),min(totstoreN[0][1], totstoreC[0][1])])
     # Respiration – growth associated bp/bh and maintenance associated r0p/r0h
     # b * growth + r0 * biomass
     # umol C/L
@@ -298,6 +300,9 @@ def basic_model_ode(time, var_vals, param_vals):
     # Overflow quantity 
     # Oh/Op: enable overflow (0 or 1)
     # umol N / L
+    #totstore2N = storeN + netDeltaN
+    #totstore2C = (storeC + netDeltaC) / paramCN
+    #store_keepN = np.array([min(totstore2N[0][0], totstore2C[0][0]),min(totstore2N[0][1], totstore2C[0][1])])
     store_keepN = np.minimum(storeN + netDeltaN, (storeC + netDeltaC) / paramCN) 
     overflowN = storeN + netDeltaN - store_keepN
     overflowC = storeC + netDeltaC - store_keepN * paramCN
@@ -311,7 +316,7 @@ def basic_model_ode(time, var_vals, param_vals):
     leakinessN = paramE_leak * biomass
     # ROS production depends on biomass
     ROSrelease = paramE_ROS * biomass
-    ROSbreakdownh = VmaxROSh * netROS / (netROS + K_ROSh) * Bh
+    ROSbreakdownh = paramVmaxROSh * netROS / (netROS + paramK_ROSh) * Bh
     # DIN breakdown due to exoenzymes
     DON2DIN = paramgamma_DON2DIN * biomass * DON
     # final differential equations
@@ -324,15 +329,30 @@ def basic_model_ode(time, var_vals, param_vals):
     dDOCdt = np.sum(
         deathN * paramgammaD * paramCN + 
         leakinessN * paramCN + overflowC - gross_growth[DOC_IDX,:])
+    dRDONdt = np.sum(deathN * (1 - paramgammaD))
+    dRDOCdt = np.sum(deathN * paramCN * (1 - paramgammaD))
 
     # In discussion can state that if DIN is produced also through overflow or leakiness then this could support Pro growth, but this is not encoded into our model.
     # Assuming that recalcitrant DON isd released only during mortality (discuss release through leakiness)
     # Assuming RDON/RDOC is recalcitrant to both organisms    dRDONdt = sum(deathN * (1 - paramgammaD))
-    dRDOCdt = sum(deathN * paramCN * (1 - paramgammaD))
-    dDINdt = sum(overflowN + DON2DIN - gross_growth[DIN_IDX,:])
-    dDICdt = dic_air_water_exchange + sum(respirationC - gross_growth[DIC_IDX,:])
-    dROSdt = sum(ROSrelease) - ROSdecay - ROSbreakdownh
-    return ([dBdt[0], dNdt[0], dCdt[0], dBdt[1], dNdt[1], dCdt[1], dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt])
+    dRDOCdt = np.sum(deathN * paramCN * (1 - paramgammaD))
+    dDINdt = np.sum(overflowN + DON2DIN - gross_growth[DIN_IDX,:])
+    dDICdt = dic_air_water_exchange + np.sum(respirationC - gross_growth[DIC_IDX,:])
+    dROSdt = np.sum(ROSrelease) - ROSdecay - ROSbreakdownh
+    #return dBdt
+    return (dBdt, dNdt, dCdt, 
+             dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt)
+
+
+
+def basic_model_cc_ode(time, var_vals, par_tuple,):
+    dBdt, dNdt, dCdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt = basic_model_ode_jit(time, var_vals,*par_tuple)
+    return np.ndarray([
+        dBdt[0], dNdt[0], dCdt[0], 
+        dBdt[1], dNdt[1], dCdt[1], 
+        dDONdt, dRDONdt, dDINdt, 
+        dDOCdt, dRDOCdt, dDICdt, dROSdt
+        ], dtype=np.float64)
 
 
 # functions
@@ -343,141 +363,12 @@ def basic_model_ode(time, var_vals, param_vals):
 #Xh = Bh / Qh
 
 
-def print_equations():
-    sfunc_list = [dBpdt, dNpdt, dCpdt, dBhdt, dNhdt, dChdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, dABpdt, dABhdt]
-    var_names  = ['Bp', 'Np',  'Cp',  'Bh',  'Nh',  'Ch',   'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS',   'ABp',  'ABh']
-    for n,f in zip(var_names, sfunc_list):
-        print(f'd{n}/dt')
-        print(str(f))
-
 def get_main_init_vars(pro99_mode):
     if pro99_mode:        
         init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_BH,INIT_NH,INIT_CH,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     else:
         init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_BH,INIT_NH,INIT_CH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     return init_vars
-
-def get_main_data(param_vals_str, pro99_mode):
-    sfunc_list = [dBpdt, dNpdt, dCpdt, dBhdt, dNhdt, dChdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, dABpdt, dABhdt]
-    var_list   = [ Bp,   Np,    Cp,    Bh,    Nh,    Ch,     DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS,    ABp,    ABh]
-    var_names  = ['Bp', 'Np',  'Cp',  'Bh',  'Nh',  'Ch',   'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS',   'ABp',  'ABh']
-    init_vars = get_main_init_vars(pro99_mode)
-    param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
-
-    subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
-    #final_func = lambdify(var_list, subs_funclist, modules=['math'])
-    #final_func_jit = jit(final_func, nopython=True)  
-    final_func_jit = lambdify(var_list, subs_funclist)
-    calc_dydt = lambda t, y : final_func_jit(*y)
-
-    interm_sfunc_list = [
-        gross_uptakeINp, 
-        gross_uptakeONp, 
-        gross_uptakeINh, 
-        gross_uptakeONh, 
-        gross_uptakeICp, 
-        gross_uptakeOCp, 
-        gross_uptakeICh, 
-        gross_uptakeOCh, 
-        uptakeNp, 
-        uptakeNh, 
-        uptakeCp, 
-        uptakeCh, 
-        regQCp,
-        regQCh,
-        regQNp,
-        regQNh,
-        bio_synthesisN_p, 
-        bio_synthesisN_h, 
-        respirationCp, 
-        respirationCh, 
-        biomass_breakdown_for_respirationCp, 
-        biomass_breakdown_for_respirationCh, 
-        netDeltaNp, 
-        netDeltaNh, 
-        netDeltaCp, 
-        netDeltaCh, 
-        store_keepNp,
-        store_keepNh,
-        overflowNp, 
-        overflowNh, 
-        overflowCp, 
-        overflowCh, 
-        dic_air_water_exchange,
-        ABreleasep,
-        ABreleaseh, 
-        death_ratep, 
-        death_rateh, 
-        deathp, 
-        deathh, 
-        leakinessOp, 
-        leakinessIp, 
-        leakinessOh, 
-        leakinessIh, 
-        ROSreleasep,
-        ROSreleaseh, 
-        ROSbreakdownh, 
-        DON2DINp, 
-        DON2DINh, 
-    ]
-    interm_names = [
-        'gross_uptakeINp', 
-        'gross_uptakeONp', 
-        'gross_uptakeINh', 
-        'gross_uptakeONh', 
-        'gross_uptakeICp', 
-        'gross_uptakeOCp', 
-        'gross_uptakeICh', 
-        'gross_uptakeOCh', 
-        'uptakeNp', 
-        'uptakeNh', 
-        'uptakeCp', 
-        'uptakeCh', 
-        'regQCp',
-        'regQCh',
-        'regQNp',
-        'regQNh',
-        'bio_synthesisN_p', 
-        'bio_synthesisN_h', 
-        'respirationCp', 
-        'respirationCh', 
-        'biomass_breakdown_for_respirationCp', 
-        'biomass_breakdown_for_respirationCh', 
-        'netDeltaNp', 
-        'netDeltaNh', 
-        'netDeltaCp', 
-        'netDeltaCh', 
-        'store_keepNp',
-        'store_keepNh',
-        'overflowNp', 
-        'overflowNh', 
-        'overflowCp', 
-        'overflowCh', 
-        'dic_air_water_exchange',
-        'ABreleasep',
-        'ABreleaseh', 
-        'death_ratep', 
-        'death_rateh', 
-        'deathp', 
-        'deathh', 
-        'leakinessOp', 
-        'leakinessIp', 
-        'leakinessOh', 
-        'leakinessIh', 
-        'ROSreleasep',
-        'ROSreleaseh', 
-        'ROSbreakdownh', 
-        'DON2DINp', 
-        'DON2DINh', 
-    ]
-
-    interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
-    #intermediate_func = lambdify(var_list, interm_funclist, modules=['math'])
-    #intermediate_func = jit(intermediate_func, nopython=True)  
-    intermediate_func = lambdify(var_list, interm_funclist)
-    #interm_names = []
-    #intermediate_func = None
-    return var_names, init_vars, calc_dydt, interm_names, intermediate_func
 
 def get_ponly_init_vars(pro99_mode):
     if pro99_mode:        
@@ -486,79 +377,6 @@ def get_ponly_init_vars(pro99_mode):
         init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     return init_vars
     
-def get_ponly_data(param_vals_str, pro99_mode):
-    sfunc_list = [dBpdt,  dNpdt, dCpdt, dDONdt_ponly, dRDONdt_ponly, dDINdt_ponly, dDOCdt_ponly, dRDOCdt_ponly, dDICdt_ponly, dROSdt_ponly, dABpdt, dABhdt_ponly]
-    var_list   = [ Bp,    Np,    Cp,    DON,    RDON,    DIN,    DOC,    RDOC,  DIC,    ROS,    ABp,   ABh]
-    var_names  = ['Bp',  'Np',  'Cp',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
-    init_vars = get_ponly_init_vars(pro99_mode)
-    param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
-
-    subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
-    #final_func = lambdify(var_list, subs_funclist, modules=['math'])
-    #final_func_jit = jit(final_func, nopython=True)  
-    final_func_jit = lambdify(var_list, subs_funclist)
-    calc_dydt = lambda t, y : final_func_jit(*y)
-
-    interm_sfunc_list = [
-        gross_uptakeINp, 
-        gross_uptakeONp, 
-        gross_uptakeICp, 
-        gross_uptakeOCp, 
-        uptakeNp, 
-        uptakeCp, 
-        regQCp,
-        regQNp,
-        bio_synthesisN_p, 
-        respirationCp, 
-        biomass_breakdown_for_respirationCp, 
-        netDeltaNp, 
-        netDeltaCp, 
-        store_keepNp,
-        overflowNp, 
-        overflowCp, 
-        dic_air_water_exchange,
-        ABreleasep,
-        death_ratep, 
-        deathp, 
-        leakinessOp, 
-        leakinessIp, 
-        ROSreleasep,
-        DON2DINp, 
-    ]
-    interm_names = [
-        'gross_uptakeINp', 
-        'gross_uptakeONp', 
-        'gross_uptakeICp', 
-        'gross_uptakeOCp', 
-        'uptakeNp', 
-        'uptakeCp', 
-        'regQCp',
-        'regQNp',
-        'bio_synthesisN_p', 
-        'respirationCp', 
-        'biomass_breakdown_for_respirationCp', 
-        'netDeltaNp', 
-        'netDeltaCp', 
-        'store_keepNp',
-        'overflowNp', 
-        'overflowCp', 
-        'dic_air_water_exchange',
-        'ABreleasep',
-        'death_ratep', 
-        'deathp', 
-        'leakinessOp', 
-        'leakinessIp', 
-        'ROSreleasep',
-        'DON2DINp', 
-    ]
-
-    interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
-    #intermediate_func = lambdify(var_list, interm_funclist, modules=['math'])
-    #intermediate_func = jit(intermediate_func, nopython=True)  
-    intermediate_func = lambdify(var_list, interm_funclist)
-
-    return var_names, init_vars, calc_dydt, interm_names, intermediate_func
-
 def get_honly_init_vars(pro99_mode):
     if pro99_mode:        
         init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
@@ -566,30 +384,6 @@ def get_honly_init_vars(pro99_mode):
         init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
     return init_vars
     
-def get_honly_data(param_vals_str, pro99_mode):
-
-    sfunc_list = [dBhdt, dNhdt, dChdt, dDONdt_honly, dRDONdt_honly, dDINdt_honly, dDOCdt_honly, dRDOCdt_honly,dDICdt_honly, dROSdt_honly, dABpdt_honly, dABhdt]
-    var_list   = [Bh,    DON,    Nh,    Ch,     RDON,    DIN,    DOC,    RDOC,   DIC,    ROS,    ABp,   ABh]
-    var_names  = ['Bh',  'DON', 'Nh',  'Ch',   'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS', 'ABp', 'ABh']
-    init_vars = get_honly_init_vars(pro99_mode)
-    param_vals = {symbols(k) : v for k,v in param_vals_str.items()}
-
-    subs_funclist = [sfunc.subs(param_vals) for sfunc in sfunc_list]
-    final_func = lambdify(var_list, subs_funclist, modules=['math'])
-    final_func_jit = jit(final_func, nopython=True)  
-    calc_dydt = lambda t, y : final_func_jit(*y)
-
-    interm_sfunc_list = [
-    ]
-    interm_names = [
-    ]
-
-    #interm_funclist = [sfunc.subs(param_vals) for sfunc in interm_sfunc_list]
-    #intermediate_func = lambdify(var_list, interm_funclist, modules=['math'])
-    #intermediate_func = jit(intermediate_func, nopython=True)  
-    intermediate_func = None
-    return var_names, init_vars, calc_dydt, interm_names, intermediate_func
-
 
 def print_dydt0(calc_dydt, var_names, init_vars):
     dydt0 = calc_dydt(0, init_vars)
