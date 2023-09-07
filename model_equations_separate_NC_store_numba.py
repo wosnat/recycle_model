@@ -23,7 +23,7 @@ import time
 
 import calc_csat
 
-from numba import jit
+from numba import jit, njit
 
 
 
@@ -205,7 +205,7 @@ def prepare_params(param_vals):
     paramb  = np.array([pars['bp'], pars['bh']], dtype=np.float64)
     paramr0  = np.array([pars['r0p'], pars['r0h']], dtype=np.float64)
     paramM = np.array([pars['Mp'], pars['Mh']], dtype=np.float64)
-    paramOverflow = np.array([pars['Op'], pars['Oh']], dtype=np.float64)
+    paramOverflow = pars['OverflowMode']
     paramE_leak = np.array([pars['E_leakp'], pars['E_leakh']], dtype=np.float64)
     paramE_ROS = np.array([pars['E_ROSp'], pars['E_ROSp']], dtype=np.float64)
     paramVmaxROSh = pars['VmaxROSh']
@@ -228,11 +228,11 @@ def prepare_params(param_vals):
 
 
 @njit
-def basic_model_ode_cc_jit(
+def basic_model_cc_ode_jit(
     time, var_vals,         
     paramCN, paramQCmax, paramQCmin, paramkns, paramvmax, paramKmtb,paramOverflow,
     paramb, paramr0, paramM, paramE_leak, paramE_ROS, paramVmaxROSh, paramK_ROSh,
-    paramgamma_DON2DIN, paramgammaD, paramROS_decay    
+    paramgamma_DON2DIN, paramgammaD, paramROS_decay
 ):
     # variables
     Bp,   Np,    Cp,    Bh,    Nh,    Ch,     DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS = var_vals
@@ -274,10 +274,6 @@ def basic_model_ode_cc_jit(
     # net uptake (maintains C:N ratios)
     # umol N / L
     biosynthesisN = np.minimum(storeN + uptakeN, (storeC + uptakeC) / paramCN)* paramKmtb
-    # workaround for numba
-    #totstoreN = storeN + uptakeN
-    #totstoreC = (storeC + uptakeC) / paramCN
-    #biosynthesisN = np.array([min(totstoreN[0][0], totstoreC[0][0]),min(totstoreN[0][1], totstoreC[0][1])])
     # Respiration – growth associated bp/bh and maintenance associated r0p/r0h
     # b * growth + r0 * biomass
     # umol C/L
@@ -299,12 +295,13 @@ def basic_model_ode_cc_jit(
     # Overflow quantity 
     # Oh/Op: enable overflow (0 or 1)
     # umol N / L
-    #totstore2N = storeN + netDeltaN
-    #totstore2C = (storeC + netDeltaC) / paramCN
-    #store_keepN = np.array([min(totstore2N[0][0], totstore2C[0][0]),min(totstore2N[0][1], totstore2C[0][1])])
-    store_keepN = np.minimum(storeN + netDeltaN, (storeC + netDeltaC) / paramCN) 
-    overflowN = storeN + netDeltaN - store_keepN
-    overflowC = storeC + netDeltaC - store_keepN * paramCN
+    if (paramOverflow == 1):
+        store_keepN = np.minimum(storeN + netDeltaN, (storeC + netDeltaC) / paramCN) 
+        overflowN = storeN + netDeltaN - store_keepN
+        overflowC = storeC + netDeltaC - store_keepN * paramCN
+    else:
+        overflowN = np.zeros(2, dtype=np.float64)
+        overflowC = np.zeros(2, dtype=np.float64)
 
     dic_air_water_exchange   = - (DIC - c_sat) / ((h * DIC) / (Kg * B * 0.01 * DIC))
     # death
@@ -337,20 +334,30 @@ def basic_model_ode_cc_jit(
     dDINdt = np.sum(overflowN + DON2DIN - gross_growth[DIN_IDX,:])
     dDICdt = dic_air_water_exchange + np.sum(respirationC - gross_growth[DIC_IDX,:])
     dROSdt = np.sum(ROSrelease) - ROSdecay - ROSbreakdownh
-    
     return (dBdt, dNdt, dCdt, 
-             dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt)
+        dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, 
+        QC, reg_clipped, gross_growth, 
+        uptakeN, uptakeC, biosynthesisN, respirationC, 
+        biomass_breakdownC, overflowN, overflowC, dic_air_water_exchange,   
+        ROSbreakdownh, DON2DIN) 
 
 
 
-def basic_model_cc_ode(time, var_vals, par_tuple,):
-    dBdt, dNdt, dCdt, dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt = basic_model_ode_jit(time, var_vals,*par_tuple)
-    return np.ndarray([
+
+def basic_model_cc_ode(time, var_vals, par_tuple, return_intermediate=False):
+    (dBdt, dNdt, dCdt, 
+        dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, 
+        QC, reg_clipped, gross_growth, 
+        uptakeN, uptakeC, biosynthesisN, respirationC, 
+        biomass_breakdownC, overflowN, overflowC, dic_air_water_exchange,   
+        ROSbreakdownh, DON2DIN
+    ) = basic_model_cc_ode_jit(time, var_vals,*par_tuple)
+    return [#np.ndarray([
         dBdt[0], dNdt[0], dCdt[0], 
         dBdt[1], dNdt[1], dCdt[1], 
         dDONdt, dRDONdt, dDINdt, 
         dDOCdt, dRDOCdt, dDICdt, dROSdt
-        ], dtype=np.float64)
+        ]#, dtype=np.float64)
 
 
 # functions
@@ -362,29 +369,32 @@ def basic_model_cc_ode(time, var_vals, par_tuple,):
 
 
 def get_main_init_vars(pro99_mode):
+    var_names  = ['Bp', 'Np',  'Cp',  'Bh',  'Nh',  'Ch',   'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS',]
     if pro99_mode:        
-        init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_BH,INIT_NH,INIT_CH,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+        init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_BH,INIT_NH,INIT_CH,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS]
     else:
-        init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_BH,INIT_NH,INIT_CH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
-    return init_vars
+        init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_BH,INIT_NH,INIT_CH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS]
+    return var_names, np.array(init_vars, dtype=np.float64)
 
 def get_ponly_init_vars(pro99_mode):
+    var_names  = ['Bp',  'Np',  'Cp',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS']
     if pro99_mode:        
-        init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+        init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS]
     else:
-        init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
-    return init_vars
+        init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS]
+    return var_names, np.array(init_vars, dtype=np.float64)
     
 def get_honly_init_vars(pro99_mode):
+    var_names  = ['Bh',  'DON', 'Nh',  'Ch',   'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS']
     if pro99_mode:        
-        init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
+        init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS]
     else:
-        init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS,INIT_SP,INIT_SH]
-    return init_vars
+        init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS]
+    return var_names, np.array(init_vars, dtype=np.float64)
     
 
-def print_dydt0(calc_dydt, var_names, init_vars):
-    dydt0 = calc_dydt(0, init_vars)
+def print_dydt0(calc_dydt, var_names, init_vars, par_tuple):
+    dydt0 = calc_dydt(0, init_vars, par_tuple)
     for i,j, k in zip(var_names, dydt0, init_vars):
         print(f'd{i}/dt = {j:.2e}, init {i} = {k:.2e}, newval = {k+j:.2e}')
 
@@ -394,12 +404,12 @@ def print_intermediate0(intermediate_func, interm_names, init_vars):
         print(f'{i:<4} = {j:.2e}')
 
 
-def biomass_diff0(calc_dydt, var_names, init_vars, param_vals):
-    dydt0 = calc_dydt(0, init_vars)
-    R_P = param_vals['Rp']
+def biomass_diff0(calc_dydt, var_names, init_vars, par_tuple):
+    dydt0 = calc_dydt(0, init_vars, par_tuple)
+    paramCN = par_tuple[0]
     V = dict(zip(var_names, dydt0))
     print (f"dBp/dt + dBh/dt + dDON/dt + dRDON/dt + dDIN/dt = { V['Bp'] + V['Np'] + V['Bh'] + V['Nh'] + V['DON'] + V['RDON'] + V['DIN'] }")
-    print (f"dBp/dt + dBh/dt + dDOC/dt + dRDOC/dt + dDIC/dt = { V['Bp']*R_P + V['Cp'] + V['Bh']*R_H + V['Ch'] + V['DOC'] + V['RDOC'] + V['DIC'] }")
+    print (f"dBp/dt + dBh/dt + dDOC/dt + dRDOC/dt + dDIC/dt = { V['Bp']*paramCN[0] + V['Cp'] + V['Bh']*paramCN[1] + V['Ch'] + V['DOC'] + V['RDOC'] + V['DIC'] }")
 
 def biomass_diff0_ponly(calc_dydt, var_names, init_vars):
     dydt0 = calc_dydt(0, init_vars)
@@ -413,7 +423,7 @@ def biomass_diff0_honly(calc_dydt, var_names, init_vars):
 
 
 
-def run_solver_ivp(calc_dydt, init_vars, days, t_eval):
+def run_solver_ivp(calc_dydt, init_vars, days, t_eval, par_tuple, method='BDF'):
     tstart = 0
     if t_eval is None: 
         tend = days*seconds_in_day
@@ -421,28 +431,17 @@ def run_solver_ivp(calc_dydt, init_vars, days, t_eval):
     else:
         tend= np.max(t_eval)
     sol = solve_ivp(
-        fun=calc_dydt, y0=init_vars,
-        t_span=[tstart, tend], t_eval=t_eval, max_step=100, first_step=1)
-    #print(f'solve_ivp(fun=calc_dydt, y0={init_vars},\n    t_span=[{tstart}, {tend}],\n    t_eval={t_eval})')
-    #print(sol.message)
+        fun=calc_dydt, y0=init_vars, args=(par_tuple,),
+        t_span=[tstart, tend], t_eval=t_eval, max_step=1000, #first_step=1, 
+        method=method)
+        #method='Radau',)
     return sol
 
-
-def solver2df_ivp(sol, var_names, interm_names, intermediate_func, param_vals):
+def solver2df_ivp(sol, var_names, par_tuple):
     d = dict(zip(var_names, sol.y))
     d['t'] = sol.t
     df = pd.DataFrame(data=d)
     df['day'] = df['t']/seconds_in_day
-    df[interm_names] = df[var_names].apply(lambda x : intermediate_func(*x), axis=1, 
-                                           result_type='expand')
-    if 'Bp' in df.columns:
-        df['Bp[C]'] = df['Bp']*param_vals[str(Rp)]
-    if 'Bh' in df.columns:
-        df['Bh[C]'] = df['Bh']*param_vals[str(Rh)]
-    if 'ABp' in df.columns:
-        df['ABp[C]'] = df['ABp']*param_vals[str(Rp)]
-    if 'ABh' in df.columns:
-        df['ABh[C]'] = df['ABh']*param_vals[str(Rh)]
     return df
 
 
