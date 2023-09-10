@@ -237,6 +237,40 @@ def prepare_params_tuple_cc(param_vals):
         paramb, paramr0, paramM, paramE_leak, paramE_ROS, paramVmaxROSh, paramK_ROSh,
         paramgamma_DON2DIN, paramgammaD, paramROS_decay, paramROSMode, paramomega_ROS)
 
+def prepare_params_tuple_ponly(param_vals):
+    pars = param_vals
+    paramCN  = np.array([pars['Rp'], ], dtype=np.float64)
+    paramQCmax  = np.array([pars['QCmaxp'], ], dtype=np.float64)
+    paramQCmin  = np.array([pars['QCminp'], ], dtype=np.float64)
+    paramKmtb  = np.array([pars['Kmtbp'], ], dtype=np.float64)
+    paramb  = np.array([pars['bp'], ], dtype=np.float64)
+    paramr0  = np.array([pars['r0p'], ], dtype=np.float64)
+    paramM = np.array([pars['Mp'], ], dtype=np.float64)
+    paramOverflow = pars['OverflowMode']
+    paramE_leak = np.array([pars['E_leakp'], ], dtype=np.float64)
+    paramE_ROS = np.array([pars['E_ROSp'], ], dtype=np.float64)
+    paramomega_ROS = np.array([pars['omegaP'], ], dtype=np.float64)
+    
+    paramVmaxROSh = pars['VmaxROSh']
+    paramK_ROSh = pars['K_ROSh']
+    paramROSMode = pars['ROSMode']
+    paramgamma_DON2DIN = np.array([pars['gamma_DON2DINp'], ], dtype=np.float64)
+    paramgammaD = np.array([pars['gammaDp'], ], dtype=np.float64)
+    paramROS_decay = pars['ROS_decay']
+    kns = np.array(
+        [[pars['KINp'], pars['KONp'], pars['KICp'], pars['KOCp']],
+        ], dtype=np.float64
+    ).T
+    vmax = np.array(
+        [[pars['VmaxINp'], pars['VmaxONp'], pars['VmaxICp'], pars['VmaxOCp']],
+        ], dtype=np.float64
+    ).T
+    return (
+        paramCN, paramQCmax, paramQCmin, kns, vmax, paramKmtb,paramOverflow, 
+        paramb, paramr0, paramM, paramE_leak, paramE_ROS, paramVmaxROSh, paramK_ROSh,
+        paramgamma_DON2DIN, paramgammaD, paramROS_decay, paramROSMode, paramomega_ROS)
+
+
 @njit
 def prepare_vals_tuple_cc(var_vals):
     Bp,   Np,    Cp,    Bh,    Nh,    Ch,     DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS = var_vals
@@ -247,6 +281,18 @@ def prepare_vals_tuple_cc(var_vals):
     biomass = np.array([Bp, Bh], dtype=np.float64)
     storeN  = np.array([Np, Nh], dtype=np.float64)
     storeC  = np.array([Cp, Ch], dtype=np.float64)
+    return (biomass, storeN, storeC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS, Bh)
+
+@njit
+def prepare_vals_tuple_ponly(var_vals):
+    Bp,   Np,    Cp,    DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS = var_vals
+    Bh = 0 # for ROS
+    resources = np.array(
+        [DIN, DON, DIC, DOC, ], dtype=np.float64
+    ).reshape(4, 1)
+    biomass = np.array([Bp], dtype=np.float64)
+    storeN  = np.array([Np], dtype=np.float64)
+    storeC  = np.array([Cp], dtype=np.float64)
     return (biomass, storeN, storeC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS, Bh)
 
 
@@ -302,10 +348,10 @@ def compute_gross_uptake(
     # gross uptake (regardless of C:N ratio)
     # vmax = muinfp* VmaxIp / Qp
     # umol N /L  or umol C /L  
-    gross_growth = paramvmax * biomass * limits  * reg_clipped * ROS_penalty
-    uptakeN = gross_growth[DIN_IDX,:] + gross_growth[DON_IDX,: ]
-    uptakeC = gross_growth[DIC_IDX,:] + gross_growth[DOC_IDX,: ]   
-    return (gross_growth, uptakeN, uptakeC, QC)
+    gross_uptake = paramvmax * biomass * limits  * reg_clipped * ROS_penalty
+    uptakeN = gross_uptake[DIN_IDX,:] + gross_uptake[DON_IDX,: ]
+    uptakeC = gross_uptake[DIC_IDX,:] + gross_uptake[DOC_IDX,: ]   
+    return (gross_uptake, uptakeN, uptakeC, QC)
 
 @njit
 def compute_net_uptake(
@@ -377,21 +423,21 @@ def compute_ROS(
 
 @njit
 def compute_C_odes(
-    DIC, netDeltaC, gross_growth, respirationC, overflowC, 
+    DIC, netDeltaC, gross_uptake, respirationC, overflowC, 
     deathN, leakinessN, paramCN, paramgammaD,  
 ):
     deathC = deathN * paramCN
     dic_air_water_exchange   = - (DIC - c_sat) / air_water_exchange_constant
     dCdt = netDeltaC - overflowC
-    dDICdt = dic_air_water_exchange + np.sum(respirationC - gross_growth[DIC_IDX,:])
+    dDICdt = dic_air_water_exchange + np.sum(respirationC - gross_uptake[DIC_IDX,:])
     dDOCdt = np.sum(
-        deathC * paramgammaD + leakinessN * paramCN + overflowC - gross_growth[DOC_IDX,:])
+        deathC * paramgammaD + leakinessN * paramCN + overflowC - gross_uptake[DOC_IDX,:])
     dRDOCdt = np.sum(deathC * (1 - paramgammaD))
     return(dCdt, dDICdt, dDOCdt, dRDOCdt)
 
 @njit
 def compute_N_odes(
-    DON, biomass, netDeltaN, gross_growth, biosynthesisN, biomass_breakdownC, overflowN, 
+    DON, biomass, netDeltaN, gross_uptake, biosynthesisN, biomass_breakdownC, overflowN, 
     deathN, leakinessN, paramCN, paramgammaD, paramgamma_DON2DIN
 ):
     # DON breakdown due to exoenzymes
@@ -399,18 +445,18 @@ def compute_N_odes(
     dBdt = biosynthesisN - biomass_breakdownC / paramCN - deathN - leakinessN 
     dNdt = netDeltaN - overflowN
     dDONdt = np.sum(
-        deathN * paramgammaD + leakinessN - gross_growth[DON_IDX,:] - DON2DIN
+        deathN * paramgammaD + leakinessN - gross_uptake[DON_IDX,:] - DON2DIN
     )
     dRDONdt = np.sum(deathN * (1 - paramgammaD))
 
     # In discussion can state that if DIN is produced also through overflow or leakiness then this could support Pro growth, but this is not encoded into our model.
     # Assuming that recalcitrant DON isd released only during mortality (discuss release through leakiness)
     # Assuming RDON/RDOC is recalcitrant to both organisms   
-    dDINdt = np.sum(overflowN + DON2DIN - gross_growth[DIN_IDX,:])
+    dDINdt = np.sum(overflowN + DON2DIN - gross_uptake[DIN_IDX,:])
     return(dBdt, dNdt, dDINdt, dDONdt, dRDONdt, DON2DIN)
 
 
-# @njit
+#@njit
 def basic_model_cc_ode_jit1(
     biomass, storeN, storeC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS, Bh,
     paramCN, paramQCmax, paramQCmin, paramkns, paramvmax, paramKmtb,paramOverflow,
@@ -419,7 +465,7 @@ def basic_model_cc_ode_jit1(
 ):
 
 
-    gross_growth, uptakeN, uptakeC, QC = compute_gross_uptake(
+    gross_uptake, uptakeN, uptakeC, QC = compute_gross_uptake(
         biomass, storeN, storeC, resources, ROS,
         paramCN, paramQCmax, paramQCmin, paramkns, paramvmax, paramROSMode, paramomega_ROS)
 
@@ -433,34 +479,74 @@ def basic_model_cc_ode_jit1(
     # final differential equations
 
     dCdt, dDICdt, dDOCdt, dRDOCdt = compute_C_odes(
-        DIC, netDeltaC, gross_growth, respirationC, overflowC, 
+        DIC, netDeltaC, gross_uptake, respirationC, overflowC, 
         deathN, leakinessN, paramCN, paramgammaD)
 
     dBdt, dNdt, dDINdt, dDONdt, dRDONdt, DON2DIN = compute_N_odes(
-        DON, biomass, netDeltaN, gross_growth, biosynthesisN, biomass_breakdownC, overflowN, 
+        DON, biomass, netDeltaN, gross_uptake, biosynthesisN, biomass_breakdownC, overflowN, 
         deathN, leakinessN, paramCN, paramgammaD, paramgamma_DON2DIN)
         
     dROSdt = compute_ROS(
         biomass, Bh, ROS, paramROSMode, paramROS_decay, paramE_ROS, paramVmaxROSh, paramK_ROSh)
 
     return (dBdt, dNdt, dCdt, 
-        dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt) 
+        dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt,
+        gross_uptake, uptakeN, uptakeC, QC,
+        biosynthesisN, respirationC, biomass_breakdownC,
+        overflowN, overflowC)
 
 
-
-
-def basic_model_cc_ode(time, var_vals, par_tuple):
+def basic_model_cc_ode(time, var_vals, par_tuple, return_intermediate=False):
     var_tuple = prepare_vals_tuple_cc(var_vals)
     (dBdt, dNdt, dCdt, 
         dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, 
+        gross_uptake, uptakeN, uptakeC, QC,
+        biosynthesisN, respirationC, biomass_breakdownC,
+        overflowN, overflowC,
     ) = basic_model_cc_ode_jit1(*var_tuple,*par_tuple)
-    return (#np.ndarray([
-        dBdt[0], dNdt[0], dCdt[0], 
-        dBdt[1], dNdt[1], dCdt[1], 
-        dDONdt, dRDONdt, dDINdt, 
-        dDOCdt, dRDOCdt, dDICdt, dROSdt
-        )#, dtype=np.float64)
+    if not return_intermediate:
+        return (
+            dBdt[0], dNdt[0], dCdt[0], 
+            dBdt[1], dNdt[1], dCdt[1], 
+            dDONdt, dRDONdt, dDINdt, 
+            dDOCdt, dRDOCdt, dDICdt, dROSdt
+        )
+    else:
+        intermediates = (
+            gross_uptake, uptakeN, uptakeC, QC,
+            biosynthesisN, respirationC, biomass_breakdownC,
+            overflowN, overflowC,
+        )
+        flat_intermediates = [i  for f in intermediates for i in (f.flat if isinstance(f, np.ndarray) else [f])]
 
+        return flat_intermediates
+
+
+def basic_model_ponly_ode(time, var_vals, par_tuple, return_intermediate=False):
+    var_tuple = prepare_vals_tuple_ponly(var_vals)
+    (dBdt, dNdt, dCdt, 
+        dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt, 
+        gross_uptake, uptakeN, uptakeC, QC,
+        biosynthesisN, respirationC, biomass_breakdownC,
+        overflowN, overflowC,
+    ) = basic_model_cc_ode_jit1(*var_tuple,*par_tuple)
+    if not return_intermediate:
+        return (
+            dBdt, dNdt, dCdt, 
+            dDONdt, dRDONdt, dDINdt, 
+            dDOCdt, dRDOCdt, dDICdt, dROSdt
+        )
+        
+    else:
+        intermediates = (
+            gross_uptake, uptakeN, uptakeC, QC,
+            biosynthesisN, respirationC, biomass_breakdownC,
+            overflowN, overflowC,
+        )
+        flat_intermediates = [i  for f in intermediates for i in (f.flat if isinstance(f, np.ndarray) else [f])]
+
+        return flat_intermediates
+    
 
 # functions
 
@@ -472,27 +558,49 @@ def basic_model_cc_ode(time, var_vals, par_tuple):
 
 def get_main_init_vars(pro99_mode):
     var_names  = ['Bp', 'Np',  'Cp',  'Bh',  'Nh',  'Ch',   'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS',]
+    intermediate_names = [
+            'gross_uptakeINp', 'gross_uptakeINh', 'gross_uptakeONp', 'gross_uptakeONh', 
+            'gross_uptakeICp', 'gross_uptakeICh', 'gross_uptakeOCp', 'gross_uptakeOCh', 
+            'uptakeNp', 'uptakeNh', 'uptakeCp', 'uptakeCh', 'QCp','QCh',
+            'biosynthesisNp', 'biosynthesisNh', 'respirationCp', 'respirationCh', 'biomass_breakdownCp','biomass_breakdownCh',
+            'overflowNp', 'overflowNh', 'overflowCp','overflowCh',
+    ]
     if pro99_mode:        
         init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_BH,INIT_NH,INIT_CH,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS]
     else:
         init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_BH,INIT_NH,INIT_CH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS]
-    return var_names, np.array(init_vars, dtype=np.float64)
+    return var_names, np.array(init_vars, dtype=np.float64), intermediate_names
+
 
 def get_ponly_init_vars(pro99_mode):
     var_names  = ['Bp',  'Np',  'Cp',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS']
+    intermediate_names = [
+            'gross_uptakeINp',  'gross_uptakeONp', 
+            'gross_uptakeICp',  'gross_uptakeOCp', 
+            'uptakeNp', 'uptakeCp', 'QCp',
+            'biosynthesisNp',  'respirationCp',  'biomass_breakdownCp',
+            'overflowNp', 'overflowCp',
+    ]
     if pro99_mode:        
         init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS]
     else:
         init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS]
-    return var_names, np.array(init_vars, dtype=np.float64)
+    return var_names, np.array(init_vars, dtype=np.float64), intermediate_names
     
 def get_honly_init_vars(pro99_mode):
     var_names  = ['Bh',  'DON', 'Nh',  'Ch',   'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS']
+    intermediate_names = [
+            'gross_uptakeINh',  'gross_uptakeONh', 
+            'gross_uptakeICh',  'gross_uptakeOCh', 
+            'uptakeNh', 'uptakeCh', 'QCh',
+            'biosynthesisNh',  'respirationCh',  'biomass_breakdownCh',
+            'overflowNh', 'overflowCh',
+    ]
     if pro99_mode:        
         init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS]
     else:
         init_vars = [INIT_BH,INIT_DON,INIT_RDON,INIT_DIN,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS]
-    return var_names, np.array(init_vars, dtype=np.float64)
+    return var_names, np.array(init_vars, dtype=np.float64), intermediate_names
     
 
 def print_dydt0(calc_dydt, var_names, init_vars, par_tuple):
@@ -539,12 +647,20 @@ def run_solver_ivp(calc_dydt, init_vars, days, t_eval, par_tuple, method='BDF', 
         #method='Radau',)
     return sol
 
-def solver2df_ivp(sol, var_names, par_tuple):
+def solver2df_ivp(sol, var_names, par_tuple, t_eval=None, return_intermediate=False, intermediate_names=None, calc_dydt=None, ):
     d = dict(zip(var_names, sol.y))
     d['t'] = sol.t
     df = pd.DataFrame(data=d)
+    if t_eval is not None:
+        df = df.loc[np.rint(df.t).isin(np.rint(t_eval))].copy()
     df['day'] = df['t']/seconds_in_day
+    if return_intermediate: 
+        df[intermediate_names] = df[var_names].apply(
+            lambda x : calc_dydt(x, par_tuple, return_intermediate=True), axis=1, 
+            result_type='expand')
     return df
+
+
 
 
 def run_solver_ode(calc_dydt, init_vars, days, t_eval):
