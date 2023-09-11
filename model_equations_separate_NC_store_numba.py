@@ -557,6 +557,7 @@ def basic_model_ponly_ode(time, var_vals, par_tuple, return_intermediate=False):
 
 
 def get_main_init_vars(pro99_mode):
+    '''return : var_names, init_vars, intermediate_names'''
     var_names  = ['Bp', 'Np',  'Cp',  'Bh',  'Nh',  'Ch',   'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS',]
     intermediate_names = [
             'gross_uptakeINp', 'gross_uptakeINh', 'gross_uptakeONp', 'gross_uptakeONh', 
@@ -573,6 +574,7 @@ def get_main_init_vars(pro99_mode):
 
 
 def get_ponly_init_vars(pro99_mode):
+    '''return : var_names, init_vars, intermediate_names'''
     var_names  = ['Bp',  'Np',  'Cp',  'DON',  'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS']
     intermediate_names = [
             'gross_uptakeINp',  'gross_uptakeONp', 
@@ -588,6 +590,7 @@ def get_ponly_init_vars(pro99_mode):
     return var_names, np.array(init_vars, dtype=np.float64), intermediate_names
     
 def get_honly_init_vars(pro99_mode):
+    '''return : var_names, init_vars, intermediate_names'''
     var_names  = ['Bh',  'DON', 'Nh',  'Ch',   'RDON',  'DIN',  'DOC',  'RDOC', 'DIC',  'ROS']
     intermediate_names = [
             'gross_uptakeINh',  'gross_uptakeONh', 
@@ -632,92 +635,137 @@ def biomass_diff0_honly(calc_dydt, var_names, init_vars):
     print (f"dBh/dt + dDON/dt + dRDON/dt + dDIN/dt = {  V['Bh'] + V['DON'] + V['RDON'] + V['DIN'] }")
 
 
-
-def run_solver_ivp(calc_dydt, init_vars, days, t_eval, par_tuple, method='BDF', jac_sparsity=None):
-    tstart = 0
+def get_t_end(maxday=140, t_eval = None, seconds_in_day=seconds_in_day):
+    
     if t_eval is None: 
-        tend = days*seconds_in_day
-        t_eval = np.arange(tstart, tend, 3600*4)
+        t_end = maxday*seconds_in_day
     else:
-        tend= np.max(t_eval)
+        t_end= np.max(t_eval)
+    return t_end
+
+
+def run_solver(calc_dydt, init_vars, par_tuple, t_end, t_eval, method='BDF', jac_sparsity=None):
+    t_start = 0
     sol = solve_ivp(
         fun=calc_dydt, y0=init_vars, args=(par_tuple,),
-        t_span=[tstart, tend], t_eval=t_eval, max_step=1000, #first_step=1, 
+        t_span=[t_start, t_end], t_eval=t_eval, max_step=1000, #first_step=1, 
         method=method, jac_sparsity=jac_sparsity)
         #method='Radau',)
     return sol
 
-def solver2df_ivp(sol, var_names, par_tuple, t_eval=None, return_intermediate=False, intermediate_names=None, calc_dydt=None, ):
+def solver2df(sol, var_names, par_tuple, t_eval=None,  intermediate_names=None, calc_dydt=None, ):
     d = dict(zip(var_names, sol.y))
     d['t'] = sol.t
     df = pd.DataFrame(data=d)
     if t_eval is not None:
         df = df.loc[np.rint(df.t).isin(np.rint(t_eval))].copy()
     df['day'] = df['t']/seconds_in_day
-    if return_intermediate: 
+    if intermediate_names: 
         df[intermediate_names] = df[var_names].apply(
-            lambda x : calc_dydt(x, par_tuple, return_intermediate=True), axis=1, 
+            lambda x : calc_dydt(0, x.to_numpy(), par_tuple=par_tuple, return_intermediate=True), axis=1, 
             result_type='expand')
-    return df
-
-
-
-
-def run_solver_ode(calc_dydt, init_vars, days, t_eval):
-    if t_eval is None: 
-        tstart = 0
-        tend = days*seconds_in_day
-        t_eval = np.arange(tstart, tend, 3600*4)
-
-        #print(t_eval)
-    y = odeint(
-        func=calc_dydt, y0=init_vars,
-        t=t_eval, hmax=100, h0=1, tfirst=True)
-    #print(f'solve_ivp(fun=calc_dydt, y0={init_vars},\n    t_span=[{tstart}, {tend}],\n    t_eval={t_eval})')
-    #print(sol.message)
-    return t_eval, y
-    #return solver2df_ode(sol, t_eval, var_names, interm_names, intermediate_func)
-
-def solver2df_ode(sol, var_names, interm_names, intermediate_func, param_vals, t_eval):
-    d = dict(zip(var_names, sol[1].T))
-    d['t'] = sol[0]
-    df = pd.DataFrame(data=d)
-    if t_eval is not None:
-        df = df.loc[np.rint(df.t).isin(np.rint(t_eval))]
-    df['day'] = df['t']/seconds_in_day
-    if (interm_names):
-        df[interm_names] = df[var_names].apply(lambda x : intermediate_func(*x), axis=1, 
-                                           result_type='expand')
+    paramCN = par_tuple[0]
     if 'Bp' in df.columns:
-        df['Bp[C]'] = df['Bp']*param_vals[str(Rp)]
+        df['Bp[C]'] = df['Bp']*paramCN[0]
+        df['Bptotal'] = df['Bp']+df['Np']
+        df['Bptotal[C]'] = df['Bp[C]']+df['Cp']
+        
     if 'Bh' in df.columns:
-        df['Bh[C]'] = df['Bh']*param_vals[str(Rh)]
-    if 'ABp' in df.columns:
-        df['ABp[C]'] = df['ABp']*param_vals[str(Rp)]
-    if 'ABh' in df.columns:
-        df['ABh[C]'] = df['ABh']*param_vals[str(Rh)]
+        # TODO: will not work in honly mode
+        df['Bh[C]'] = df['Bh']*paramCN[1]
+        df['Bhtotal'] = df['Bh']+df['Nh']
+        df['Bhtotal[C]'] = df['Bh[C]']+df['Ch']
+        
     return df
 
+   
+def _mse(x, refdf, refcol, col, timecol, tolerance):
+    #print(x.columns)
+    tdf = pd.merge_asof(x[[timecol, col]].dropna(), refdf[[timecol, refcol]], on=timecol, direction='nearest', tolerance=tolerance).dropna()
+    return pd.Series({
+        'compare_points': tdf.shape[0], 
+        'MSE': mean_squared_error(tdf[col], tdf[refcol])}
+    )
 
-def run_solver(calc_dydt, init_vars, days=140, t_eval=None):
-    tstart = time.process_time()
-    sol = run_solver_ode(calc_dydt, init_vars, days, t_eval=t_eval)
-    tend =  time.process_time()
-    print ('simulation time', tend - tstart)
-    return sol
+def compute_mse(df, refdf, refcol= 'ref_Bp', col='Bptotal', timecol='t', tolerance=100):
+    #print (x)
+    mse_df = refdf.groupby(['Sample', 'full name', 'Group',]
+                        ).apply(lambda y : _mse(df,y, refcol= refcol, col=col, timecol=timecol, tolerance=tolerance))
+    mse_df = mse_df.reset_index()
+    return mse_df
+
+def run_solver_from_new_params(
+    new_param_vals, refdf, init_var_vals, 
+    calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names, return_dfs=False
+    ):
+
+    par_tuple = prepare_params_tuple(new_param_vals)
+    sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval)
+    df = solver2df(
+        sol, var_names, par_tuple=par_tuple, 
+        intermediate_names=intermediate_names, calc_dydt=calc_dydt)
+
+    if refdf is not None:
+        try:
+            mse_df = compute_mse(df, refdf, refcol= 'ref_Bp', col='Bptotal', timecol='t', tolerance=100)
+            perr = mse_df['MSE'].min()
+
+        except Exception as inst:
+            print(inst)
+            pass
+    if return_dfs:
+        return(perr, new_param_vals, df, mse_df)
+    else:
+        return perr 
+
+def save_solver_results_to_file(
+    new_param_vals, df, mse_df,
+    json_dpath, out_dpath, out_fprefix, 
+    ):
+        
+    sumdf = pd.DataFrame({str(k): v for k,v in new_param_vals.items()}, index=[0])
+    sumdf['run_id'] = out_fprefix
+    df['run_id'] = out_fprefix
+    mse_df['run_id'] = out_fprefix
     
-def solver2df(sol, var_names, interm_names, intermediate_func, param_vals, t_eval=None):
-    return solver2df_ode(sol, var_names, interm_names, intermediate_func, param_vals, t_eval)
+    df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip', index=False)
+    sumdf.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'), compression='gzip', index=False)
+    mse_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_mse.csv.gz'), compression='gzip', index=False)
 
-def get_t_eval(maxday, step = 1000, ref_times = None):
-    tstart = 0
-    tend = maxday*seconds_in_day
-    sim_times = np.arange(tstart, tend, step)
-    if ref_times is not None:
-        ref_times = np.rint(ref_times)
-        sim_times = np.concatenate((sim_times, ref_times))
-        sim_times = np.unique(sim_times)
-    return sim_times
+
+
+def run_solver_from_X(
+    X, params_to_update, orig_param_vals, refdf, 
+    log_params, init_var_vals, 
+    calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names, return_dfs=False
+    ):
+
+    new_param_vals = get_params(X, params_to_update, orig_param_vals, log_params)
+    return run_solver_from_new_params(
+        new_param_vals, refdf, init_var_vals, 
+        calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names, return_dfs
+    )
+
+
+def run_solver_from_new_params_and_save(
+    new_param_vals, refdf, json_dpath, out_dpath, 
+    out_fprefix, init_var_vals, 
+    calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names,
+    ):
+
+    perr, new_param_vals, df, mse_df,  =  run_solver_from_new_params(
+        new_param_vals, refdf, init_var_vals, 
+        calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names, return_dfs
+    )
+            
+    save_solver_results_to_file(
+        new_param_vals, df, mse_df,
+        json_dpath, out_dpath, out_fprefix, 
+    )
+
+    return perr 
+
+
 
 ##################################################################
 ##################################################################
@@ -742,20 +790,6 @@ def json2params(default_params, fpath):
 #    ref_t = np.rint(smallrefdf['t'])
 #    tdf = df.loc[df.t.isin(ref_t)]
 #    return mean_squared_error(tdf[col], smallrefdf[refcol])
-   
-def _mse(x, refdf, refcol, col, timecol, tolerance):
-    #print(x.columns)
-    tdf = pd.merge_asof(x[[timecol, col]].dropna(), refdf[[timecol, refcol]], on=timecol, direction='nearest', tolerance=tolerance).dropna()
-    return pd.Series({
-        'compare_points': tdf.shape[0], 
-        'MSE': mean_squared_error(tdf[col], tdf[refcol])}
-    )
-def compute_mse(df, refdf, refcol= 'ref_Bp', col='Bp', timecol='t', tolerance=100):
-    #print (x)
-    mse_df = refdf.groupby(['Sample', 'full name', 'Group',]
-                        ).apply(lambda y : _mse(df,y, refcol= refcol, col=col, timecol=timecol, tolerance=tolerance))
-    mse_df = mse_df.reset_index()
-    return mse_df
 
 # this is sensitivity specific
 # def compute_mse(df, refdf, refcol= 'ref_Bp', col='Bp', timecol='t', tolerance=100):
@@ -784,35 +818,11 @@ def run_with_params_json(json_fpath_list, days, refdf, out_dpath, out_fprefix, w
     else:
         t_eval = get_t_eval(days, ref_times = t_eval)
 
-    
-    sol = run_solver(calc_dydt, init_vars, t_eval=t_eval, days=days)
-    sumdf = pd.DataFrame({str(k): v for k,v in new_params.items()}, index=[0])
-    sumdf['run_id'] = out_fprefix
-    #sumdf['status'] = sol.status
-    #if sol.status != 0:
-    #    sumdf['message'] = sol.message
-    #if sol.success:
-    df = solver2df(sol, var_names, None, intermediate_func, new_params, t_eval=orig_t_eval)
-    df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip')
-
-    if refdf is not None:
-        try:
-            mse_df = compute_mse(df, refdf, refcol= 'ref_Bp', col='Bp', timecol='t', tolerance=100)
-            mse_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_mse.csv.gz'), compression='gzip')
-            perr = mse_df['MSE'].min()
-
-        except Exception as inst:
-            print(inst)
-            pass
-    sumdf.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'), compression='gzip')
-    return perr 
-   
-def generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60, which_organism='all', pro99_mode=False, t_eval=None):
-    if pro99_mode:
-        out_fprefix = f'{out_fprefix}_pro99'
-    
-    hash_val = str(hash(tuple(params.values())))
-    run_id = f'{out_fprefix}_h{hash_val}'
+    run_solver_from_new_params_and_save(
+        new_param_vals, refdf, json_dpath, out_dpath, 
+        out_fprefix, init_var_vals, 
+        calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names,
+    )    
     
     json_fpath = os.path.join(json_dpath, f'{run_id}_params.json')
     params2json(params, json_fpath)
@@ -897,6 +907,13 @@ def run_sensitivity_per_parameter(param_vals, parameter, bound, number_of_runs, 
             [v], [parameter], param_vals, 
             ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=[log_param], which_organism=which_organism, pro99_mode=pro99_mode)
 
+def get_runid_unique_suffix(pro99_mode, param_vals):
+    suffix = ''
+    if pro99_mode:
+        suffix = '_pro99'
+    hash_val = str(hash(tuple(param_vals.values())))
+    suffix = f'{suffix}_h{hash_val}'
+    return suffix 
 
     
 if __name__ == '__main__':
@@ -911,7 +928,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--outdpath", help="output dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
-    parser.add_argument("--model", help="model to run", choices=['MIN', 'FULL', 'LEAK', 'MIXO'], default='FULL')
+    parser.add_argument("--model", help="model to run", choices=['MIN', 'MIXOTROPHY', 'OVERFLOW', 'ROS', 'EXOENZYMES'], default='FULL')
     parser.add_argument("--which_organism", help="which organism to run", choices=['ponly', 'honly', 'all'], default='all')
     parser.add_argument("--pro99_mode", help="run on pro99 media",
                         action="store_true")
@@ -921,12 +938,50 @@ if __name__ == '__main__':
     dpath = args.outdpath
     if dpath != '':
         os.makedirs(dpath, exist_ok=True)
+
+
+
     if args.ref_csv == 'None':
         refdf = None
     else:
         refdf = pd.read_excel(args.ref_csv)
-    param_vals = get_param_vals(args.model)
 
-    #print(args.t_eval) 
-    MSE_err = run_with_params_json(args.json, args.maxday, refdf, dpath, args.run_id, args.which_organism, args.pro99_mode, args.t_eval)
+    new_param_vals = get_param_vals(args.model)
+    for json_fpath in json_fpath_list:
+        new_param_vals = json2params(new_param_vals, json_fpath)
+
+    suffix = get_runid_unique_suffix(args.pro99_mode, new_param_vals)
+    out_fprefix = args.run_id
+    run_id = f'{out_fprefix}_h{hash_val}'
+        
+    t_eval = args.t_eval
+    if t_eval is None:
+        if refdf is not None:
+            t_eval = np.rint(refdf['t'].drop_duplicates().sort_values()).to_numpy()
+    t_end = get_t_end(maxday=args.maxday, t_eval=t_eval, seconds_in_day=seconds_in_day)
+
+    if t_eval is None: # no refdf
+        t_eval = np.arange(0, t_end, 1000)
+
+    which_organism = args.which_organism
+    if which_organism == 'ponly':
+        var_names, init_var_vals, intermediate_names =  get_ponly_init_vars(pro99_mode=args.pro99_mode)
+        calc_dydt = basic_model_ponly_ode
+        prepare_params_tuple = prepare_params_tuple_ponly
+    elif which_organism == 'honly':
+        var_names, init_var_vals, intermediate_names =  get_honly_init_vars(pro99_mode=args.pro99_mode)
+        # TODO - HONLY implementation
+        calc_dydt = basic_model_ponly_ode
+        prepare_params_tuple = prepare_params_tuple_ponly
+    else:
+        var_names, init_var_vals, intermediate_names =  get_main_init_vars(pro99_mode=args.pro99_mode)
+        calc_dydt = basic_model_cc_ode
+        prepare_params_tuple = prepare_params_tuple_cc
+
+    MSE_err = run_solver_from_new_params_and_save(
+        new_param_vals, refdf, args.json_dpath, args.out_dpath, 
+        run_id, init_var_vals, 
+        calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names,
+    )
+
     print ('\nMSE:', MSE_err)
