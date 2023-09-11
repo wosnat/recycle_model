@@ -532,7 +532,7 @@ def basic_model_ponly_ode(time, var_vals, par_tuple, return_intermediate=False):
     ) = basic_model_cc_ode_jit1(*var_tuple,*par_tuple)
     if not return_intermediate:
         return (
-            dBdt, dNdt, dCdt, 
+            dBdt[0], dNdt[0], dCdt[0], 
             dDONdt, dRDONdt, dDINdt, 
             dDOCdt, dRDOCdt, dDICdt, dROSdt
         )
@@ -720,7 +720,7 @@ def run_solver_from_new_params(
 
 def save_solver_results_to_file(
     new_param_vals, df, mse_df,
-    json_dpath, out_dpath, out_fprefix, 
+    out_dpath, out_fprefix, 
     ):
         
     sumdf = pd.DataFrame({str(k): v for k,v in new_param_vals.items()}, index=[0])
@@ -748,19 +748,19 @@ def run_solver_from_X(
 
 
 def run_solver_from_new_params_and_save(
-    new_param_vals, refdf, json_dpath, out_dpath, 
+    new_param_vals, refdf, out_dpath, 
     out_fprefix, init_var_vals, 
     calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names,
     ):
 
     perr, new_param_vals, df, mse_df,  =  run_solver_from_new_params(
         new_param_vals, refdf, init_var_vals, 
-        calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names, return_dfs
+        calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names, return_dfs=True
     )
             
     save_solver_results_to_file(
         new_param_vals, df, mse_df,
-        json_dpath, out_dpath, out_fprefix, 
+        out_dpath, out_fprefix, 
     )
 
     return perr 
@@ -784,6 +784,14 @@ def json2params(default_params, fpath):
     new_param_vals.update(tparams)
     return new_param_vals
 
+def get_params(X, params_to_update, param_vals, log_params=None):
+    new_param_vals = param_vals.copy()
+    if log_params is not None:
+        X = [np.exp(x) if lg else x for x,lg in zip(X, log_params)]
+
+    new_param_vals.update({k : v for k,v in zip(params_to_update, X)})
+    return new_param_vals
+
 
 #def _rmse(df, refdf, refcol, col):
 #    smallrefdf = refdf.dropna(subset=[refcol])
@@ -797,49 +805,6 @@ def json2params(default_params, fpath):
 # ).apply(lambda x : _mse_all(x, refdf, refcol= refcol, col=col, timecol=timecol, tolerance=tolerance))    
 
 
-def run_with_params_json(json_fpath_list, days, refdf, out_dpath, out_fprefix, which_organism, pro99_mode, t_eval):
-    perr = -1
-    orig_t_eval = t_eval
-    new_params = param_vals
-    for json_fpath in json_fpath_list:
-        new_params = json2params(new_params, json_fpath)
-    if which_organism == 'ponly':
-        var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_ponly_data(param_vals_str=new_params, pro99_mode=pro99_mode)
-    elif which_organism == 'honly':
-        var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_honly_data(param_vals_str=new_params, pro99_mode=pro99_mode)
-    else:
-        var_names, init_vars, calc_dydt, interm_names, intermediate_func = get_main_data(param_vals_str=new_params, pro99_mode=pro99_mode)
-    if t_eval is None:
-        if refdf is not None:
-            orig_t_eval = np.rint(refdf['t'].drop_duplicates().sort_values()).values
-            t_eval = get_t_eval(days, ref_times = orig_t_eval)
-        else:
-            t_eval = get_t_eval(days)
-    else:
-        t_eval = get_t_eval(days, ref_times = t_eval)
-
-    run_solver_from_new_params_and_save(
-        new_param_vals, refdf, json_dpath, out_dpath, 
-        out_fprefix, init_var_vals, 
-        calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names,
-    )    
-    
-    json_fpath = os.path.join(json_dpath, f'{run_id}_params.json')
-    params2json(params, json_fpath)
-    return run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout, which_organism, pro99_mode, t_eval)
-
-
-def get_params(X, params_to_update, param_vals, log_params=None): 
-    new_param_vals = param_vals.copy()
-    if log_params is not None:
-        X = [np.exp(x) if lg else x for x,lg in zip(X, log_params)]
-    
-    new_param_vals.update({k : v for k,v in zip(params_to_update, X)})
-    return new_param_vals
-
-def generate_json_and_run_from_X(X, params_to_update, param_vals, ref_csv, json_dpath, out_dpath, out_fprefix, timeout=10*60, log_params=None, which_organism='all', pro99_mode=False, t_eval=None):
-    params = get_params(X, params_to_update, param_vals, log_params)
-    return generate_json_and_run(params, ref_csv, json_dpath, out_dpath, out_fprefix, timeout, which_organism=which_organism, pro99_mode=pro99_mode, t_eval=t_eval)
 
 
 
@@ -947,12 +912,13 @@ if __name__ == '__main__':
         refdf = pd.read_excel(args.ref_csv)
 
     new_param_vals = get_param_vals(args.model)
-    for json_fpath in json_fpath_list:
-        new_param_vals = json2params(new_param_vals, json_fpath)
+    if args.json is not None:
+        for json_fpath in args.json:
+            new_param_vals = json2params(new_param_vals, json_fpath)
 
     suffix = get_runid_unique_suffix(args.pro99_mode, new_param_vals)
     out_fprefix = args.run_id
-    run_id = f'{out_fprefix}_h{hash_val}'
+    run_id = f'{out_fprefix}_{suffix}'
         
     t_eval = args.t_eval
     if t_eval is None:
@@ -979,7 +945,7 @@ if __name__ == '__main__':
         prepare_params_tuple = prepare_params_tuple_cc
 
     MSE_err = run_solver_from_new_params_and_save(
-        new_param_vals, refdf, args.json_dpath, args.out_dpath, 
+        new_param_vals, refdf, args.outdpath, 
         run_id, init_var_vals, 
         calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names,
     )
