@@ -793,84 +793,7 @@ def get_params(X, params_to_update, param_vals, log_params=None):
     return new_param_vals
 
 
-#def _rmse(df, refdf, refcol, col):
-#    smallrefdf = refdf.dropna(subset=[refcol])
-#    ref_t = np.rint(smallrefdf['t'])
-#    tdf = df.loc[df.t.isin(ref_t)]
-#    return mean_squared_error(tdf[col], smallrefdf[refcol])
 
-# this is sensitivity specific
-# def compute_mse(df, refdf, refcol= 'ref_Bp', col='Bp', timecol='t', tolerance=100):
-# return df.groupby(['sen_param', 'model', 'idx', 'run_id' ]
-# ).apply(lambda x : _mse_all(x, refdf, refcol= refcol, col=col, timecol=timecol, tolerance=tolerance))    
-
-
-
-
-
-def run_with_timout(json_fpath, ref_csv, out_dpath, run_id, timeout=10*60, which_organism='all', pro99_mode=False, t_eval=None):
-    try:
-        run_args = [
-             sys.executable, __file__, 
-             '--json', json_fpath,
-             '--ref_csv', ref_csv, 
-             '--run_id', run_id,
-             '--outdpath', out_dpath,
-             '--which_organism', which_organism,
-
-        ]
-        if pro99_mode:
-            run_args += ['--pro99_mode']
-        if t_eval is not None:
-            run_args += ['--t_eval'] + np.char.mod('%d', t_eval).tolist()
-
-        #print(run_args)
-        result = subprocess.run(run_args,
-            capture_output=True, text=True, check=True, timeout=timeout,
-        )
-        print("stdout:", result.stdout)
-        print("stderr:", result.stderr)
-
-        
-    except subprocess.CalledProcessError as err:
-        print('CalledProcessError', err.returncode)
-        print("stdout:", err.stdout)
-        print("stderr:", err.stderr)
-                
-    except subprocess.TimeoutExpired as err:
-        print('TimeoutExpired', err.timeout)
-        print("stdout:", err.stdout)
-        print("stderr:", err.stderr)
-    return run_id
-
-def run_chunk(param_vals, param_values, params_to_update, chunk, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_params=None, which_organism='all', pro99_mode=False):
-    start_line = (chunk  - 1) * number_of_runs
-    end_line = min(param_values.shape[0], start_line + number_of_runs)
-    if start_line >= end_line:
-        print(f'start ({start_line}) >= end ({end_line}), stopping...')
-        return
-    print (f'running chunk {chunk} \t\t<<<==========')
-    for i in range(start_line, end_line):
-
-        out_fprefix = f'{run_id}_{i}'
-        print(out_fprefix)
-
-        files = glob.glob(os.path.join(out_dpath, f'{out_fprefix}_*_df.csv.gz'))
-        if len(files) == 0:
-            generate_json_and_run_from_X(
-                param_values[i], params_to_update, param_vals, 
-                ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=log_params, which_organism=which_organism, pro99_mode=pro99_mode)
-            
-
-def run_sensitivity_per_parameter(param_vals, parameter, bound, number_of_runs, run_id, ref_csv, json_dpath, out_dpath, timeout, skip_if_found=True, log_param=False, which_organism='all', pro99_mode=False):
-    if log_param == True:
-        bound = (np.log(bound[0]), np.log(bound[1]))
-    for i,v in enumerate(np.linspace(bound[0], bound[1],num=number_of_runs)):
-        out_fprefix = f'{run_id}_{parameter}_{i}'
-        print(out_fprefix)
-        generate_json_and_run_from_X(
-            [v], [parameter], param_vals, 
-            ref_csv, json_dpath, out_dpath, out_fprefix, timeout, log_params=[log_param], which_organism=which_organism, pro99_mode=pro99_mode)
 
 def get_runid_unique_suffix(pro99_mode, param_vals):
     suffix = ''
@@ -898,13 +821,15 @@ if __name__ == '__main__':
     parser.add_argument("--pro99_mode", help="run on pro99 media",
                         action="store_true")
     parser.add_argument('--t_eval', nargs="+", type=float, default=None)
+    parser.add_argument("--param_sensitivity", help="index of param to update (0 based) ",  type=int, default=-1)
+    parser.add_argument("--organism_to_tune", help="which organism to tune", choices=['PRO', 'HET'], default='PRO')
+    parser.add_argument("--number_of_runs", help="number of simulations to run",  type=int, default=1024)
+    
     
     args = parser.parse_args()
     dpath = args.outdpath
     if dpath != '':
         os.makedirs(dpath, exist_ok=True)
-
-
 
     if args.ref_csv == 'None':
         refdf = None
@@ -917,8 +842,6 @@ if __name__ == '__main__':
             new_param_vals = json2params(new_param_vals, json_fpath)
 
     suffix = get_runid_unique_suffix(args.pro99_mode, new_param_vals)
-    out_fprefix = args.run_id
-    run_id = f'{out_fprefix}_{suffix}'
         
     t_eval = args.t_eval
     if t_eval is None:
@@ -944,10 +867,37 @@ if __name__ == '__main__':
         calc_dydt = basic_model_cc_ode
         prepare_params_tuple = prepare_params_tuple_cc
 
-    MSE_err = run_solver_from_new_params_and_save(
-        new_param_vals, refdf, args.outdpath, 
-        run_id, init_var_vals, 
-        calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names,
-    )
+    if args.param_sensitivity != -1:
+        # run sensitivity
+        idx = args.param_sensitivity
+        params_to_update, bounds, log_params = get_param_tuning_values(args.model, args.organism_to_tune)
+        parameter = params_to_update[idx]
+        param_bounds = bounds[idx]
+        param_log = log_params[idx]
+        if param_log:
+            param_bounds = (np.log(param_bounds[0]), np.log(param_bounds[1]))
+        number_of_runs = args.number_of_runs
+        for i,v in enumerate(np.linspace(param_bounds[0], param_bounds[1],num=number_of_runs)):
+            run_id = f"{args.run_id}_{args.model}_{parameter}_{i}_{v}_{suffix}"
+            print(run_id)
+            if param_log:
+                v = np.exp(v)
+            new_param_vals[parameter] = v
+            
+            MSE_err = run_solver_from_new_params_and_save(
+                new_param_vals, refdf, args.outdpath, 
+                run_id, init_var_vals, 
+                calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names,
+            )
+            print ('MSE:', MSE_err)
+            
+    else:
+        # default - run simulation
+        run_id = f'{args.run_id}_{suffix}'
+        MSE_err = run_solver_from_new_params_and_save(
+            new_param_vals, refdf, args.outdpath, 
+            run_id, init_var_vals, 
+            calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names,
+        )
 
-    print ('\nMSE:', MSE_err)
+    print ('MSE:', MSE_err)
