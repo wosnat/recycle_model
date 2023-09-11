@@ -878,11 +878,11 @@ if __name__ == '__main__':
             param_bounds = (np.log(param_bounds[0]), np.log(param_bounds[1]))
         number_of_runs = args.number_of_runs
         for i,v in enumerate(np.linspace(param_bounds[0], param_bounds[1],num=number_of_runs)):
-            run_id = f"{args.run_id}_{args.model}_{parameter}_{i}_{v}_{suffix}"
-            print(run_id)
             if param_log:
                 v = np.exp(v)
             new_param_vals[parameter] = v
+            run_id = f"{args.run_id}_{args.model}_{parameter}_{i}_{v}_{suffix}"
+            print(run_id)
             
             MSE_err = run_solver_from_new_params_and_save(
                 new_param_vals, refdf, args.outdpath, 
@@ -900,4 +900,4 @@ if __name__ == '__main__':
             calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names,
         )
 
-    print ('MSE:', MSE_err)
+        print ('MSE:', MSE_err)
