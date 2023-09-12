@@ -7,11 +7,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import pprint
-sns.set(style="white", context='poster')
-from sympy import *
 import math
-init_printing(use_unicode=True)
+import pprint
 from scipy.integrate import solve_ivp
 from scipy.integrate import odeint
 from sklearn.metrics import mean_squared_error
@@ -795,10 +792,11 @@ def get_params(X, params_to_update, param_vals, log_params=None):
 
 
 
-def get_runid_unique_suffix(pro99_mode, param_vals):
-    suffix = ''
+def get_runid_unique_suffix(pro99_mode, which_organism, model, param_vals):
+    suffix = '_lowN'
     if pro99_mode:
         suffix = '_pro99'
+    suffix = f'{suffix}_{which_organism}_{model}'
     hash_val = str(hash(tuple(param_vals.values())))
     suffix = f'{suffix}_h{hash_val}'
     return suffix 
@@ -816,7 +814,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--outdpath", help="output dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
-    parser.add_argument("--model", help="model to run", choices=['MIN', 'MIXOTROPHY', 'OVERFLOW', 'ROS', 'EXOENZYMES'], default='FULL')
+    parser.add_argument("--model", help="model to run", choices=['MIN', 'MIXOTROPH', 'OVERFLOW', 'ROS', 'EXOENZYME'], required=True)
     parser.add_argument("--which_organism", help="which organism to run", choices=['ponly', 'honly', 'all'], default='all')
     parser.add_argument("--pro99_mode", help="run on pro99 media",
                         action="store_true")
@@ -841,7 +839,7 @@ if __name__ == '__main__':
         for json_fpath in args.json:
             new_param_vals = json2params(new_param_vals, json_fpath)
 
-    suffix = get_runid_unique_suffix(args.pro99_mode, new_param_vals)
+    suffix = get_runid_unique_suffix(args.pro99_mode, args.which_organism, args.model, new_param_vals)
         
     t_eval = args.t_eval
     if t_eval is None:
@@ -881,7 +879,7 @@ if __name__ == '__main__':
             if param_log:
                 v = np.exp(v)
             new_param_vals[parameter] = v
-            run_id = f"{args.run_id}_{args.model}_{parameter}_{i}_{v}_{suffix}"
+            run_id = f"{args.run_id}_{parameter}_{i}_{v}{suffix}"
             print(run_id)
             
             MSE_err = run_solver_from_new_params_and_save(
@@ -893,7 +891,7 @@ if __name__ == '__main__':
             
     else:
         # default - run simulation
-        run_id = f'{args.run_id}_{suffix}'
+        run_id = f'{args.run_id}{suffix}'
         MSE_err = run_solver_from_new_params_and_save(
             new_param_vals, refdf, args.outdpath, 
             run_id, init_var_vals, 
