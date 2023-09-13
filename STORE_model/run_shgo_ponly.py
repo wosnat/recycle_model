@@ -157,7 +157,7 @@ if __name__ == '__main__':
                 # jac_for_minimize)
 
     additional_params = (
-        params_to_update, new_param_vals, log_params, 
+        Y, params_to_update, new_param_vals, log_params, 
         calc_dydt, prepare_params_tuple, var_names, 
         init_var_vals, t_end , t_eval, ref_df, 
         init_var_pro99_vals, t_end_pro99 , t_eval_pro99, ref_pro99_df
