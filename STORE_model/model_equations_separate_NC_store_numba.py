@@ -650,6 +650,14 @@ def run_solver(calc_dydt, init_vars, par_tuple, t_end, t_eval, method='BDF', jac
         #method='Radau',)
     return sol
 
+def solver2df_forlsq(sol, var_names):
+    d = dict(zip(var_names, sol.y))
+    d['t'] = sol.t
+    df = pd.DataFrame(data=d)
+    df['Bptotal'] = df['Bp']+df['Np']
+        
+    return df
+
 def solver2df(sol, var_names, par_tuple, t_eval=None,  intermediate_names=None, calc_dydt=None, ):
     d = dict(zip(var_names, sol.y))
     d['t'] = sol.t
@@ -678,7 +686,7 @@ def solver2df(sol, var_names, par_tuple, t_eval=None,  intermediate_names=None, 
    
 def _mse(x, refdf, refcol, col, timecol, tolerance):
     #print(x.columns)
-    tdf = pd.merge_asof(x[[timecol, col]].dropna(), refdf[[timecol, refcol]], on=timecol, direction='nearest', tolerance=tolerance).dropna()
+    tdf = pd.merge_asof(x, refdf[[timecol, refcol]], on=timecol, direction='nearest', tolerance=tolerance).dropna()
     return pd.Series({
         'compare_points': tdf.shape[0], 
         'MSE': mean_squared_error(tdf[col], tdf[refcol])}
@@ -686,8 +694,10 @@ def _mse(x, refdf, refcol, col, timecol, tolerance):
 
 def compute_mse(df, refdf, refcol= 'ref_Bp', col='Bptotal', timecol='t', tolerance=100):
     #print (x)
+    df1 = df[[timecol, col]].dropna().copy()
+    df1[col] = df1[col].clip(lower=4)
     mse_df = refdf.groupby(['Sample', 'full name', 'Group',]
-                        ).apply(lambda y : _mse(df,y, refcol= refcol, col=col, timecol=timecol, tolerance=tolerance))
+                        ).apply(lambda y : _mse(df1, y, refcol= refcol, col=col, timecol=timecol, tolerance=tolerance))
     mse_df = mse_df.reset_index()
     return mse_df
 
@@ -702,6 +712,8 @@ def run_solver_from_new_params(
         sol, var_names, par_tuple=par_tuple, 
         intermediate_names=intermediate_names, calc_dydt=calc_dydt)
 
+    mse_df = None
+    perr = 1e6 # very large number for error
     if refdf is not None:
         try:
             mse_df = compute_mse(df, refdf, refcol= 'ref_Bp', col='Bptotal', timecol='t', tolerance=100)
@@ -722,12 +734,14 @@ def save_solver_results_to_file(
         
     sumdf = pd.DataFrame({str(k): v for k,v in new_param_vals.items()}, index=[0])
     sumdf['run_id'] = out_fprefix
-    df['run_id'] = out_fprefix
-    mse_df['run_id'] = out_fprefix
-    
-    df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip', index=False)
     sumdf.to_csv(os.path.join(out_dpath, f'{out_fprefix}_sum.csv.gz'), compression='gzip', index=False)
-    mse_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_mse.csv.gz'), compression='gzip', index=False)
+
+    df['run_id'] = out_fprefix
+    df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_df.csv.gz'), compression='gzip', index=False)
+
+    if mse_df is not None:
+        mse_df['run_id'] = out_fprefix
+        mse_df.to_csv(os.path.join(out_dpath, f'{out_fprefix}_mse.csv.gz'), compression='gzip', index=False)
 
 
 
@@ -801,6 +815,51 @@ def get_runid_unique_suffix(pro99_mode, which_organism, model, param_vals):
     suffix = f'{suffix}_h{hash_val}'
     return suffix 
 
+def get_constants_per_organism(pro99_mode, which_organism):
+    if which_organism == 'ponly':
+        var_names, init_var_vals, intermediate_names =  get_ponly_init_vars(pro99_mode=pro99_mode)
+        calc_dydt = basic_model_ponly_ode
+        prepare_params_tuple = prepare_params_tuple_ponly
+    elif which_organism == 'honly':
+        var_names, init_var_vals, intermediate_names =  get_honly_init_vars(pro99_mode=pro99_mode)
+        # TODO - HONLY implementation
+        calc_dydt = basic_model_ponly_ode
+        prepare_params_tuple = prepare_params_tuple_ponly
+    else:
+        var_names, init_var_vals, intermediate_names =  get_main_init_vars(pro99_mode=pro99_mode)
+        calc_dydt = basic_model_cc_ode
+        prepare_params_tuple = prepare_params_tuple_cc
+    return (var_names, init_var_vals, intermediate_names, calc_dydt, prepare_params_tuple)
+
+def get_t_eval_and_t_end(t_eval, refdf, maxday):
+    if t_eval is None:
+        if refdf is not None:
+            t_eval = np.rint(refdf['t'].drop_duplicates().sort_values()).to_numpy()
+    t_end = get_t_end(maxday=maxday, t_eval=t_eval)
+    # if t_eval is None: # no refdf
+        # t_eval = np.arange(0, t_end, 1000)
+    return t_eval, t_end
+
+
+def get_param_vals_from_json_list(model, json_fpath_list):
+    new_param_vals = get_param_vals(model)
+    if json_fpath_list is not None:
+        for json_fpath in json_fpath_list:
+            new_param_vals = json2params(new_param_vals, json_fpath)
+    return new_param_vals
+
+def get_param_sensitivity_values(param_sensitivity_idx, model, organism_to_tune, number_of_runs):
+    params_to_update, bounds, log_params = get_param_tuning_values(model, organism_to_tune)
+    parameter = params_to_update[param_sensitivity_idx]
+    param_bounds = bounds[param_sensitivity_idx]
+    param_log = log_params[param_sensitivity_idx]
+    if param_log:
+        param_bounds = (np.log(param_bounds[0]), np.log(param_bounds[1]))
+    param_values = np.linspace(param_bounds[0], param_bounds[1],num=number_of_runs)
+    if param_log:
+        param_values = np.exp(param_values)
+    return parameter, param_values
+
     
 if __name__ == '__main__':
     import argparse
@@ -833,58 +892,27 @@ if __name__ == '__main__':
         refdf = None
     else:
         refdf = pd.read_excel(args.ref_csv)
+        refdf['ref_Bp'] = refdf['ref_Bp'].clip(lower=4)
 
-    new_param_vals = get_param_vals(args.model)
-    if args.json is not None:
-        for json_fpath in args.json:
-            new_param_vals = json2params(new_param_vals, json_fpath)
 
+    new_param_vals = get_param_vals_from_json_list(args.model, args.json)
     suffix = get_runid_unique_suffix(args.pro99_mode, args.which_organism, args.model, new_param_vals)
-        
-    t_eval = args.t_eval
-    if t_eval is None:
-        if refdf is not None:
-            t_eval = np.rint(refdf['t'].drop_duplicates().sort_values()).to_numpy()
-    t_end = get_t_end(maxday=args.maxday, t_eval=t_eval, seconds_in_day=seconds_in_day)
-
-    if t_eval is None: # no refdf
-        t_eval = np.arange(0, t_end, 1000)
-
-    which_organism = args.which_organism
-    if which_organism == 'ponly':
-        var_names, init_var_vals, intermediate_names =  get_ponly_init_vars(pro99_mode=args.pro99_mode)
-        calc_dydt = basic_model_ponly_ode
-        prepare_params_tuple = prepare_params_tuple_ponly
-    elif which_organism == 'honly':
-        var_names, init_var_vals, intermediate_names =  get_honly_init_vars(pro99_mode=args.pro99_mode)
-        # TODO - HONLY implementation
-        calc_dydt = basic_model_ponly_ode
-        prepare_params_tuple = prepare_params_tuple_ponly
-    else:
-        var_names, init_var_vals, intermediate_names =  get_main_init_vars(pro99_mode=args.pro99_mode)
-        calc_dydt = basic_model_cc_ode
-        prepare_params_tuple = prepare_params_tuple_cc
+    t_eval, t_end = get_t_eval_and_t_end(args.t_eval, refdf, args.maxday)
+    (var_names, init_var_vals, intermediate_names, calc_dydt, prepare_params_tuple
+        ) = get_constants_per_organism(args.pro99_mode, args.which_organism)
 
     if args.param_sensitivity != -1:
         # run sensitivity
-        idx = args.param_sensitivity
-        params_to_update, bounds, log_params = get_param_tuning_values(args.model, args.organism_to_tune)
-        parameter = params_to_update[idx]
-        param_bounds = bounds[idx]
-        param_log = log_params[idx]
-        if param_log:
-            param_bounds = (np.log(param_bounds[0]), np.log(param_bounds[1]))
-        number_of_runs = args.number_of_runs
-        for i,v in enumerate(np.linspace(param_bounds[0], param_bounds[1],num=number_of_runs)):
-            if param_log:
-                v = np.exp(v)
+        parameter, sensitivity_values = get_param_sensitivity_values(
+            args.param_sensitivity, args.model, args.organism_to_tune, args.number_of_runs)
+        for i,v in enumerate(sensitivity_values):
             new_param_vals[parameter] = v
-            run_id = f"{args.run_id}_{parameter}_{i}_{v}{suffix}"
+            sen_run_id = f"{args.run_id}_{parameter}_{i}_{v}{suffix}"
             print(run_id)
             
             MSE_err = run_solver_from_new_params_and_save(
                 new_param_vals, refdf, args.outdpath, 
-                run_id, init_var_vals, 
+                sen_run_id, init_var_vals, 
                 calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names,
             )
             print ('MSE:', MSE_err)
