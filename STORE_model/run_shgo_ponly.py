@@ -23,25 +23,29 @@ from scipy.optimize import shgo
 
 
 def run_model(X, additional_params):
-
     (Y, params_to_update, orig_param_vals, log_params, 
     calc_dydt, prepare_params_tuple, var_names, 
     init_var_vals, t_end , t_eval, ref_df, 
     init_var_pro99_vals, t_end_pro99 , t_eval_pro99, ref_pro99_df
     ) = additional_params
+    print(X)
 
-    new_param_vals = get_params(X, params_to_update, orig_param_vals, log_params)
-    par_tuple = prepare_params_tuple(new_param_vals)
+    try:
+        new_param_vals = get_params(X, params_to_update, orig_param_vals, log_params)
+        par_tuple = prepare_params_tuple(new_param_vals)
 
-    lowN_sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval)
-    lowN_df = solver2df_forlsq(lowN_sol, var_names)
-    result_lowN = pd.merge_asof(ref_df, lowN_df, on='t', tolerance=1, direction='nearest')['Bptotal']
+        lowN_sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval)
+        lowN_df = solver2df_forlsq(lowN_sol, var_names)
+        result_lowN = pd.merge_asof(ref_df, lowN_df, on='t', tolerance=1, direction='nearest')['Bptotal']
 
-    pro99_sol = run_solver(calc_dydt, init_var_pro99_vals, par_tuple, t_end_pro99 , t_eval_pro99)
-    pro99_df = solver2df_forlsq(pro99_sol, var_names)
-    result_pro99 = pd.merge_asof(ref_pro99_df, pro99_df, on='t', tolerance=1, direction='nearest')['Bptotal']
+        pro99_sol = run_solver(calc_dydt, init_var_pro99_vals, par_tuple, t_end_pro99 , t_eval_pro99)
+        pro99_df = solver2df_forlsq(pro99_sol, var_names)
+        result_pro99 = pd.merge_asof(ref_pro99_df, pro99_df, on='t', tolerance=1, direction='nearest')['Bptotal']
 
-    return np.clip(pd.concat([result_lowN, result_pro99]).to_numpy(), a_min=4, a_max=None)
+        return np.clip(pd.concat([result_lowN, result_pro99]).to_numpy(), a_min=4, a_max=None)
+    except BaseException as err:
+        print(f"Unexpected {err}, {type(err)}")
+        return np.zeros_like(Y)
 
 # this wrap is to cache run_model results
 # run_model = lru_cache(run_model)
@@ -170,7 +174,7 @@ if __name__ == '__main__':
         minimizer_kwargs=dict(
             #jac=jac_for_minimize, 
             hess=hess_for_minimize, 
-            options=dict(disp=True, maxiter=3), method='L-BFGS-B'),
+            options=dict(disp=True, maxiter=3, ), method='L-BFGS-B'),
         options=dict(jac=jac_for_minimize,disp=True),
     )
 
