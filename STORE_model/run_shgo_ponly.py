@@ -101,7 +101,7 @@ if __name__ == '__main__':
     parser.add_argument('--ref_pro99_csv', help='reference pro99 CSV', required=True)
     parser.add_argument("--out_dpath", help="output dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
-    parser.add_argument("--model", help="model to run", choices=['MIN', 'FULL', 'LEAK', 'MIXO'], default='MIN')
+    parser.add_argument("--model", help="model to run", choices=['MIN', 'MIXOTROPH', 'OVERFLOW', 'ROS', 'EXOENZYME'], required=True)
     parser.add_argument('--json', help='json with param vals', nargs="+")
     parser.add_argument("--number_of_runs", help="number of simulations to run",  type=int, default=1024)
                         
@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
     new_param_vals = get_param_vals_from_json_list(args.model, args.json)
     #TODO
-    t_eval, t_end = get_t_eval_and_t_end(None, refdf, maxday=140)
+    t_eval, t_end = get_t_eval_and_t_end(None, ref_df, maxday=140)
     t_eval_pro99, t_end_pro99 = get_t_eval_and_t_end(None, ref_pro99_df, maxday=140)
     (var_names, init_var_vals, intermediate_names, calc_dydt, prepare_params_tuple
         ) = get_constants_per_organism(False, which_organism)
