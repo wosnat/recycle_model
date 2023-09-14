@@ -10,6 +10,7 @@ sns.set(style="white", context='poster')
 import math
 from scipy.integrate import solve_ivp
 from scipy.optimize import least_squares
+from scipy.stats import qmc
 from functools import lru_cache
 
 from model_equations_separate_NC_store_numba import *
@@ -28,7 +29,7 @@ def run_model(X, additional_params):
     init_var_vals, t_end , t_eval, ref_df, 
     init_var_pro99_vals, t_end_pro99 , t_eval_pro99, ref_pro99_df
     ) = additional_params
-    print(X)
+    #print(X)
 
     try:
         new_param_vals = get_params(X, params_to_update, orig_param_vals, log_params)
@@ -89,8 +90,15 @@ def hess_for_minimize(X, additional_params):
     J = jac(X, additional_params)
     return J.T.dot(J)
 
-
-
+def get_sobol_sample(param_bounds, m):
+    ''' return a list of samples
+    param_bounds - list of (lower,upper) bounds for scaling
+    m - will produce 2^m samples
+    '''
+    l_bounds, u_bounds = tuple(zip(*param_bounds))
+    sampler = qmc.Sobol(d=len(param_bounds))
+    sample = sampler.random_base2(m=m)
+    return qmc.scale(sample, l_bounds, u_bounds)
 
 
 
@@ -168,20 +176,31 @@ if __name__ == '__main__':
     ) 
 
 
-    res = shgo(
-        fun, param_bounds, args=(additional_params,), 
-        n=args.number_of_runs, iters=1, sampling_method='sobol',
-        minimizer_kwargs=dict(
-            #jac=jac_for_minimize, 
-            hess=hess_for_minimize, 
-            options=dict(disp=True, maxiter=3, ), method='L-BFGS-B'),
-        options=dict(jac=jac_for_minimize,disp=True),
-    )
+    sample = get_sobol_sample(param_bounds, m=args.number_of_runs)
+    SSE_list = [fun(X, additional_params) for X in sample]
+    sample_unlogged = np.copy(sample)
+    sample_unlogged[:, log_params] = np.exp(sample_unlogged[:, log_params])
+    df = pd.DataFrame(sample_unlogged, columns=params_to_update)
+    df['SSE'] = SSE_list          
+    #df.nsmallest(n=3, columns='SSE')
+    res_fpath = os.path.join(out_dpath, f'{run_id}_sobol_ponly.csv.gz')
+    df.to_csv(res_fpath, compression='gzip', index=False)
+    
+    # can't get SHGO to work (scipy bugs)
+    # res = shgo(
+        # fun, param_bounds, args=(additional_params,), 
+        # n=args.number_of_runs, iters=1, sampling_method='sobol',
+        # minimizer_kwargs=dict(
+            # jac=jac_for_minimize, 
+            # hess=hess_for_minimize, 
+            # options=dict(disp=True, maxiter=3, ), method='L-BFGS-B'),
+        # options=dict(jac=jac_for_minimize,disp=True),
+    # )
 
-    print(res)
+    # print(res)
 
-    for idx, finalX in enumerate(res.xl, start=1):
-        actual_finalX = {p: np.exp(i) if lg else i for i,lg,p in zip(finalX, log_params, params_to_update)}
-        res_fpath = os.path.join(out_dpath, f'{run_id}_{idx}.json')
-        params2json(actual_finalX, res_fpath)
+    # for idx, finalX in enumerate(res.xl, start=1):
+        # actual_finalX = {p: np.exp(i) if lg else i for i,lg,p in zip(finalX, log_params, params_to_update)}
+        # res_fpath = os.path.join(out_dpath, f'{run_id}_{idx}.json')
+        # params2json(actual_finalX, res_fpath)
 
