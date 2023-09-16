@@ -7,9 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pprint
 sns.set(style="white", context='poster')
-from sympy import *
 import math
-init_printing(use_unicode=True)
 from scipy.integrate import solve_ivp
 from scipy.optimize import least_squares
 from functools import lru_cache
@@ -107,7 +105,7 @@ if __name__ == '__main__':
     params_to_update, bounds, log_params = get_param_tuning_values(model, organism_to_tune)
 
     # start with the defalt params
-    x0 = np.array([np.log(param_vals[i]) if lg else param_vals[i] for i, lg in zip(params_to_update, log_params)])
+    x0 = np.array([np.log(new_param_vals[i]) if lg else new_param_vals[i] for i, lg in zip(params_to_update, log_params)])
 
     bounds_logged = [(np.log(b[0]),  np.log(b[1]))  if lg else b for b,lg in zip(bounds, log_params)]
     param_bounds =  list(zip(*bounds_logged))

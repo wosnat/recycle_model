@@ -153,8 +153,6 @@ if __name__ == '__main__':
 
     params_to_update, bounds, log_params = get_param_tuning_values(model, organism_to_tune)
 
-    # start with the defalt params
-    x0 = np.array([np.log(param_vals[i]) if lg else param_vals[i] for i, lg in zip(params_to_update, log_params)])
 
     bounds_logged = [(np.log(b[0]),  np.log(b[1]))  if lg else b for b,lg in zip(bounds, log_params)]
     param_bounds =  bounds_logged
