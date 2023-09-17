@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=lsqp_MIXOTROPH
+#SBATCH --job-name=lsqp_MIN
 #SBATCH --partition=hive1d,hive7d,hiveunlim
 #SBATCH --array=11-50
 #SBATCH --output=/mnt/beegfs/home/dsher/oweissber/RECYCLE_MODEL/results/lsq_ponly/log/out_%A_%a_%j.out
@@ -24,9 +24,9 @@ echo "branch${i}";
 
 
 
-#MIXOTROPH MIXOTROPH OVERFLOW ROS EXOENZYME
+#MIN MIN OVERFLOW ROS MIN
 #
-m=MIXOTROPH
+m=MIN
 baseid=lsq_ponly
 RDIR=/mnt/beegfs/home/dsher/oweissber/RECYCLE_MODEL/recycle_model/STORE_model
 ODIR=/mnt/beegfs/home/dsher/oweissber/RECYCLE_MODEL/results/${baseid}

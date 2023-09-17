@@ -2,7 +2,7 @@
 
 #SBATCH --job-name=lsqp_OVERFLOW
 #SBATCH --partition=hive1d,hive7d,hiveunlim
-#SBATCH --array=1-10
+#SBATCH --array=11-50
 #SBATCH --output=/mnt/beegfs/home/dsher/oweissber/RECYCLE_MODEL/results/lsq_ponly/log/out_%A_%a_%j.out
 
 ## To make things simple: ${i} == $SLURM_ARRAY_TASK_ID
@@ -27,7 +27,7 @@ echo "branch${i}";
 #OVERFLOW OVERFLOW OVERFLOW ROS EXOENZYME
 #
 m=OVERFLOW
-baseid=lsq_ponly_${m}
+baseid=lsq_ponly
 RDIR=/mnt/beegfs/home/dsher/oweissber/RECYCLE_MODEL/recycle_model/STORE_model
 ODIR=/mnt/beegfs/home/dsher/oweissber/RECYCLE_MODEL/results/${baseid}
 w=ponly
