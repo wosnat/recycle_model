@@ -908,7 +908,7 @@ if __name__ == '__main__':
         for i,v in enumerate(sensitivity_values):
             new_param_vals[parameter] = v
             sen_run_id = f"{args.run_id}_{parameter}_{i}_{v}{suffix}"
-            print(run_id)
+            print(sen_run_id)
             
             MSE_err = run_solver_from_new_params_and_save(
                 new_param_vals, refdf, args.outdpath, 
