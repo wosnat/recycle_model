@@ -317,11 +317,10 @@ def prepare_jac_sparsity_cc(ROS_mode):
         
     
 
-
 @njit
 def compute_gross_uptake(
-    biomassC, storeN, storeC, resources, ROS,
-    paramCN, paramQCmax, paramQCmin, paramkns, paramvmax, paramROSMode, paramomega_ROS, 
+        biomassC, storeN, storeC, resources, ROS,
+        paramCN, paramQCmax, paramQCmin, paramkns, paramvmax, paramROSMode, paramomega_ROS
 ):
     QC = (storeC + biomassC ) / (storeN + biomassC / paramCN)
   
@@ -350,10 +349,15 @@ def compute_gross_uptake(
     uptakeC = gross_uptake[DIC_IDX,:] + gross_uptake[DOC_IDX,: ]   
     return (gross_uptake, uptakeN, uptakeC, QC)
 
+    (biosynthesisC, respirationC, biomass_breakdownC, 
+     netDeltaBiomassC, netDeltaN, netDeltaC) = compute_net_uptake(
+        biomassC, storeN, storeC, uptakeN, uptakeC,
+        paramCN, paramKmtb, paramb, paramr0)
+
 @njit
 def compute_net_uptake(
-    biomassC, storeN, storeC, uptakeN, uptakeC,
-    paramCN, paramKmtb, paramb, paramr0
+        biomassC, storeN, storeC, uptakeN, uptakeC,
+        paramCN, paramKmtb, paramb, paramr0
 ):
     # net uptake (maintains C:N ratios)
     # umol N / L
@@ -373,11 +377,14 @@ def compute_net_uptake(
     # store change - uptake minus biosynthesis and respiration
     netDeltaN = uptakeN + biomass_breakdownC / paramCN - biosynthesisC / paramCN 
     netDeltaC = uptakeC + biomass_breakdownC - biosynthesisC - respirationC
-    return(biosynthesisC, respirationC, biomass_breakdownC, netDeltaN, netDeltaC)
+    netDeltaBiomassC = biosynthesisC - biomass_breakdownC  
+    
+    return(biosynthesisC, respirationC, biomass_breakdownC, 
+     netDeltaBiomassC, netDeltaN, netDeltaC)
 
 @njit
-def compute_losses(
-    biomassC, storeN, storeC, netDeltaN, netDeltaC, paramCN, paramOverflow, paramM, paramE_leak
+def compute_overflow(
+    biomassC, storeN, storeC, netDeltaN, netDeltaC, paramCN, paramOverflow, 
 ):
     # overflow -
     # make the store maintain the C:N ratio and exude the rest
@@ -394,13 +401,24 @@ def compute_losses(
         #overflowN = 0.0
         #overflowC = 0.0
 
+    return (overflowN, overflowC)
+
+
+@njit
+def compute_death(
+    grossbiomassC, grossstoreN, grossstoreC, paramM
+):
     # death
     # Need to explain why we used exponential decay – in ISMEJ we show that other formulations are better for co-cultures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
-    deathC = paramM * (biomassC + storeC)
-    # leakiness formulated as fraction of biomassC (“property tax”)
-    # We assume that the vast majority of C and N biomassC is in organic form, hence leakiness is to organic. We assume that overflow is also to organic in both organisms, as for the phototroph this is the release of fixed C (or inorganic N incorporated into e.g. AA) which cannot be used for growth. For the heterotrophs we assume overflow metabolism to be the inefficient use of organic C (e.g. not fully oxidized) to maximize growth rate (*citation E coli).
-    leakinessC = paramE_leak * biomassC
-    return (deathC, leakinessC, overflowN, overflowC)
+    deathBiomassC = paramM * grossbiomassC
+    deathStoreC = paramM * grossstoreC
+    deathStoreN = paramM * grossstoreN
+
+    biomassC = grossbiomassC - deathBiomassC 
+    storeC = grossstoreC - deathStoreC
+    storeN = grossstoreN - deathStoreN
+    
+    return deathBiomassC, deathStoreN, deathStoreC, biomassC, storeN, storeC
 
 @njit
 def compute_ROS(
@@ -420,29 +438,31 @@ def compute_ROS(
 
 @njit
 def compute_C_odes(
-    DIC, netDeltaC, gross_uptake, respirationC, overflowC, 
-    deathC, leakinessC, paramCN, paramgammaD,  
+    DIC, netDeltaBiomassC, netDeltaC, gross_uptake, respirationC, overflowC, 
+    deathBiomassC, deathStoreC, paramCN, paramgammaD,  
 ):
+    deathC = deathBiomassC + deathStoreC
+    dCdt = netDeltaC - deathStoreC - overflowC
+    dBdt = netDeltaBiomassC - deathBiomassC 
+
     dic_air_water_exchange   = - (DIC - c_sat) / air_water_exchange_constant
-    dCdt = netDeltaC - overflowC
     dDICdt = dic_air_water_exchange + np.sum(respirationC - gross_uptake[DIC_IDX,:])
     dDOCdt = np.sum(
-        deathC * paramgammaD + leakinessC + overflowC - gross_uptake[DOC_IDX,:])
+        deathC * paramgammaD + overflowC - gross_uptake[DOC_IDX,:])
     dRDOCdt = np.sum(deathC * (1 - paramgammaD))
-    return(dCdt, dDICdt, dDOCdt, dRDOCdt)
+    return(dBdt, dCdt, dDICdt, dDOCdt, dRDOCdt)
 
 @njit
 def compute_N_odes(
-    DON, biomassC, netDeltaN, gross_uptake, biosynthesisC, biomass_breakdownC, overflowN, 
-    deathC, leakinessC, paramCN, paramgammaD, paramgamma_DON2DIN
+    DON, biomassC, netDeltaN, gross_uptake, overflowN, 
+    deathBiomassC, deathStoreN, paramCN, paramgammaD, paramgamma_DON2DIN
 ):
     # DON breakdown due to exoenzymes
-    deathN = deathC / paramCN
+    deathN = deathBiomassC / paramCN + deathStoreN 
     DON2DIN = paramgamma_DON2DIN * biomassC * DON
-    dBdt = biosynthesisC - biomass_breakdownC - deathC - leakinessC 
-    dNdt = netDeltaN - overflowN
+    dNdt = netDeltaN - deathStoreN - overflowN
     dDONdt = np.sum(
-        deathN * paramgammaD + leakinessC/ paramCN - gross_uptake[DON_IDX,:] - DON2DIN
+        deathN * paramgammaD - gross_uptake[DON_IDX,:] - DON2DIN
     )
     dRDONdt = np.sum(deathN * (1 - paramgammaD))
 
@@ -450,38 +470,43 @@ def compute_N_odes(
     # Assuming that recalcitrant DON isd released only during mortality (discuss release through leakiness)
     # Assuming RDON/RDOC is recalcitrant to both organisms   
     dDINdt = np.sum(overflowN + DON2DIN - gross_uptake[DIN_IDX,:])
-    return(dBdt, dNdt, dDINdt, dDONdt, dRDONdt, DON2DIN)
+    return(dNdt, dDINdt, dDONdt, dRDONdt, DON2DIN)
 
 
 #@njit
 def basic_model_cc_ode_jit1(
-    biomassC, storeN, storeC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS, Bh,
+    grossbiomassC, grossstoreN, grossstoreC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS, Bh,
     paramCN, paramQCmax, paramQCmin, paramkns, paramvmax, paramKmtb,paramOverflow,
     paramb, paramr0, paramM, paramE_leak, paramE_ROS, paramVmaxROSh, paramK_ROSh,
     paramgamma_DON2DIN, paramgammaD, paramROS_decay, paramROSMode, paramomega_ROS
 ):
+
+    
+    (deathBiomassC, deathStoreN, deathStoreC, 
+    biomassC, storeN, storeC) = compute_death(grossbiomassC, grossstoreN, grossstoreC, paramM)
 
 
     gross_uptake, uptakeN, uptakeC, QC = compute_gross_uptake(
         biomassC, storeN, storeC, resources, ROS,
         paramCN, paramQCmax, paramQCmin, paramkns, paramvmax, paramROSMode, paramomega_ROS)
 
-    biosynthesisC, respirationC, biomass_breakdownC, netDeltaN, netDeltaC = compute_net_uptake(
+    (biosynthesisC, respirationC, biomass_breakdownC, 
+     netDeltaBiomassC, netDeltaN, netDeltaC) = compute_net_uptake(
         biomassC, storeN, storeC, uptakeN, uptakeC,
         paramCN, paramKmtb, paramb, paramr0)
 
-    deathC, leakinessC, overflowN, overflowC = compute_losses(
-        biomassC, storeN, storeC, netDeltaN, netDeltaC, paramCN, paramOverflow, paramM, paramE_leak)
+    overflowN, overflowC = compute_overflow(
+        biomassC, storeN, storeC, netDeltaN, netDeltaC, paramCN, paramOverflow)
 
     # final differential equations
 
-    dCdt, dDICdt, dDOCdt, dRDOCdt = compute_C_odes(
-        DIC, netDeltaC, gross_uptake, respirationC, overflowC, 
-        deathC, leakinessC, paramCN, paramgammaD)
+    dBdt, dCdt, dDICdt, dDOCdt, dRDOCdt = compute_C_odes(
+    DIC, netDeltaBiomassC, netDeltaC, gross_uptake, respirationC, overflowC, 
+    deathBiomassC, deathStoreC, paramCN, paramgammaD)
 
-    dBdt, dNdt, dDINdt, dDONdt, dRDONdt, DON2DIN = compute_N_odes(
-        DON, biomassC, netDeltaN, gross_uptake, biosynthesisC, biomass_breakdownC, overflowN, 
-        deathC, leakinessC, paramCN, paramgammaD, paramgamma_DON2DIN)
+    dNdt, dDINdt, dDONdt, dRDONdt, DON2DIN = compute_N_odes(
+    DON, biomassC, netDeltaN, gross_uptake, overflowN, 
+    deathBiomassC, deathStoreN, paramCN, paramgammaD, paramgamma_DON2DIN)
         
     dROSdt = compute_ROS(
         biomassC, Bh, ROS, paramROSMode, paramROS_decay, paramE_ROS, paramVmaxROSh, paramK_ROSh)
@@ -609,22 +634,26 @@ def print_dydt0(calc_dydt, var_names, init_vars, par_tuple):
         print(f'd{i}/dt = {j:.2e}, init {i} = {k:.2e}, newval = {k+j:.2e}')
 
 
-def print_intermediate0(intermediate_func, interm_names, init_vars):
-    for i,j in zip(interm_names, intermediate_func(*init_vars)):
-        print(f'{i:<4} = {j:.2e}')
+def print_intermediate0(calc_dydt, interm_names, init_vars, par_tuple):
+    dydt0 = calc_dydt(0, init_vars, par_tuple,)
+    for i,j, k in zip(interm_names, dydt0, init_vars):
+        print(f'{i} = {j:.2e}, {j* seconds_in_day:.2e}' )
+
 
 
 def biomass_diff0(calc_dydt, var_names, init_vars, par_tuple):
     dydt0 = calc_dydt(0, init_vars, par_tuple)
     paramCN = par_tuple[0]
     V = dict(zip(var_names, dydt0))
-    print (f"dBp/dt + dBh/dt + dDON/dt + dRDON/dt + dDIN/dt = { V['Bp'] + V['Np'] + V['Bh'] + V['Nh'] + V['DON'] + V['RDON'] + V['DIN'] }")
-    print (f"dBp/dt + dBh/dt + dDOC/dt + dRDOC/dt + dDIC/dt = { V['Bp']*paramCN[0] + V['Cp'] + V['Bh']*paramCN[1] + V['Ch'] + V['DOC'] + V['RDOC'] + V['DIC'] }")
+    print (f"Bp + Np + Bh + Nh + DON + RDON + DIN = { V['Bp']/paramCN[0] + V['Np'] + V['Bh']/paramCN[1] + V['Nh'] + V['DON'] + V['RDON'] + V['DIN'] }")
+    print (f"Bp + Cp + Bh + Ch + DOC + RDOC + DIC = { V['Bp'] + V['Cp'] + V['Bh'] + V['Ch'] + V['DOC'] + V['RDOC'] + V['DIC'] }")
 
-def biomass_diff0_ponly(calc_dydt, var_names, init_vars):
-    dydt0 = calc_dydt(0, init_vars)
+def biomass_diff0_ponly(calc_dydt, var_names, init_vars, par_tuple):
+    dydt0 = calc_dydt(0, init_vars, par_tuple)
+    paramCN = par_tuple[0]
     V = dict(zip(var_names, dydt0))
-    print (f"dBp/dt  + dDON/dt + dRDON/dt + dDIN/dt = { V['Bp']  + V['DON'] + V['RDON'] + V['DIN'] }")
+    print (f"Bp + Np + DON + RDON + DIN = { V['Bp']/paramCN[0] + V['Np'] +  + V['DON'] + V['RDON'] + V['DIN'] }")
+    print (f"Bp + Cp + DOC + RDOC + DIC = { V['Bp'] + V['Cp'] + V['DOC'] + V['RDOC'] + V['DIC'] }")
 
 def biomass_diff0_honly(calc_dydt, var_names, init_vars):
     dydt0 = calc_dydt(0, init_vars)
