@@ -65,8 +65,8 @@ R_P = 7
 R_H = 4.5 # in the range 4-6 (for DSS N limited, 11)
 
 # fg -> umol 14 (N mulecular weight) * 1e-9 (fmol -> umol)
-Qp = 25  * 1e-9 / 14
-Qh = 40 * 1e-9 / 14
+Qp = 50  * 1e-9 / 12
+Qh = 100 * 1e-9 / 12
 
 
 
@@ -349,10 +349,6 @@ def compute_gross_uptake(
     uptakeC = gross_uptake[DIC_IDX,:] + gross_uptake[DOC_IDX,: ]   
     return (gross_uptake, uptakeN, uptakeC, QC)
 
-    (biosynthesisC, respirationC, biomass_breakdownC, 
-     netDeltaBiomassC, netDeltaN, netDeltaC) = compute_net_uptake(
-        biomassC, storeN, storeC, uptakeN, uptakeC,
-        paramCN, paramKmtb, paramb, paramr0)
 
 @njit
 def compute_net_uptake(
@@ -473,7 +469,7 @@ def compute_N_odes(
     return(dNdt, dDINdt, dDONdt, dRDONdt, DON2DIN)
 
 
-#@njit
+@njit
 def basic_model_cc_ode_jit1(
     grossbiomassC, grossstoreN, grossstoreC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS, Bh,
     paramCN, paramQCmax, paramQCmin, paramkns, paramvmax, paramKmtb,paramOverflow,
@@ -481,35 +477,112 @@ def basic_model_cc_ode_jit1(
     paramgamma_DON2DIN, paramgammaD, paramROS_decay, paramROSMode, paramomega_ROS
 ):
 
+    # death
+    # Need to explain why we used exponential decay – in ISMEJ we show that other formulations are better for co-cultures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
+    deathBiomassC = paramM * grossbiomassC
+    deathStoreC = paramM * grossstoreC
+    deathStoreN = paramM * grossstoreN
+
+    biomassC = grossbiomassC - deathBiomassC 
+    storeC = grossstoreC - deathStoreC
+    storeN = grossstoreN - deathStoreN
+
+    QC = (storeC + biomassC ) / (storeN + biomassC / paramCN)
+  
+    # monod ratios
+    limits = resources / (resources + paramkns)
+    # regulate uptake by not letting the stores grow too large 
+    # question: is DIC uptake by photosynthesis regulated?
+    regC = 1 - (QC / paramQCmax)
+    regC = np.atleast_2d(regC)
+    regN = 1 - (paramQCmin / QC)
+    regN = np.atleast_2d(regN)
+    reg =  np.vstack((regN, regN, regC, regC))
+    reg_clipped = np.clip(reg, a_min =0.0, a_max=1.0)
     
-    (deathBiomassC, deathStoreN, deathStoreC, 
-    biomassC, storeN, storeC) = compute_death(grossbiomassC, grossstoreN, grossstoreC, paramM)
+    # ROS
+    if paramROSMode == 1:
+        ROS_penalty = np.exp( - paramomega_ROS*ROS)
+    else:
+        ROS_penalty = np.ones_like(paramomega_ROS)
 
+    # gross uptake (regardless of C:N ratio)
+    # vmax = muinfp* VmaxIp / Qp
+    # umol N /L  or umol C /L  
+    gross_uptake = paramvmax * biomassC * limits  * reg_clipped * ROS_penalty
+    uptakeN = gross_uptake[DIN_IDX,:] + gross_uptake[DON_IDX,: ]
+    uptakeC = gross_uptake[DIC_IDX,:] + gross_uptake[DOC_IDX,: ]   
 
-    gross_uptake, uptakeN, uptakeC, QC = compute_gross_uptake(
-        biomassC, storeN, storeC, resources, ROS,
-        paramCN, paramQCmax, paramQCmin, paramkns, paramvmax, paramROSMode, paramomega_ROS)
+    # net uptake (maintains C:N ratios)
+    # umol N / L
+    biosynthesisC = np.minimum((storeN + uptakeN) * paramCN, storeC + uptakeC)* paramKmtb
+    # Respiration – growth associated bp/bh and maintenance associated r0p/r0h
+    # b * growth + r0 * biomassC
+    # umol C/L
+    respirationC = (paramb * biosynthesisC + (biomassC + storeC) * paramr0) 
+    # if C store is not big enough, break some of the biomassC into the stores
+    # make sure Cp is not negative
+    # umol C/L
+    biomass_breakdownC = np.clip(
+        respirationC +  biosynthesisC - storeC - uptakeC, 
+        a_min=0, a_max=None,
+    )
 
-    (biosynthesisC, respirationC, biomass_breakdownC, 
-     netDeltaBiomassC, netDeltaN, netDeltaC) = compute_net_uptake(
-        biomassC, storeN, storeC, uptakeN, uptakeC,
-        paramCN, paramKmtb, paramb, paramr0)
+    # store change - uptake minus biosynthesis and respiration
+    netDeltaN = uptakeN + biomass_breakdownC / paramCN - biosynthesisC / paramCN 
+    netDeltaC = uptakeC + biomass_breakdownC - biosynthesisC - respirationC
+    netDeltaBiomassC = biosynthesisC - biomass_breakdownC  
 
-    overflowN, overflowC = compute_overflow(
-        biomassC, storeN, storeC, netDeltaN, netDeltaC, paramCN, paramOverflow)
+    # overflow -
+    # make the store maintain the C:N ratio and exude the rest
+    # Overflow quantity 
+    # Oh/Op: enable overflow (0 or 1)
+    # umol N / L
+    if (paramOverflow == 1):
+        store_keepC = np.minimum(netDeltaN * paramCN, netDeltaC) 
+        overflowN = netDeltaN - store_keepC / paramCN
+        overflowC = netDeltaC - store_keepC
+    else:
+        overflowN = np.zeros_like(netDeltaN)
+        overflowC = np.zeros_like(netDeltaN)
+        #overflowN = 0.0
+        #overflowC = 0.0
+
+    if paramROSMode == 1:
+        ROSdecay = ROS * paramROS_decay
+        netROS = ROS - ROSdecay
+        # ROS production depends on biomassC
+        ROSrelease = paramE_ROS * biomassC
+        ROSbreakdownh = paramVmaxROSh * Bh * netROS / (netROS + paramK_ROSh)
+        dROSdt = np.sum(ROSrelease) - ROSdecay - ROSbreakdownh
+    else:
+        dROSdt = 0.0
 
     # final differential equations
+    deathC = deathBiomassC + deathStoreC
+    dCdt = netDeltaC - deathStoreC - overflowC
+    dBdt = netDeltaBiomassC - deathBiomassC 
 
-    dBdt, dCdt, dDICdt, dDOCdt, dRDOCdt = compute_C_odes(
-    DIC, netDeltaBiomassC, netDeltaC, gross_uptake, respirationC, overflowC, 
-    deathBiomassC, deathStoreC, paramCN, paramgammaD)
+    dic_air_water_exchange   = - (DIC - c_sat) / air_water_exchange_constant
+    dDICdt = dic_air_water_exchange + np.sum(respirationC - gross_uptake[DIC_IDX,:])
+    dDOCdt = np.sum(
+        deathC * paramgammaD + overflowC - gross_uptake[DOC_IDX,:])
+    dRDOCdt = np.sum(deathC * (1 - paramgammaD))
 
-    dNdt, dDINdt, dDONdt, dRDONdt, DON2DIN = compute_N_odes(
-    DON, biomassC, netDeltaN, gross_uptake, overflowN, 
-    deathBiomassC, deathStoreN, paramCN, paramgammaD, paramgamma_DON2DIN)
-        
-    dROSdt = compute_ROS(
-        biomassC, Bh, ROS, paramROSMode, paramROS_decay, paramE_ROS, paramVmaxROSh, paramK_ROSh)
+
+    # DON breakdown due to exoenzymes
+    deathN = deathBiomassC / paramCN + deathStoreN 
+    DON2DIN = paramgamma_DON2DIN * biomassC * DON
+    dNdt = netDeltaN - deathStoreN - overflowN
+    dDONdt = np.sum(
+        deathN * paramgammaD - gross_uptake[DON_IDX,:] - DON2DIN
+    )
+    dRDONdt = np.sum(deathN * (1 - paramgammaD))
+
+    # In discussion can state that if DIN is produced also through overflow or leakiness then this could support Pro growth, but this is not encoded into our model.
+    # Assuming that recalcitrant DON isd released only during mortality (discuss release through leakiness)
+    # Assuming RDON/RDOC is recalcitrant to both organisms   
+    dDINdt = np.sum(overflowN + DON2DIN - gross_uptake[DIN_IDX,:])
 
     return (dBdt, dNdt, dCdt, 
         dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt,
@@ -635,7 +708,7 @@ def print_dydt0(calc_dydt, var_names, init_vars, par_tuple):
 
 
 def print_intermediate0(calc_dydt, interm_names, init_vars, par_tuple):
-    dydt0 = calc_dydt(0, init_vars, par_tuple,)
+    dydt0 = calc_dydt(0, init_vars, par_tuple, return_intermediate=True)
     for i,j, k in zip(interm_names, dydt0, init_vars):
         print(f'{i} = {j:.2e}, {j* seconds_in_day:.2e}' )
 
@@ -670,11 +743,11 @@ def get_t_end(maxday=140, t_eval = None, seconds_in_day=seconds_in_day):
     return t_end
 
 
-def run_solver(calc_dydt, init_vars, par_tuple, t_end, t_eval, method='BDF', jac_sparsity=None):
+def run_solver(calc_dydt, init_vars, par_tuple, t_end, t_eval, method='BDF', jac_sparsity=None, max_step=1000):
     t_start = 0
     sol = solve_ivp(
         fun=calc_dydt, y0=init_vars, args=(par_tuple,),
-        t_span=[t_start, t_end], t_eval=t_eval, max_step=1000, #first_step=1, 
+        t_span=[t_start, t_end], t_eval=t_eval, max_step=max_step, #first_step=1, 
         method=method, jac_sparsity=jac_sparsity)
         #method='Radau',)
     return sol
@@ -732,11 +805,11 @@ def compute_mse(df, refdf, refcol= 'ref_Bp', col='Bptotal', timecol='t', toleran
 
 def run_solver_from_new_params(
     new_param_vals, refdf, init_var_vals, 
-    calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names, return_dfs=False
+    calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names, return_dfs=False, max_step=1000
     ):
 
     par_tuple = prepare_params_tuple(new_param_vals)
-    sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval)
+    sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval, max_step=max_step)
     df = solver2df(
         sol, var_names, par_tuple=par_tuple, 
         intermediate_names=intermediate_names, calc_dydt=calc_dydt)
