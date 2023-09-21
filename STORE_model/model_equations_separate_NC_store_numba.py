@@ -375,6 +375,22 @@ def compute_net_uptake(
     netDeltaC = uptakeC + biomass_breakdownC - biosynthesisN * paramCN  - respirationC
     return(biosynthesisN, respirationC, biomass_breakdownC, netDeltaN, netDeltaC)
 
+
+@njit
+def compute_death(
+    grossbiomass, grossstoreN, grossstoreC, paramM
+):
+    # death
+    # Need to explain why we used exponential decay – in ISMEJ we show that other formulations are better for co-cultures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
+    deathbiomassN = paramM * grossbiomass
+    deathstoreN = paramM * grossstoreN
+    deathstoreC = paramM * grossstoreC
+    biomass = grossbiomass - deathbiomassN
+    storeN = grossstoreN - deathstoreN
+    storeC = grossstoreC - deathstoreC
+    return (biomass, storeN, storeC, deathbiomassN, deathstoreN, deathstoreC)
+    
+
 @njit
 def compute_losses(
     biomass, storeN, storeC, netDeltaN, netDeltaC, paramCN, paramOverflow, paramM, paramE_leak
@@ -396,11 +412,12 @@ def compute_losses(
 
     # death
     # Need to explain why we used exponential decay – in ISMEJ we show that other formulations are better for co-cultures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
-    deathN = paramM * biomass
+    #deathN = paramM * biomass
     # leakiness formulated as fraction of biomass (“property tax”)
     # We assume that the vast majority of C and N biomass is in organic form, hence leakiness is to organic. We assume that overflow is also to organic in both organisms, as for the phototroph this is the release of fixed C (or inorganic N incorporated into e.g. AA) which cannot be used for growth. For the heterotrophs we assume overflow metabolism to be the inefficient use of organic C (e.g. not fully oxidized) to maximize growth rate (*citation E coli).
     leakinessN = paramE_leak * biomass
-    return (deathN, leakinessN, overflowN, overflowC)
+    return (#deathN, 
+    leakinessN, overflowN, overflowC)
 
 @njit
 def compute_ROS(
@@ -421,11 +438,11 @@ def compute_ROS(
 @njit
 def compute_C_odes(
     DIC, netDeltaC, gross_uptake, respirationC, overflowC, 
-    deathN, leakinessN, paramCN, paramgammaD,  
+    deathbiomassN, deathstoreN, deathstoreC, leakinessN, paramCN, paramgammaD,  
 ):
-    deathC = deathN * paramCN
+    deathC = deathbiomassN * paramCN + deathstoreC
     dic_air_water_exchange   = - (DIC - c_sat) / air_water_exchange_constant
-    dCdt = netDeltaC - overflowC
+    dCdt = netDeltaC - overflowC - deathstoreC
     dDICdt = dic_air_water_exchange + np.sum(respirationC - gross_uptake[DIC_IDX,:])
     dDOCdt = np.sum(
         deathC * paramgammaD + leakinessN * paramCN + overflowC - gross_uptake[DOC_IDX,:])
@@ -435,12 +452,13 @@ def compute_C_odes(
 @njit
 def compute_N_odes(
     DON, biomass, netDeltaN, gross_uptake, biosynthesisN, biomass_breakdownC, overflowN, 
-    deathN, leakinessN, paramCN, paramgammaD, paramgamma_DON2DIN
+    deathbiomassN, deathstoreN, deathstoreC, leakinessN, paramCN, paramgammaD, paramgamma_DON2DIN
 ):
     # DON breakdown due to exoenzymes
+    deathN = deathbiomassN + deathstoreN
     DON2DIN = paramgamma_DON2DIN * biomass * DON
-    dBdt = biosynthesisN - biomass_breakdownC / paramCN - deathN - leakinessN 
-    dNdt = netDeltaN - overflowN
+    dBdt = biosynthesisN - biomass_breakdownC / paramCN - deathbiomassN - leakinessN 
+    dNdt = netDeltaN - overflowN - deathstoreN
     dDONdt = np.sum(
         deathN * paramgammaD + leakinessN - gross_uptake[DON_IDX,:] - DON2DIN
     )
@@ -455,12 +473,14 @@ def compute_N_odes(
 
 #@njit
 def basic_model_cc_ode_jit1(
-    biomass, storeN, storeC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS, Bh,
+    grossbiomass, grossstoreN, grossstoreC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS, Bh,
     paramCN, paramQCmax, paramQCmin, paramkns, paramvmax, paramKmtb,paramOverflow,
     paramb, paramr0, paramM, paramE_leak, paramE_ROS, paramVmaxROSh, paramK_ROSh,
     paramgamma_DON2DIN, paramgammaD, paramROS_decay, paramROSMode, paramomega_ROS
 ):
 
+    (biomass, storeN, storeC, deathbiomassN, deathstoreN, deathstoreC) = compute_death(
+        grossbiomass, grossstoreN, grossstoreC, paramM)
 
     gross_uptake, uptakeN, uptakeC, QC = compute_gross_uptake(
         biomass, storeN, storeC, resources, ROS,
@@ -470,18 +490,18 @@ def basic_model_cc_ode_jit1(
         biomass, storeN, storeC, uptakeN, uptakeC,
         paramCN, paramKmtb, paramb, paramr0)
 
-    deathN, leakinessN, overflowN, overflowC = compute_losses(
+    leakinessN, overflowN, overflowC = compute_losses(
         biomass, storeN, storeC, netDeltaN, netDeltaC, paramCN, paramOverflow, paramM, paramE_leak)
 
     # final differential equations
 
     dCdt, dDICdt, dDOCdt, dRDOCdt = compute_C_odes(
         DIC, netDeltaC, gross_uptake, respirationC, overflowC, 
-        deathN, leakinessN, paramCN, paramgammaD)
+        deathbiomassN, deathstoreN, deathstoreC, leakinessN, paramCN, paramgammaD)
 
     dBdt, dNdt, dDINdt, dDONdt, dRDONdt, DON2DIN = compute_N_odes(
         DON, biomass, netDeltaN, gross_uptake, biosynthesisN, biomass_breakdownC, overflowN, 
-        deathN, leakinessN, paramCN, paramgammaD, paramgamma_DON2DIN)
+        deathbiomassN, deathstoreN, deathstoreC, leakinessN, paramCN, paramgammaD, paramgamma_DON2DIN)
         
     dROSdt = compute_ROS(
         biomass, Bh, ROS, paramROSMode, paramROS_decay, paramE_ROS, paramVmaxROSh, paramK_ROSh)
