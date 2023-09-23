@@ -909,6 +909,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Run models - nutrients recycle with separate N/C and quotas.')
     parser.add_argument('--ref_csv', help='reference CSV', default='None')
+    parser.add_argument('--ref_pro99_csv', help='reference pro99 CSV', default='None')
     parser.add_argument('--json', help='json with param vals', nargs="+")
     parser.add_argument('--maxday', help='max day of simulation', type=int, default=140)
 
@@ -938,6 +939,17 @@ if __name__ == '__main__':
         refdf['ref_Bp[C]'] = refdf['ref_Bp[C]'].clip(lower=4)
         refdf['log_ref_Bp[N]'] = np.log(refdf['ref_Bp[N]'])
         refdf['log_ref_Bp[C]'] = np.log(refdf['ref_Bp[C]'])
+        #ref_df = ref_df.sort_values(['t','Sample'])
+
+    if args.ref_pro99_fpath == 'None':
+        ref_pro99_df = None
+    else:
+        ref_pro99_df = pd.read_excel(args.ref_pro99_fpath)
+        ref_pro99_df['ref_Bp[N]'] = ref_pro99_df['ref_Bp[N]'].clip(lower=4)
+        ref_pro99_df['ref_Bp[C]'] = ref_pro99_df['ref_Bp[C]'].clip(lower=4)
+        ref_pro99_df['log_ref_Bp[N]'] = np.log(ref_pro99_df['ref_Bp[N]'])
+        ref_pro99_df['log_ref_Bp[C]'] = np.log(ref_pro99_df['ref_Bp[C]'])
+        #ref_pro99_df = ref_pro99_df.sort_values(['t','Sample'])
 
 
     new_param_vals = get_param_vals_from_json_list(args.model, args.json)
@@ -945,6 +957,11 @@ if __name__ == '__main__':
     t_eval, t_end = get_t_eval_and_t_end(args.t_eval, refdf, args.maxday)
     (var_names, init_var_vals, intermediate_names, calc_dydt, prepare_params_tuple
         ) = get_constants_per_organism(args.pro99_mode, args.which_organism)
+
+    if ref_pro99_df is not None:
+        t_eval_pro99, t_end_pro99 = get_t_eval_and_t_end(None, ref_pro99_df, args.maxday)
+        (_, init_var_pro99_vals, _, _, _) = get_constants_per_organism(True, which_organism)
+        pro99_suffix = get_runid_unique_suffix(True, args.which_organism, args.model, new_param_vals)
 
     if args.param_sensitivity != -1:
         # run sensitivity
@@ -975,8 +992,20 @@ if __name__ == '__main__':
             MSE_err = run_solver_from_X_and_save(
                 X, params_to_update, new_param_vals, refdf, args.outdpath, sen_run_id, 
                 log_params, init_var_vals, 
-                calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names)
+                calc_dydt, prepare_params_tuple, 
+                t_end , t_eval, var_names, intermediate_names)
             print ('MSE:', MSE_err)
+
+            if ref_pro99_df is not None:
+                sen_run_id = f"{args.run_id}_sobol_{i}{pro99_suffix}"
+                print(sen_run_id)
+                
+                MSE_err = run_solver_from_X_and_save(
+                    X, params_to_update, new_param_vals, refdf, args.outdpath, sen_run_id, 
+                    log_params, init_var_pro99_vals, 
+                    calc_dydt, prepare_params_tuple, 
+                    t_end_pro99, t_eval_pro99, var_names, intermediate_names)
+                print ('MSE:', MSE_err)
 
     else:
         # default - run simulation
