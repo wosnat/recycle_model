@@ -12,6 +12,7 @@ import pprint
 from scipy.integrate import solve_ivp
 from scipy.integrate import odeint
 from sklearn.metrics import mean_squared_error
+from scipy.stats import qmc
 import json
 import subprocess
 import sys
@@ -692,13 +693,15 @@ def solver2df(sol, var_names, par_tuple, t_eval=None,  intermediate_names=None, 
     paramCN = par_tuple[0]
     if 'Bp' in df.columns:
         df['Bp[C]'] = df['Bp']*paramCN[0]
-        df['Bptotal'] = df['Bp']+df['Np']
+        df['Bptotal[N]'] = df['Bp']+df['Np']
         df['Bptotal[C]'] = df['Bp[C]']+df['Cp']
+        df['log_Bptotal[N]'] = np.log(df['Bptotal[N]'])
+        df['log_Bptotal[C]'] = np.log(df['Bptotal[C]'])
         
     if 'Bh' in df.columns:
         # TODO: will not work in honly mode
         df['Bh[C]'] = df['Bh']*paramCN[1]
-        df['Bhtotal'] = df['Bh']+df['Nh']
+        df['Bhtotal[N]'] = df['Bh']+df['Nh']
         df['Bhtotal[C]'] = df['Bh[C]']+df['Ch']
         
     return df
@@ -706,18 +709,18 @@ def solver2df(sol, var_names, par_tuple, t_eval=None,  intermediate_names=None, 
    
 def _mse(x, refdf, refcol, col, timecol, tolerance):
     #print(x.columns)
-    tdf = pd.merge_asof(x, refdf[[timecol, refcol]], on=timecol, direction='nearest', tolerance=tolerance).dropna()
-    return pd.Series({
-        'compare_points': tdf.shape[0], 
-        'MSE': mean_squared_error(tdf[col], tdf[refcol])}
-    )
+    tdf = pd.merge_asof(x, refdf[[timecol] + refcol], on=timecol, direction='nearest', tolerance=tolerance).dropna()
 
-def compute_mse(df, refdf, refcol= 'ref_Bp', col='Bptotal', timecol='t', tolerance=100):
-    #print (x)
-    df1 = df[[timecol, col]].dropna().copy()
+    mse_dict = {f'RMSE_{c}': np.sqrt(mean_squared_error(tdf[c], tdf[rc])) for c,rc in zip(col, refcol)}
+    mse_dict['compare_points'] = tdf.shape[0]
+    return pd.Series(mse_dict)
+
+def compute_mse(df, refdf, refcol, col, timecol='t', tolerance=100):
+    df1 = df[[timecol] + col].dropna().copy()
     df1[col] = df1[col].clip(lower=4)
     mse_df = refdf.groupby(['Sample', 'full name', 'Group',]
-                        ).apply(lambda y : _mse(df1, y, refcol= refcol, col=col, timecol=timecol, tolerance=tolerance))
+                    ).apply(lambda y : _mse(df1, y, refcol= refcol, col=col, timecol=timecol, tolerance=tolerance))
+    
     mse_df = mse_df.reset_index()
     return mse_df
 
@@ -736,8 +739,14 @@ def run_solver_from_new_params(
     perr = 1e6 # very large number for error
     if refdf is not None:
         try:
-            mse_df = compute_mse(df, refdf, refcol= 'ref_Bp', col='Bptotal', timecol='t', tolerance=100)
-            perr = mse_df['MSE'].min()
+            mse_df = compute_mse(
+                df, refdf, 
+                refcol= ['ref_Bp[N]' , 'ref_Bp[C]' , 'log_ref_Bp[N]' , 'log_ref_Bp[C]' ], 
+                col=    ['Bptotal[N]', 'Bptotal[C]', 'log_Bptotal[N]', 'log_Bptotal[C]'], 
+                timecol='t', tolerance=100)
+            mse_df['RMSE'] = np.prod(mse_df[['RMSE_Bptotal[N]', 'RMSE_Bptotal[C]']], axis=1)
+            mse_df['lRMSE'] = np.prod(mse_df[['RMSE_log_Bptotal[N]', 'RMSE_log_Bptotal[C]']], axis=1)
+            perr = mse_df['RMSE'].min()
 
         except Exception as inst:
             print(inst)
@@ -765,16 +774,17 @@ def save_solver_results_to_file(
 
 
 
-def run_solver_from_X(
-    X, params_to_update, orig_param_vals, refdf, 
+def run_solver_from_X_and_save(
+    X, params_to_update, orig_param_vals, refdf, out_dpath, out_fprefix,
     log_params, init_var_vals, 
-    calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names, return_dfs=False
+    calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names, 
     ):
 
     new_param_vals = get_params(X, params_to_update, orig_param_vals, log_params)
-    return run_solver_from_new_params(
-        new_param_vals, refdf, init_var_vals, 
-        calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names, return_dfs
+    return run_solver_from_new_params_and_save(
+        new_param_vals, refdf, out_dpath, 
+        out_fprefix, init_var_vals, 
+        calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names,
     )
 
 
@@ -880,6 +890,16 @@ def get_param_sensitivity_values(param_sensitivity_idx, model, organism_to_tune,
         param_values = np.exp(param_values)
     return parameter, param_values
 
+def get_sobol_sample(param_bounds, m):
+    ''' return a list of samples
+    param_bounds - list of (lower,upper) bounds for scaling
+    m - will produce 2^m samples
+    '''
+    l_bounds, u_bounds = tuple(zip(*param_bounds))
+    sampler = qmc.Sobol(d=len(param_bounds))
+    sample = sampler.random_base2(m=m)
+    return qmc.scale(sample, l_bounds, u_bounds)
+
     
 if __name__ == '__main__':
     import argparse
@@ -901,6 +921,7 @@ if __name__ == '__main__':
     parser.add_argument("--param_sensitivity", help="index of param to update (0 based) ",  type=int, default=-1)
     parser.add_argument("--organism_to_tune", help="which organism to tune", choices=['PRO', 'HET'], default='PRO')
     parser.add_argument("--number_of_runs", help="number of simulations to run",  type=int, default=1024)
+    parser.add_argument("--sobol", help="run sobol (will run 2^<sobol> simulation",  type=int, default=-1)
     
     
     args = parser.parse_args()
@@ -912,7 +933,10 @@ if __name__ == '__main__':
         refdf = None
     else:
         refdf = pd.read_excel(args.ref_csv)
-        refdf['ref_Bp'] = refdf['ref_Bp'].clip(lower=4)
+        refdf['ref_Bp[N]'] = refdf['ref_Bp[N]'].clip(lower=4)
+        refdf['ref_Bp[C]'] = refdf['ref_Bp[C]'].clip(lower=4)
+        refdf['log_ref_Bp[N]'] = np.log(refdf['ref_Bp[N]'])
+        refdf['log_ref_Bp[C]'] = np.log(refdf['ref_Bp[C]'])
 
 
     new_param_vals = get_param_vals_from_json_list(args.model, args.json)
@@ -937,6 +961,22 @@ if __name__ == '__main__':
             )
             print ('MSE:', MSE_err)
             
+    elif args.sobol != -1:
+            
+        params_to_update, bounds, log_params = get_param_tuning_values(args.model, args.organism_to_tune)
+        bounds_logged = [(np.log(b[0]),  np.log(b[1]))  if lg else b for b,lg in zip(bounds, log_params)]
+        param_bounds =  bounds_logged
+        sample = get_sobol_sample(param_bounds, m=args.sobol)
+        for i,X in enumerate(sample):
+            sen_run_id = f"{args.run_id}_sobol_{i}{suffix}"
+            print(sen_run_id)
+            
+            MSE_err = run_solver_from_X_and_save(
+                X, params_to_update, new_param_vals, refdf, args.outdpath, sen_run_id, 
+                log_params, init_var_vals, 
+                calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names)
+            print ('MSE:', MSE_err)
+
     else:
         # default - run simulation
         run_id = f'{args.run_id}{suffix}'
