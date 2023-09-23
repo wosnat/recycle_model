@@ -65,7 +65,7 @@ R_P = 7
 R_H = 4.5 # in the range 4-6 (for DSS N limited, 11)
 
 # fg -> umol 14 (N mulecular weight) * 1e-9 (fmol -> umol)
-Qp = 25  * 1e-9 / 14
+Qp = 12.5  * 1e-9 / 14
 Qh = 40 * 1e-9 / 14
 
 
