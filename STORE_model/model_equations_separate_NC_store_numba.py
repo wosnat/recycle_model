@@ -941,10 +941,10 @@ if __name__ == '__main__':
         refdf['log_ref_Bp[C]'] = np.log(refdf['ref_Bp[C]'])
         #ref_df = ref_df.sort_values(['t','Sample'])
 
-    if args.ref_pro99_fpath == 'None':
+    if args.ref_pro99_csv == 'None':
         ref_pro99_df = None
     else:
-        ref_pro99_df = pd.read_excel(args.ref_pro99_fpath)
+        ref_pro99_df = pd.read_excel(args.ref_pro99_csv)
         ref_pro99_df['ref_Bp[N]'] = ref_pro99_df['ref_Bp[N]'].clip(lower=4)
         ref_pro99_df['ref_Bp[C]'] = ref_pro99_df['ref_Bp[C]'].clip(lower=4)
         ref_pro99_df['log_ref_Bp[N]'] = np.log(ref_pro99_df['ref_Bp[N]'])
@@ -960,7 +960,7 @@ if __name__ == '__main__':
 
     if ref_pro99_df is not None:
         t_eval_pro99, t_end_pro99 = get_t_eval_and_t_end(None, ref_pro99_df, args.maxday)
-        (_, init_var_pro99_vals, _, _, _) = get_constants_per_organism(True, which_organism)
+        (_, init_var_pro99_vals, _, _, _) = get_constants_per_organism(True, args.which_organism)
         pro99_suffix = get_runid_unique_suffix(True, args.which_organism, args.model, new_param_vals)
 
     if args.param_sensitivity != -1:
@@ -986,26 +986,31 @@ if __name__ == '__main__':
         param_bounds =  bounds_logged
         sample = get_sobol_sample(param_bounds, m=args.sobol)
         for i,X in enumerate(sample):
-            sen_run_id = f"{args.run_id}_sobol_{i}{suffix}"
-            print(sen_run_id)
-            
-            MSE_err = run_solver_from_X_and_save(
-                X, params_to_update, new_param_vals, refdf, args.outdpath, sen_run_id, 
-                log_params, init_var_vals, 
-                calc_dydt, prepare_params_tuple, 
-                t_end , t_eval, var_names, intermediate_names)
-            print ('MSE:', MSE_err)
-
-            if ref_pro99_df is not None:
-                sen_run_id = f"{args.run_id}_sobol_{i}{pro99_suffix}"
+            try:
+                sen_run_id = f"{args.run_id}_sobol_{i}{suffix}"
                 print(sen_run_id)
-                
+            
                 MSE_err = run_solver_from_X_and_save(
                     X, params_to_update, new_param_vals, refdf, args.outdpath, sen_run_id, 
-                    log_params, init_var_pro99_vals, 
+                    log_params, init_var_vals, 
                     calc_dydt, prepare_params_tuple, 
-                    t_end_pro99, t_eval_pro99, var_names, intermediate_names)
+                    t_end , t_eval, var_names, intermediate_names)
                 print ('MSE:', MSE_err)
+
+                if ref_pro99_df is not None:
+                    sen_run_id = f"{args.run_id}_sobol_{i}{pro99_suffix}"
+                    print(sen_run_id)
+                    
+                    MSE_err = run_solver_from_X_and_save(
+                        X, params_to_update, new_param_vals, refdf, args.outdpath, sen_run_id, 
+                        log_params, init_var_pro99_vals, 
+                        calc_dydt, prepare_params_tuple, 
+                        t_end_pro99, t_eval_pro99, var_names, intermediate_names)
+                    print ('MSE:', MSE_err)
+            except Exception as inst:
+                print('ERROR:', i, X)
+                print(inst)
+                pass
 
     else:
         # default - run simulation
