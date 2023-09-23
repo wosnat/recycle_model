@@ -662,11 +662,11 @@ def get_t_end(maxday=140, t_eval = None, seconds_in_day=seconds_in_day):
     return t_end
 
 
-def run_solver(calc_dydt, init_vars, par_tuple, t_end, t_eval, method='BDF', jac_sparsity=None):
+def run_solver(calc_dydt, init_vars, par_tuple, t_end, t_eval, method='BDF', jac_sparsity=None, max_step=1000):
     t_start = 0
     sol = solve_ivp(
         fun=calc_dydt, y0=init_vars, args=(par_tuple,),
-        t_span=[t_start, t_end], t_eval=t_eval, max_step=1000, #first_step=1, 
+        t_span=[t_start, t_end], t_eval=t_eval, max_step=max_step, #first_step=1, 
         method=method, jac_sparsity=jac_sparsity)
         #method='Radau',)
     return sol
@@ -734,7 +734,8 @@ def run_solver_from_new_params(
     df = solver2df(
         sol, var_names, par_tuple=par_tuple, 
         intermediate_names=intermediate_names, calc_dydt=calc_dydt)
-
+    # todo decrease max step if too low
+    #if df[var_names].min() < 
     mse_df = None
     perr = 1e6 # very large number for error
     if refdf is not None:
