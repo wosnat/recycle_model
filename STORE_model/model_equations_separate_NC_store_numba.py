@@ -679,6 +679,15 @@ def solver2df_forlsq(sol, var_names):
         
     return df
 
+def is_problematic_solution(sol, t_eval):
+    for sim_res in sol.y: 
+        if np.min(sim_res) < -1e-9:
+            return True
+    if sol.t.size < t_eval.size:
+        return True
+    return False
+
+
 def solver2df(sol, var_names, par_tuple, t_eval=None,  intermediate_names=None, calc_dydt=None, ):
     d = dict(zip(var_names, sol.y))
     d['t'] = sol.t
@@ -730,7 +739,17 @@ def run_solver_from_new_params(
     ):
 
     par_tuple = prepare_params_tuple(new_param_vals)
-    sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval)
+    max_step = 1000
+    try: 
+        sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval, max_step=max_step)
+        if is_problematic_solution(sol, t_eval):
+            max_step = max_step / 10
+            sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval, max_step=max_step)
+    except Exception as inst:
+        print('run_solver failed, max_step =',max_step,  inst)
+        max_step = max_step / 10
+        sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval, max_step=max_step)
+    
     df = solver2df(
         sol, var_names, par_tuple=par_tuple, 
         intermediate_names=intermediate_names, calc_dydt=calc_dydt)
