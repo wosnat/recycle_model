@@ -1021,7 +1021,7 @@ if __name__ == '__main__':
                     print(sen_run_id)
                     
                     MSE_err = run_solver_from_X_and_save(
-                        X, params_to_update, new_param_vals, refdf, args.outdpath, sen_run_id, 
+                        X, params_to_update, new_param_vals, ref_pro99_df, args.outdpath, sen_run_id, 
                         log_params, init_var_pro99_vals, 
                         calc_dydt, prepare_params_tuple, 
                         t_end_pro99, t_eval_pro99, var_names, intermediate_names)
