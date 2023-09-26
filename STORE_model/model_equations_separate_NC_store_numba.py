@@ -747,7 +747,7 @@ def run_solver_from_new_params(
             sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval, max_step=max_step)
     except Exception as inst:
         print('run_solver failed, max_step =',max_step,  inst)
-        max_step = max_step / 10
+        max_step = 100
         sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval, max_step=max_step)
     
     df = solver2df(
