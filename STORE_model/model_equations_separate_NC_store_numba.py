@@ -681,7 +681,7 @@ def solver2df_forlsq(sol, var_names):
 
 def is_problematic_solution(sol, t_eval):
     for sim_res in sol.y: 
-        if np.min(sim_res) < -1e-9:
+        if np.min(sim_res) < 0:
             return True
     if sol.t.size < t_eval.size:
         return True
