@@ -416,7 +416,8 @@ def compute_losses(
     #deathN = paramM * biomass
     # leakiness formulated as fraction of biomass (“property tax”)
     # We assume that the vast majority of C and N biomass is in organic form, hence leakiness is to organic. We assume that overflow is also to organic in both organisms, as for the phototroph this is the release of fixed C (or inorganic N incorporated into e.g. AA) which cannot be used for growth. For the heterotrophs we assume overflow metabolism to be the inefficient use of organic C (e.g. not fully oxidized) to maximize growth rate (*citation E coli).
-    leakinessN = paramE_leak * biomass
+    #leakinessN = paramE_leak * biomass
+    leakinessN = np.zeros_like(biomass)
     return (#deathN, 
     leakinessN, overflowN, overflowC)
 
