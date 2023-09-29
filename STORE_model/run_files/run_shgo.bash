@@ -1,4 +1,4 @@
-baseid=shgo2
+baseid=shgo4
 RDIR=/home/oweissberg/work/RECYCLE_MODEL/recycle_model/STORE_model
 ODIR=~/work/RECYCLE_MODEL/results/${baseid}
 w=ponly
