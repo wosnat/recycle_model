@@ -671,11 +671,14 @@ def run_solver(calc_dydt, init_vars, par_tuple, t_end, t_eval, method='BDF', jac
         #method='Radau',)
     return sol
 
-def solver2df_forlsq(sol, var_names):
+def solver2df_forlsq(sol, var_names, par_tuple):
     d = dict(zip(var_names, sol.y))
     d['t'] = sol.t
     df = pd.DataFrame(data=d)
-    df['Bptotal'] = df['Bp']+df['Np']
+    paramCN = par_tuple[0]
+    df['Bp[C]'] = df['Bp']*paramCN[0]
+    df['Bptotal[N]'] = df['Bp']+df['Np']
+    df['Bptotal[C]'] = df['Bp[C]']+df['Cp']
         
     return df
 
