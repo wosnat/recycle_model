@@ -14,6 +14,19 @@ from functools import lru_cache
 
 from model_equations_separate_NC_store_numba import *
 
+def run_solver_for_lsq(calc_dydt, init_var_vals, par_tuple, t_end , t_eval)
+    max_step = 1000
+    try: 
+        sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval, max_step=max_step)
+        if is_problematic_solution(sol, t_eval):
+            max_step = max_step / 10
+            sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval, max_step=max_step)
+    except Exception as inst:
+        print('run_solver failed, max_step =',max_step,  inst)
+        max_step = 100
+        sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval, max_step=max_step)
+    return sol
+
 
 def run_model(X, additional_params):
     (Y, params_to_update, orig_param_vals, log_params, 
@@ -27,11 +40,11 @@ def run_model(X, additional_params):
         new_param_vals = get_params(X, params_to_update, orig_param_vals, log_params)
         par_tuple = prepare_params_tuple(new_param_vals)
 
-        lowN_sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval)
+        lowN_sol = run_solver_for_lsq(calc_dydt, init_var_vals, par_tuple, t_end , t_eval)
         lowN_df = solver2df_forlsq(lowN_sol, var_names, par_tuple)
         result_lowN = pd.merge_asof(ref_df, lowN_df, on='t', tolerance=1, direction='nearest')
 
-        pro99_sol = run_solver(calc_dydt, init_var_pro99_vals, par_tuple, t_end_pro99 , t_eval_pro99)
+        pro99_sol = run_solver_for_lsq(calc_dydt, init_var_pro99_vals, par_tuple, t_end_pro99 , t_eval_pro99)
         pro99_df = solver2df_forlsq(pro99_sol, var_names, par_tuple)
         result_pro99 = pd.merge_asof(ref_pro99_df, pro99_df, on='t', tolerance=1, direction='nearest')
 
