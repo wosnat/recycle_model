@@ -102,8 +102,8 @@ if __name__ == '__main__':
     Y = pd.concat([
             ref_df['ref_Bp[N]'], 
             ref_df['ref_Bp[C]'], 
-            ref_pro99_df['ref_Bp[N]']
-            ref_pro99_df['ref_Bp[C]']
+            ref_pro99_df['ref_Bp[N]'],
+            ref_pro99_df['ref_Bp[C]'],
         ]).to_numpy()
     Y = np.clip(Y, a_min=4, a_max=None)
     if args.logerror:
