@@ -14,7 +14,7 @@ from functools import lru_cache
 
 from model_equations_separate_NC_store_numba import *
 
-def run_solver_for_lsq(calc_dydt, init_var_vals, par_tuple, t_end , t_eval)
+def run_solver_for_lsq(calc_dydt, init_var_vals, par_tuple, t_end , t_eval):
     max_step = 1000
     try: 
         sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval, max_step=max_step)
