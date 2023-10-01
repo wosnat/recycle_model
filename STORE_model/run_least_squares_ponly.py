@@ -19,6 +19,7 @@ def run_solver_for_lsq(calc_dydt, init_var_vals, par_tuple, t_end , t_eval):
     try: 
         sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval, max_step=max_step)
         if is_problematic_solution(sol, t_eval):
+            print('is_problematic_solution')
             max_step = max_step / 10
             sol = run_solver(calc_dydt, init_var_vals, par_tuple, t_end , t_eval, max_step=max_step)
     except Exception as inst:
@@ -34,32 +35,32 @@ def run_model(X, additional_params):
     init_var_vals, t_end , t_eval, ref_df, 
     init_var_pro99_vals, t_end_pro99 , t_eval_pro99, ref_pro99_df, logerror
     ) = additional_params
-    #print(X)
+    print(X)
 
-    try:
-        new_param_vals = get_params(X, params_to_update, orig_param_vals, log_params)
-        par_tuple = prepare_params_tuple(new_param_vals)
+    #try:
+    new_param_vals = get_params(X, params_to_update, orig_param_vals, log_params)
+    par_tuple = prepare_params_tuple(new_param_vals)
 
-        lowN_sol = run_solver_for_lsq(calc_dydt, init_var_vals, par_tuple, t_end , t_eval)
-        lowN_df = solver2df_forlsq(lowN_sol, var_names, par_tuple)
-        result_lowN = pd.merge_asof(ref_df, lowN_df, on='t', tolerance=1, direction='nearest')
+    lowN_sol = run_solver_for_lsq(calc_dydt, init_var_vals, par_tuple, t_end , t_eval)
+    lowN_df = solver2df_forlsq(lowN_sol, var_names, par_tuple)
+    result_lowN = pd.merge_asof(ref_df, lowN_df, on='t', tolerance=1, direction='nearest')
 
-        pro99_sol = run_solver_for_lsq(calc_dydt, init_var_pro99_vals, par_tuple, t_end_pro99 , t_eval_pro99)
-        pro99_df = solver2df_forlsq(pro99_sol, var_names, par_tuple)
-        result_pro99 = pd.merge_asof(ref_pro99_df, pro99_df, on='t', tolerance=1, direction='nearest')
+    pro99_sol = run_solver_for_lsq(calc_dydt, init_var_pro99_vals, par_tuple, t_end_pro99 , t_eval_pro99)
+    pro99_df = solver2df_forlsq(pro99_sol, var_names, par_tuple)
+    result_pro99 = pd.merge_asof(ref_pro99_df, pro99_df, on='t', tolerance=1, direction='nearest')
 
-        res = np.clip(pd.concat([
-                result_lowN['Bptotal[N]'], 
-                result_lowN['Bptotal[C]'], 
-                result_pro99['Bptotal[N]'],
-                result_pro99['Bptotal[C]'],
-            ]).to_numpy(), a_min=4, a_max=None)
-        if logerror:
-            res = np.log(res)
-        return res
-    except BaseException as err:
-        print(f"Unexpected {err}, {type(err)}")
-        return np.zeros_like(Y)
+    res = np.clip(pd.concat([
+            result_lowN['Bptotal[N]'], 
+            result_lowN['Bptotal[C]'], 
+            result_pro99['Bptotal[N]'],
+            result_pro99['Bptotal[C]'],
+        ]).to_numpy(), a_min=4, a_max=None)
+    if logerror:
+        res = np.log(res)
+    return res
+    #except BaseException as err:
+        #print(f"Unexpected {err}, {type(err)}")
+        #return np.zeros_like(Y)
 
 def jac(X, additional_params):
     delta = 1e-8
@@ -74,6 +75,7 @@ def jac(X, additional_params):
     return J    
 
 def fun(X, additional_params):
+    Y = additional_params[0]
     return run_model(X, additional_params) - Y
 
 
