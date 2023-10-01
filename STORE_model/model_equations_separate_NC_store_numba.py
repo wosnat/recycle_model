@@ -137,7 +137,10 @@ DOC_IDX = 3
     
     
 def get_param_vals(model_name):
-    param_df = pd.read_excel( 'Model_Parameters Store model.xlsx',)
+    print(f"__file__, {__file__}")
+    fpath = os.path.join(os.path.dirname(__file__),'Model_Parameters Store model.xlsx',)
+    print(fpath)
+    param_df = pd.read_excel(fpath)
     param_df['values'] = param_df['full model']
     if model_name not in [None, 'FULL']:
         model_col = f'{model_name} model hardcoded parameters'
@@ -164,7 +167,10 @@ def get_param_tuning_values(model_name, organism_to_tune):
     bounds (list of pairs)
     log_params (list of bools
     """
-    param_df = pd.read_excel( 'Model_Parameters Store model.xlsx',)
+    print(f"__file__, {__file__}")
+    fpath = os.path.join(os.path.dirname(__file__),'Model_Parameters Store model.xlsx',)
+    print(fpath)
+    param_df = pd.read_excel(fpath)
     org_col = f'Tunable parameters ({organism_to_tune} fitting)'
 
     if model_name not in [None, 'FULL']:
