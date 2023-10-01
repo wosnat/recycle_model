@@ -37,30 +37,30 @@ def run_model(X, additional_params):
     ) = additional_params
     print(X)
 
-    #try:
-    new_param_vals = get_params(X, params_to_update, orig_param_vals, log_params)
-    par_tuple = prepare_params_tuple(new_param_vals)
+    try:
+        new_param_vals = get_params(X, params_to_update, orig_param_vals, log_params)
+        par_tuple = prepare_params_tuple(new_param_vals)
 
-    lowN_sol = run_solver_for_lsq(calc_dydt, init_var_vals, par_tuple, t_end , t_eval)
-    lowN_df = solver2df_forlsq(lowN_sol, var_names, par_tuple)
-    result_lowN = pd.merge_asof(ref_df, lowN_df, on='t', tolerance=1, direction='nearest')
+        lowN_sol = run_solver_for_lsq(calc_dydt, init_var_vals, par_tuple, t_end , t_eval)
+        lowN_df = solver2df_forlsq(lowN_sol, var_names, par_tuple)
+        result_lowN = pd.merge_asof(ref_df, lowN_df, on='t', tolerance=1, direction='nearest')
+    
+        pro99_sol = run_solver_for_lsq(calc_dydt, init_var_pro99_vals, par_tuple, t_end_pro99 , t_eval_pro99)
+        pro99_df = solver2df_forlsq(pro99_sol, var_names, par_tuple)
+        result_pro99 = pd.merge_asof(ref_pro99_df, pro99_df, on='t', tolerance=1, direction='nearest')
 
-    pro99_sol = run_solver_for_lsq(calc_dydt, init_var_pro99_vals, par_tuple, t_end_pro99 , t_eval_pro99)
-    pro99_df = solver2df_forlsq(pro99_sol, var_names, par_tuple)
-    result_pro99 = pd.merge_asof(ref_pro99_df, pro99_df, on='t', tolerance=1, direction='nearest')
-
-    res = np.clip(pd.concat([
-            result_lowN['Bptotal[N]'], 
-            result_lowN['Bptotal[C]'], 
-            result_pro99['Bptotal[N]'],
-            result_pro99['Bptotal[C]'],
-        ]).to_numpy(), a_min=4, a_max=None)
-    if logerror:
-        res = np.log(res)
-    return res
-    #except BaseException as err:
-        #print(f"Unexpected {err}, {type(err)}")
-        #return np.zeros_like(Y)
+        res = np.clip(pd.concat([
+                result_lowN['Bptotal[N]'], 
+                result_lowN['Bptotal[C]'], 
+                result_pro99['Bptotal[N]'],
+                result_pro99['Bptotal[C]'],
+            ]).to_numpy(), a_min=4, a_max=None)
+        if logerror:
+            res = np.log(res)
+        return res
+    except BaseException as err:
+        print(f"Unexpected {err}, {type(err)}")
+        return np.zeros_like(Y)
 
 def jac(X, additional_params):
     delta = 1e-8

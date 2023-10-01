@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 
 
+
+
+#SBATCH --job-name=lsqp_ROS
+#SBATCH --partition=hive1d,hive7d,hiveunlim
+#SBATCH --output=/mnt/beegfs/home/dsher/oweissber/RECYCLE_MODEL/results/lsq_ponly/log/out_%A_%a_%j.out
+
 # this script is meant to be run using gnu parallel.
 # run using:
 #  m=MIN; ls VPRO/X0/*${m}* |  parallel run_files/run_lsq_ponly_parallel.bash $m {}
@@ -31,7 +37,7 @@ echo $m
 #do 
 run_id=${baseid}_$(basename ${j%.*})
 echo $m $j $run_id
-$RDIR/run_least_squares_ponly.py --ref_csv $RDIR/reference_10cc_axenic.xlsx --ref_pro99_csv $RDIR/reference_pro99_axenic.xlsx --out_dpath ${ODIR}/out --run_id ${run_id} --model $m --json $j > $ODIR/log/${run_id}.log 2>&1 
+$RDIR/run_least_squares_ponly.py --ref_csv $RDIR/reference_10cc_axenic.xlsx --ref_pro99_csv $RDIR/reference_pro99_axenic.xlsx --out_dpath ${ODIR}/out --run_id ${run_id} --model $m --json $j --logerror > $ODIR/log/${run_id}.log 2>&1 
 
 
 
