@@ -944,7 +944,7 @@ def create_random_param_vals(params_to_update, log_params, rng, i, ):
 def get_monte_json_fnames(jsondpath, number_of_runs, rng):
 
     json_files = os.listdir(jsondpath)
-    json_files = [f for f in json_files of f.endswith('json')
+    json_files = [f for f in json_files if f.endswith('json')]
     # return file names without path so easier to make run_id
     return rng.choice(json_files, number_of_runs)
 
@@ -957,6 +957,7 @@ def get_monte_sample(params_to_update, log_params, param_bounds, jsondpath, numb
     if jsondpath != 'None':
         json_fnames =  get_monte_json_fnames(jsondpath, number_of_runs, rng)
     random_param_list = [create_random_param_vals(params_to_update, log_params, rng, i) for i in zip(number_of_params, *random_param_values)]
+    print(json_fnames, random_param_list)
     return json_fnames, random_param_list
         #random_params, random_values, random_log_params = 
         
@@ -1085,10 +1086,11 @@ if __name__ == '__main__':
         
         for i, (json_fname, (random_params_to_update, random_values, random_log_params)) in enumerate(zip(json_fnames, sample)):
             json_fpath = os.path.join(json_dpath, json_fname)
-            updated_param_vals = get_param_vals_from_json_list(args.model, json_fpath)
+            updated_param_vals = get_param_vals_from_json_list(args.model, [json_fpath])
             vpro_id = json_fname.replace('.json','')
             sen_run_id = f"{args.run_id}_monte_{vpro_id}_{i}{suffix}"
             print(sen_run_id)
+            print(random_values, random_params_to_update, random_log_params, json_fpath)
             MSE_err = run_solver_from_X_and_save(
                 random_values, random_params_to_update, updated_param_vals, refdf, args.outdpath, sen_run_id, 
                 random_log_params, init_var_vals, 
