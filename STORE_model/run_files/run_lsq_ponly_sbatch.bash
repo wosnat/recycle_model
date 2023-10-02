@@ -6,11 +6,12 @@
 
 
 # run by: 
+# cd slurm
 # RDIR=/mnt/beegfs/home/dsher/oweissber/RECYCLE_MODEL/recycle_model/STORE_model
-# for m in MIN MIXOTROPH OVERFLOW ROS EXOENZYME; do;
-#  m=MIN; 
-# ls VPRO/X0/*${m}* |  xargs sbatch --partition=hive1d,hive7d,hiveunlim --wrap  "$RDIR/run_files/run_lsq_ponly_parallel.bash $m {}"
-# done
+
+# for m in MIN MIXOTROPH OVERFLOW ROS EXOENZYME; do for j in $(ls $RDIR/VPRO/X0/*${m}*); do echo $j; sbatch --partition=hive1d,hive7d,hiveunlim --wrap  "$RDIR/run_files/run_lsq_ponly_sbatch.bash $m $j"; done; done
+
+
 
 # this script is meant to be run using gnu parallel.
 # run using:

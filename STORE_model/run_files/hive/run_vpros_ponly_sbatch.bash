@@ -7,7 +7,7 @@ mkdir -p $ODIR/log
 
 for m in MIN MIXOTROPH OVERFLOW ROS EXOENZYME
 do 
-for j in $(ls $PWD/VPRO/FINAL/*${m}*.json)
+for j in $(ls $RDIR/VPRO/LSQ/*${m}*.json)
 do 
 vpro=${j##*/}
 vpro=${vpro%.json}
