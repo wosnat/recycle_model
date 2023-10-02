@@ -930,6 +930,38 @@ def get_sobol_sample(param_bounds, m):
     sample = sampler.random_base2(m=m)
     return qmc.scale(sample, l_bounds, u_bounds)
 
+def create_random_param_vals(params_to_update, log_params, rng, i, ):
+    random_number_of_parameters = i[0]
+    random_parameter_values = i[1:]
+    random_params_to_update = rng.choice(
+        len(params_to_update), replace=False, size=random_number_of_parameters)
+    random_params     = [params_to_update[j]        for j in random_params_to_update ]
+    random_log_params = [log_params[j]              for j in random_params_to_update ]
+    random_values     = [random_parameter_values[j] for j in random_params_to_update ]
+    return random_params, random_values, random_log_params
+
+
+def get_monte_json_fnames(jsondpath, number_of_runs, rng):
+
+    json_files = os.listdir(jsondpath)
+    json_files = [f for f in json_files of f.endswith('json')
+    # return file names without path so easier to make run_id
+    return rng.choice(json_files, number_of_runs)
+
+    
+def get_monte_sample(params_to_update, log_params, param_bounds, jsondpath, number_of_runs):
+    rng = np.random.default_rng()
+    number_of_params = rng.integers(low=2,high=8, size=number_of_runs)
+    random_param_values = [rng.uniform(low=l, high=h, size=number_of_runs) for l,h in param_bounds]
+    json_fnames = None
+    if jsondpath != 'None':
+        json_fnames =  get_monte_json_fnames(jsondpath, number_of_runs, rng)
+    random_param_list = [create_random_param_vals(params_to_update, log_params, rng, i) for i in zip(number_of_params, *random_param_values)]
+    return json_fnames, random_param_list
+        #random_params, random_values, random_log_params = 
+        
+
+
     
 if __name__ == '__main__':
     import argparse
@@ -940,6 +972,7 @@ if __name__ == '__main__':
     parser.add_argument('--ref_csv', help='reference CSV', default='None')
     parser.add_argument('--ref_pro99_csv', help='reference pro99 CSV', default='None')
     parser.add_argument('--json', help='json with param vals', nargs="+")
+    parser.add_argument('--jsondpath', help='directory with json files', default='None')
     parser.add_argument('--maxday', help='max day of simulation', type=int, default=140)
 
     parser.add_argument("--outdpath", help="output dir", default='.')
@@ -953,6 +986,8 @@ if __name__ == '__main__':
     parser.add_argument("--organism_to_tune", help="which organism to tune", choices=['PRO', 'HET'], default='PRO')
     parser.add_argument("--number_of_runs", help="number of simulations to run",  type=int, default=1024)
     parser.add_argument("--sobol", help="run sobol (will run 2^<sobol> simulation",  type=int, default=-1)
+    parser.add_argument("--monte", help="run monte carlo",
+                        action="store_true")
     
     
     args = parser.parse_args()
@@ -1040,6 +1075,26 @@ if __name__ == '__main__':
                 print('ERROR:', i, X)
                 print(inst)
                 pass
+
+    elif args.monte:
+        params_to_update, bounds, log_params = get_param_tuning_values(args.model, args.organism_to_tune)
+        bounds_logged = [(np.log(b[0]),  np.log(b[1]))  if lg else b for b,lg in zip(bounds, log_params)]
+        param_bounds =  bounds_logged
+        json_dpath = args.jsondpath
+        json_fnames, sample = get_monte_sample(params_to_update, log_params, param_bounds, args.jsondpath, args.number_of_runs)
+        
+        for i, (json_fname, (random_params_to_update, random_values, random_log_params)) in enumerate(zip(json_fnames, sample)):
+            json_fpath = os.path.join(json_dpath, json_fname)
+            updated_param_vals = get_param_vals_from_json_list(args.model, json_fpath)
+            vpro_id = json_fname.replace('.json','')
+            sen_run_id = f"{args.run_id}_monte_{vpro_id}_{i}{suffix}"
+            print(sen_run_id)
+            MSE_err = run_solver_from_X_and_save(
+                random_values, random_params_to_update, updated_param_vals, refdf, args.outdpath, sen_run_id, 
+                random_log_params, init_var_vals, 
+                calc_dydt, prepare_params_tuple, 
+                t_end , t_eval, var_names, intermediate_names)
+            print ('MSE:', MSE_err)
 
     else:
         # default - run simulation
