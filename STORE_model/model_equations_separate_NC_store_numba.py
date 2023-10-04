@@ -137,9 +137,7 @@ DOC_IDX = 3
     
     
 def get_param_vals(model_name):
-    print(f"__file__, {__file__}")
     fpath = os.path.join(os.path.dirname(__file__),'Model_Parameters Store model.xlsx',)
-    print(fpath)
     param_df = pd.read_excel(fpath)
     param_df['values'] = param_df['full model']
     if model_name not in [None, 'FULL']:
@@ -167,9 +165,7 @@ def get_param_tuning_values(model_name, organism_to_tune):
     bounds (list of pairs)
     log_params (list of bools
     """
-    print(f"__file__, {__file__}")
     fpath = os.path.join(os.path.dirname(__file__),'Model_Parameters Store model.xlsx',)
-    print(fpath)
     param_df = pd.read_excel(fpath)
     org_col = f'Tunable parameters ({organism_to_tune} fitting)'
 
@@ -957,7 +953,6 @@ def get_monte_sample(params_to_update, log_params, param_bounds, jsondpath, numb
     if jsondpath != 'None':
         json_fnames =  get_monte_json_fnames(jsondpath, number_of_runs, rng)
     random_param_list = [create_random_param_vals(params_to_update, log_params, rng, i) for i in zip(number_of_params, *random_param_values)]
-    print(json_fnames, random_param_list)
     return json_fnames, random_param_list
         #random_params, random_values, random_log_params = 
         
@@ -1085,18 +1080,22 @@ if __name__ == '__main__':
         json_fnames, sample = get_monte_sample(params_to_update, log_params, param_bounds, args.jsondpath, args.number_of_runs)
         
         for i, (json_fname, (random_params_to_update, random_values, random_log_params)) in enumerate(zip(json_fnames, sample)):
-            json_fpath = os.path.join(json_dpath, json_fname)
-            updated_param_vals = get_param_vals_from_json_list(args.model, [json_fpath])
-            vpro_id = json_fname.replace('.json','')
-            sen_run_id = f"{args.run_id}_monte_{vpro_id}_{i}{suffix}"
-            print(sen_run_id)
-            print(random_values, random_params_to_update, random_log_params, json_fpath)
-            MSE_err = run_solver_from_X_and_save(
-                random_values, random_params_to_update, updated_param_vals, refdf, args.outdpath, sen_run_id, 
-                random_log_params, init_var_vals, 
-                calc_dydt, prepare_params_tuple, 
-                t_end , t_eval, var_names, intermediate_names)
-            print ('MSE:', MSE_err)
+            try:
+                json_fpath = os.path.join(json_dpath, json_fname)
+                updated_param_vals = get_param_vals_from_json_list(args.model, [json_fpath])
+                vpro_id = json_fname.replace('.json','')
+                sen_run_id = f"{args.run_id}_monte_{vpro_id}_{i}{suffix}"
+                print(sen_run_id)
+                MSE_err = run_solver_from_X_and_save(
+                    random_values, random_params_to_update, updated_param_vals, refdf, args.outdpath, sen_run_id, 
+                    random_log_params, init_var_vals, 
+                    calc_dydt, prepare_params_tuple, 
+                    t_end , t_eval, var_names, intermediate_names)
+                print ('MSE:', MSE_err)
+            except Exception as inst:
+                print('ERROR:', i, X)
+                print(inst)
+                pass
 
     else:
         # default - run simulation
