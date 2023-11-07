@@ -21,6 +21,7 @@ All variables are in $\mu M$.
 ## Death and losses
 Loss processes (death and leakage) is modeled linearly as a precentage of the biomass/stores.
 We use exponential decay – in ISMEJ we show that other formulations are better for co-cultures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
+
 $deathB_i = M_i * B_i$
 
 $deathN_i = M_i * N_i$
@@ -66,11 +67,11 @@ $QC$ is the C/N ratio of organism *i*.
 ### ROS
 ROS penalty is imposed in the ROS model. 
 
-$ROSpenalty = e^{- \omega_{ROS}*ROS}$
+$ROSpenalty_i = e^{- \omega_{i}*ROS}$
 
 
 ### Gross uptake 
-$grossUptake_{ij} = Vmax_{ij} * B_{i} * limit_{ij}  * reg_{ij} * ROSpenalty_{ij}$
+$grossUptake_{ij} = Vmax_{ij} * B_{i} * limit_{ij}  * reg_{ij} * ROSpenalty_{i}$
 
 $uptakeN_i = grossUptake_{i,DIN} +  grossUptake_{i,DON}$
 
@@ -90,7 +91,7 @@ $respirationC_i = (b_i * biosynthesisN_i + B_i * r0_i) * C2N_i$
 
 If C store is not big enough, break some of the biomass into the stores. Make sure $C_i$ is not negative
 
-$biomassbreakdownC = max(0, respirationC +  biosynthesisN * paramCN - storeC - uptakeC)$
+$biomassbreakdownC_i = max(0, respirationC_i +  biosynthesisN_i * C2N_i - C_i - uptakeC_i)$
 
 
 The store change is modeled as uptake minus biosynthesis and respiration.
@@ -114,7 +115,7 @@ $overflowN_i = netDeltaN_i - storekeepN_i$
 $overflowC_i = netDeltaC_i - storekeepN_i * C2N_i$
 
 ## ROS
-ROS are produce by both organisms and are toxic, they limit growth.
+ROS is modeled in the ROS model. ROS is produced by both organisms and is toxic, limiting growth.
 ROS is an unstable compounds and decays over time.
 
 $ROSdecay = ROS * ROSdecayRate$
@@ -133,13 +134,13 @@ $ROSbreakdown_H = Vmax_{H,ROS} * B_H * netROS / (netROS + Kn_{H,ROS})$
 $dROS/dt = \sum{ROSrelease_i} - ROSdecay - ROSbreakdown_H$
 
 ## DON breakdown due to exoenzymes. 
-DON is degraded to DIN by exoenzymes released by the bacteria. This DIN is then available to both bacteria for uptake.
+In the exoenzyme model, DON is degraded to DIN by exoenzymes released by the bacteria. This DIN is then available to both bacteria for uptake.
 We did not model spontaneous breakdown of DON, only exoenzyme mediated. Also there is no cost for the bacteria to release these enzymes.
 
 $DON2DIN_i = DON2DINrate_i * B_i * DON$
 
 
-## air water exchange
+## Air water exchange
 $DICAirWaterExchange   = - (DIC - csat) / airWaterExchangeConstant$
 
 Where $csat$ is the saturated DIC concentration. and $airWaterExchangeConstant$ is a constant computed as:
@@ -155,9 +156,9 @@ $totaldeathC_i = deathB_i * C2N_i + deathC_i$
 
 $dC_i/dt = netDeltaC_i - overflowC_i - deathC_i$
 
-$dDIC/dt = DICAirWaterExchange + \sum{(respirationC_i - grossuptake_{i,DIC})}$
+$dDIC/dt = DICAirWaterExchange + \sum{(respirationC_i - grossUptake_{i,DIC})}$
 
-$dDOC/dt = \sum{(totaldeathC_i * \gamma_{i} + overflowC_i - grossuptake_{i,DOC})}$
+$dDOC/dt = \sum{(totaldeathC_i * \gamma_{i} + overflowC_i - grossUptake_{i,DOC})}$
 
 $dRDOC/dt = \sum{totaldeathC_i * (1 - \gamma_{i})}$
 
@@ -172,11 +173,12 @@ $dB_i/dt = biosynthesisN_i - biomassbreakdownC_i / C2N_i - deathB_i  $
 
 $dN_i/dt = netDeltaN_i - overflowN_i - deathN_i$
 
-$dDON/dt = \sum{(totaldeathN_i * \gamma_{i} - grossuptake_{i,DON} - DON2DIN_i)}$
+$dDIN/dt = \sum{(overflowN_i + DON2DIN_i - grossUptake_{i,DIN})}$
+
+$dDON/dt = \sum{(totaldeathN_i * \gamma_{i} - grossUptake_{i,DON} - DON2DIN_i)}$
 
 $dRDON/dt = \sum{totaldeathN_i * (1 - \gamma_{i})}$
 
-$dDIN/dt = \sum{(overflowN_i + DON2DIN_i - grossuptake_{i,DIN})}$
 
 Assuming that recalcitrant DON is released only during mortality/leakiness.
 Assuming RDON/RDOC is recalcitrant to both organisms.
