@@ -1,6 +1,7 @@
 # Introduction
 This document describes the model. We are modeling  the interaction between *Prochlorococcus*, an autotrophic phytoplankton, and co-occurring marine heterotrophic bacterias.
 
+The model represents the interaction between the autotroph and heterotroph through the lens of nutrien
 # Model variables
 All variables are in $\mu M$. 
 
