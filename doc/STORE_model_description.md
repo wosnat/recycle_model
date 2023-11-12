@@ -1,7 +1,81 @@
 # Introduction
 This document describes the model. We are modeling  the interaction between *Prochlorococcus*, an autotrophic phytoplankton, and co-occurring marine heterotrophic bacterias.
 
-The model represents the interaction between the autotroph and heterotroph through the lens of nutrien
+The model represents the interaction between the autotroph and heterotroph through the lens of nutrients exchanges and detoxification.
+
+![image](https://github.com/wosnat/recycle_model/assets/22752755/c97f696a-ae02-4469-a00f-cdaf4f1780b9)
+
+
+# Main model overview
+In our model, C and N are taken up from dissolved organic and/or inorganic forms into C and N stores ($C_i$ and $N_i$ respectively), which are then combined through biosynthesis into functional biomass  ($B_i$, figure 1). Functional biomass is either degraded back into stores to support respiration or lost through mortality (Eq 1)
+
+The stores are utilized for biosynthesis, respiration (C store only) and are degraded into dessolved organic matter upon death (Eq2, Eq3). When the stores are imbalanced, some of them may be exuded as overflow (see below).
+
+
+Eq1:    $dB_i/dt = biosynthesisN_i - biomassbreakdownC_i / C2N_i - deathB_i  $
+
+Eq2:    $dN_i/dt = uptakeN_i + biomassbreakdownC_i / C2N_i - biosynthesisN_i - overflowN_i - deathN_i$
+
+Eq3:    $dC_i/dt = uptakeC_i + biomassbreakdownC_i - biosynthesisN_i * C2N_i  - respirationC_i - overflowC_i - deathC_i$
+
+<br />
+
+
+
+The synthesis of functional biomass ($\mu M  N/sec$)) is determined by the limiting store (C or N in $\mu M$) times a biosynthesis rate ($1/sec$) (Eq4). The C and N stores available for biosynthesis include storage and uptake.
+
+Eq4:   $biosynthesisN_i = min(N_i + uptakeN_i, (C_i + uptakeC_i) / C2N_i) * Kmtb_i$
+
+
+Respiration is comprised of growth associated respiration controlled by $b_i$ and maintenance associated respiration controlled by $r0$ (Eq5).
+
+Eq5:   $respirationC_i = (b_i * biosynthesisN_i + B_i * r0_i) * C2N_i$
+
+
+The breakdown of biomass does not need occur if the cell is in balanced growth (i.e. can be equal to zero). However, biomass may be broken down to support respiration. Respiration is assumed to occur from the C storage (e.g. carbohydrates or lipids), but if there is not enough C storage biomass will be degraded instead (eq 6). Note that equation 6 is calculated after the calculation of biosynthesis but before the calculation of the C store, and hence the needs to incorporate also the C used for biosynthesis (Eq 6,7).
+
+Eq6: $requiredCStore_i = C_i + uptakeC_i - biosynthesisN_i * C2N_i $
+
+E67: $biomassbreakdownC_i = max(0, respirationC_i - requiredCStore_i)$
+
+
+# carbon Resources
+
+DIC is replCarbon 
+Some of the carbon is uptaken be the bacteria, 
+
+
+$totaldeathC_i = deathB_i * C2N_i + deathC_i$
+
+$dDIC/dt = DICAirWaterExchange + \sum{(respirationC_i - grossUptake_{i,DIC})}$
+
+$dDOC/dt = \sum{(totaldeathC_i * \gamma_{i} + overflowC_i - grossUptake_{i,DOC})}$
+
+$dRDOC/dt = \sum{totaldeathC_i * (1 - \gamma_{i})}$
+
+Where $\gamma_{i}$ is the portion of the losses that is recalcitrant. 
+
+
+## N differential equations
+
+$totaldeathN_i = deathB_i + deathN_i$
+
+
+$dN_i/dt = netDeltaN_i - overflowN_i - deathN_i$
+
+$dDIN/dt = \sum{(overflowN_i + DON2DIN_i - grossUptake_{i,DIN})}$
+
+$dDON/dt = \sum{(totaldeathN_i * \gamma_{i} - grossUptake_{i,DON} - DON2DIN_i)}$
+
+$dRDON/dt = \sum{totaldeathN_i * (1 - \gamma_{i})}$
+
+
+Assuming that recalcitrant DON is released only during mortality/leakiness.
+Assuming RDON/RDOC is recalcitrant to both organisms.
+
+
+
+
 # Model variables
 All variables are in $\mu M$. 
 
