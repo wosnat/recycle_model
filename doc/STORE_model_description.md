@@ -3,7 +3,6 @@ This document describes the model. We are modeling  the interaction between *Pro
 
 The model represents the interaction between the autotroph and heterotroph through the lens of nutrients exchanges and detoxification.
 
-![image](https://github.com/wosnat/recycle_model/assets/22752755/cf814c98-3190-48fc-801d-5aba284048e7)
 
 # Model variables
 All variables are in $\mu M$. 
@@ -23,6 +22,8 @@ In the equation below, *i* is the subscript for population, and can be either *P
 * $ROS$ - reactive oxygen species
 
 # Main model overview
+![image](https://github.com/wosnat/recycle_model/assets/22752755/93bd90ac-fb83-4eb8-be1f-3a8d5a945e48)
+
 In our model, C and N are taken up from dissolved organic and/or inorganic forms into C and N stores ($C_i$ and $N_i$ respectively), which are then combined through biosynthesis into functional biomass  ($B_i$, figure 1). Functional biomass is either degraded back into stores to support respiration or lost through mortality (Eq 1)
 
 The functional biomass has a fixed C/N ratio ($C2N_i$). $B_i$, the biomass variable is maintained in $\mu M  N$, representing also the corresponding C biomass of $C2N_i * B_i$.
