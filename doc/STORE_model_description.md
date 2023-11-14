@@ -191,7 +191,9 @@ Eq32: $netDeltaN_i = uptakeN_i + biomassbreakdownC_i / C2N_i - biosynthesisN_i $
 
 Eq33: $netDeltaC_i = uptakeC_i + biomassbreakdownC_i - biosynthesisN_i * C2N_i  - respirationC_i$
 
-Eq34: $storekeepN = min(netDeltaN, netDeltaC_i / C2N_i) $
+$storekeepN_i$ is the nutrient limited uptake, maintaining the C:N ratio of the organism.
+
+Eq34: $storekeepN_i = min(netDeltaN, netDeltaC_i / C2N_i) $
 
 Eq35: $overflowN_i = netDeltaN_i - storekeepN_i$
 
