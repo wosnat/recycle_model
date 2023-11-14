@@ -75,7 +75,7 @@ if __name__ == '__main__':
 
     dba_km = TimeSeriesKMeans(
         n_clusters=args.n_clusters,
-        n_init=args.n_clusters, 
+        n_init=args.n_init, 
         max_iter=args.max_iter,
         metric=args.metric,
         verbose=True,
