@@ -144,11 +144,12 @@ and $Kn_{ij}$ is the $Kn$ affinity for of organism *i* for resource *j*.
 
 Uptake is regulated by not letting the stores grow too large. Using Droop-like equations.
 
-Eq23: $QC_i = (C_i + B_i * C2N_i) / (N_i + B_i)$
+Eq23: $Q_{i,C} = \frac{C_i + B_i * C2N_i}{N_i + B_i}$
 
-Eq24: $regC_i = 1 - (QC_i / QCmax_i)$
+Eq24: $Q_{i,N} =  \frac{N_i + B_i}{C_i + B_i * C2N_i}$
 
-Eq25: $regN_i = 1 - (QCmin_i / QC_i)$
+Eq25: $reg_i = \frac{Qmax_{ij} - Q_{ij}}{Qmax_{ij} - Qmin_{ij}}$
+
 
 Where $C2N_i$ is a parameter describing the C/N ratio in the biomass of organism *i*.
 $QCmax_i$ and $QCmin_i$ are the minimum and maximum C/N ratios for organism *i*.
@@ -187,17 +188,14 @@ In photosynthetic organisms this includes photosyntheate that cannnot be utilize
 In the heterotrophs, under C limitation, carbon is extracted from organic compouds and the N containing waste (e.g. NH4) is released.
 Make the store maintain the C:N ratio and exude the rest.
 
-Eq32: $netDeltaN_i = uptakeN_i + biomassbreakdownC_i / C2N_i - biosynthesisN_i $
+Eq32: $delta_{i,N} = N_i - C_i  / C2N_i $
 
-Eq33: $netDeltaC_i = uptakeC_i + biomassbreakdownC_i - biosynthesisN_i * C2N_i  - respirationC_i$
+Eq32: $delta_{i,C} = C_i - N_i * C2N_i  $
 
-$storekeepN_i$ is the nutrient limited uptake, maintaining the C:N ratio of the organism.
+Eq32: $overflow_{ij} = max(0, delta_{ij}) * e^{-reg_{ij}} * EO_{ij}$
 
-Eq34: $storekeepN_i = min(netDeltaN, netDeltaC_i / C2N_i) $
+Where $reg_{ij}$ is the droop-like regulation (see Uptake above) and $EO_{ij}$ is the overflow rate (1/sec).
 
-Eq35: $overflowN_i = netDeltaN_i - storekeepN_i$
-
-Eq36: $overflowC_i = netDeltaC_i - storekeepN_i * C2N_i$
 
 ## DON breakdown due to exoenzymes. 
 In the exoenzyme model, DON is degraded to DIN by exoenzymes released by the bacteria. This DIN is then available to both bacteria for uptake.
