@@ -190,9 +190,9 @@ Make the store maintain the C:N ratio and exude the rest.
 
 Eq32: $delta_{i,N} = N_i - C_i  / C2N_i $
 
-Eq32: $delta_{i,C} = C_i - N_i * C2N_i  $
+Eq33: $delta_{i,C} = C_i - N_i * C2N_i  $
 
-Eq32: $overflow_{ij} = max(0, delta_{ij}) * e^{-reg_{ij}} * EO_{ij}$
+Eq34: $overflow_{ij} = max(0, delta_{ij}) * e^{-reg_{ij}} * EO_{ij}$
 
 Where $reg_{ij}$ is the droop-like regulation (see Uptake above) and $EO_{ij}$ is the overflow rate (1/sec).
 
@@ -201,18 +201,18 @@ Where $reg_{ij}$ is the droop-like regulation (see Uptake above) and $EO_{ij}$ i
 In the exoenzyme model, DON is degraded to DIN by exoenzymes released by the bacteria. This DIN is then available to both bacteria for uptake.
 We did not model spontaneous breakdown of DON, only exoenzyme mediated. Also there is no cost for the bacteria to release these enzymes.
 
-Eq37: $DON2DIN_i = EXOrate_i * B_i * DON$
+Eq35: $DON2DIN_i = EXOrate_i * B_i * DON$
 
-Eq37: $globalDON2DIN = DON2DINrate * DON$
+Eq36: $globalDON2DIN = DON2DINrate * DON$
 
 
 
 ## Air water exchange
-Eq38: $DICAirWaterExchange   = - (DIC - csat) / airWaterExchangeConstant$
+Eq37: $DICAirWaterExchange   = - (DIC - csat) / airWaterExchangeConstant$
 
 Where $csat$ is the saturated DIC concentration. and $airWaterExchangeConstant$ is a constant computed as:
 
-Eq39: $airWaterExchangeConstant = (h / (Kg * B * 0.01))$
+Eq38: $airWaterExchangeConstant = (h / (Kg * B * 0.01))$
 
 Where $h$ is the height of the media in meters,  $Kg$ is the exchange rate in m sec-1 
 and $B$ is the Revelle buffer factor. 
