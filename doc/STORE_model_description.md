@@ -40,7 +40,7 @@ Eq3:    $dC_i/dt = uptakeC_i + biomassbreakdownC_i - biosynthesisN_i * C2N_i  - 
 
 The synthesis of functional biomass ($\mu M  N/sec$)) is determined by the limiting store (C or N in $\mu M$) times a biosynthesis rate ($1/sec$) (Eq4). The C and N stores available for biosynthesis include storage and uptake.
 
-Eq4:   $biosynthesisN_i = min(N_i + uptakeN_i, (C_i + uptakeC_i) / C2N_i) * Kmtb_i$
+Eq4:   $biosynthesisN_i = min(N_i + uptakeN_i, \frac{C_i + uptakeC_i}{C2N_i}) * Kmtb_i$
 
 
 Respiration is comprised of growth associated respiration controlled by $b_i$ and maintenance associated respiration controlled by $r0$ (Eq5).
@@ -101,9 +101,9 @@ The system is closed to nitrogen. The nitrogen budget consists of the initial ni
 
 Eq12: $totaldeathN_i = deathB_i + deathN_i$
 
-Eq13: $dDIN/dt = \sum{(overflowN_i + DON2DIN_i - grossUptake_{i,DIN})}$
+Eq13: $dDIN/dt = \sum{(overflowN_i + DON2DIN_i - grossUptake_{i,DIN})} + globalDON2DIN$
 
-Eq14: $dDON/dt = \sum{(totaldeathN_i * \gamma_{i} - grossUptake_{i,DON} - DON2DIN_i)}$
+Eq14: $dDON/dt = \sum{(totaldeathN_i * \gamma_{i} - grossUptake_{i,DON} - DON2DIN_i)} - globalDON2DIN $
 
 Eq15: $dRDON/dt = \sum{totaldeathN_i * (1 - \gamma_{i})}$
 
@@ -136,7 +136,7 @@ Eq21: $uptakeC_i = grossUptake_{i,DIC} +  grossUptake_{i,DOC}$
 
 We are using monod limits to model the uptake dynamics based on resource availability
 
-Eq22: $limit_{ij} = R_j / (R_j + Kn_{ij})$
+Eq22: $limit_{ij} = \frac{R_j}{R_j + Kn_{ij}}$
 
 Where $R_j$ is one of the resources ($DOC$, $DON$, $DIC$, $DIN$),
 and $Kn_{ij}$ is the $Kn$ affinity for of organism *i* for resource *j*.
@@ -177,7 +177,7 @@ Eq29: $ROSrelease_i = E_{i,ROS} * B_i$
 ROS breakdown is a common good that may be part of the positive interaction between *Prochlorococcus* and the heterotrophs.
 *Prochlorococcus* cannot break down ROS, and may benefit from the breakdown performed by the heterotroph.
 
-Eq30: $ROSbreakdown_H = Vmax_{H,ROS} * B_H * netROS / (netROS + Kn_{H,ROS})$
+Eq30: $ROSbreakdown_H = Vmax_{H,ROS} * B_H * \frac{netROS}{netROS + Kn_{H,ROS}}$
 
 Eq31: $dROS/dt = \sum{ROSrelease_i} - ROSdecay - ROSbreakdown_H$
 
@@ -201,7 +201,10 @@ Where $reg_{ij}$ is the droop-like regulation (see Uptake above) and $EO_{ij}$ i
 In the exoenzyme model, DON is degraded to DIN by exoenzymes released by the bacteria. This DIN is then available to both bacteria for uptake.
 We did not model spontaneous breakdown of DON, only exoenzyme mediated. Also there is no cost for the bacteria to release these enzymes.
 
-Eq37: $DON2DIN_i = DON2DINrate_i * B_i * DON$
+Eq37: $DON2DIN_i = EXOrate_i * B_i * DON$
+
+Eq37: $globalDON2DIN = DON2DINrate * DON$
+
 
 
 ## Air water exchange
