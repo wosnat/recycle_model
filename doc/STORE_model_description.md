@@ -9,17 +9,18 @@ All variables are in $\mu M$.
 
 In the equation below, $i$ is the subscript for population, and can be either *Prochlorococcus* or Heterotroph.
 
-
-* $B_i$ - biomass
-* $N_i$ - N store
-* $C_i$ - C store
-* $DON$ - dissolved organic N
-* $RDON$ - recalcitrant dissolved organic N
-* $DIN$ - dissolved inorganic N
-* $DOC$ - dissolved organic C
-* $RDOC$ - recalcitrant dissolved organic C
-* $DIC$ - dissolved inorganic C
-* $ROS$ - reactive oxygen species
+|Variable | Unit         | Description                          |
+|---------|--------------|--------------------------------------|
+| $B_i$   | $\mu M N$    | functional biomass in N              |
+| $N_i$   | $\mu M N$    |  N store                             |
+| $C_i$   | $\mu M C$    |  C store                             |
+| $DON$   | $\mu M N$    |  dissolved organic N                 |
+| $RDON$  | $\mu M N$    |  recalcitrant dissolved organic N    |
+| $DIN$   | $\mu M N$    |  dissolved inorganic N               |
+| $DOC$   | $\mu M C$    |  dissolved organic C                 |
+| $RDOC$  | $\mu M C$    |  recalcitrant dissolved organic C    |
+| $DIC$   | $\mu M C$    |  dissolved inorganic C               |
+| $ROS$   | $\mu M ROS$  |  reactive oxygen species             |
 
 # Main model overview
 ![image](https://github.com/wosnat/recycle_model/assets/22752755/93bd90ac-fb83-4eb8-be1f-3a8d5a945e48)
