@@ -5,22 +5,22 @@ The model represents the interaction between the autotroph and heterotroph throu
 
 
 # Model variables
-All variables are in $\mu M$. 
-
-In the equation below, $i$ is the subscript for population, and can be either *Prochlorococcus* or Heterotroph.
 
 |Variable | Unit         | Description                          |
 |---------|--------------|--------------------------------------|
-| $B_i$   | $\mu M N$    | functional biomass in N              |
+| $B_i$   | $\mu M N$    | Functional biomass in N              |
 | $N_i$   | $\mu M N$    |  N store                             |
 | $C_i$   | $\mu M C$    |  C store                             |
-| $DON$   | $\mu M N$    |  dissolved organic N                 |
-| $RDON$  | $\mu M N$    |  recalcitrant dissolved organic N    |
-| $DIN$   | $\mu M N$    |  dissolved inorganic N               |
-| $DOC$   | $\mu M C$    |  dissolved organic C                 |
-| $RDOC$  | $\mu M C$    |  recalcitrant dissolved organic C    |
-| $DIC$   | $\mu M C$    |  dissolved inorganic C               |
-| $ROS$   | $\mu M ROS$  |  reactive oxygen species             |
+| $DON$   | $\mu M N$    |  Dissolved Organic N                 |
+| $RDON$  | $\mu M N$    |  Recalcitrant Dissolved Organic N    |
+| $DIN$   | $\mu M N$    |  Dissolved Inorganic N               |
+| $DOC$   | $\mu M C$    |  Dissolved Organic C                 |
+| $RDOC$  | $\mu M C$    |  Recalcitrant Dissolved Organic C    |
+| $DIC$   | $\mu M C$    |  Dissolved Inorganic C               |
+| $ROS$   | $\mu M ROS$  |  Reactive Oxygen Species             |
+
+
+$i$ is the subscript for population, and can be either *Prochlorococcus* or Heterotroph.
 
 # Main model overview
 ![image](https://github.com/wosnat/recycle_model/assets/22752755/93bd90ac-fb83-4eb8-be1f-3a8d5a945e48)
