@@ -7,7 +7,7 @@ The model represents the interaction between the autotroph and heterotroph throu
 # Model variables
 All variables are in $\mu M$. 
 
-In the equation below, *i* is the subscript for population, and can be either *Prochlorococcus* or Heterotroph.
+In the equation below, $i$ is the subscript for population, and can be either *Prochlorococcus* or Heterotroph.
 
 
 * $B_i$ - biomass
@@ -40,7 +40,7 @@ Eq3:    $dC_i/dt = uptakeC_i + biomassbreakdownC_i - biosynthesisN_i  \cdot  C2N
 
 The synthesis of functional biomass ($\mu M  N/sec$)) is determined by the limiting store (C or N in $\mu M$) times a biosynthesis rate ($1/sec$) (Eq4). The C and N stores available for biosynthesis include storage and uptake.
 
-Eq4:   $biosynthesisN_i = min(N_i + uptakeN_i, \frac{C_i + uptakeC_i}{C2N_i})  \cdot  Kmtb_i$
+Eq4:   $biosynthesisN_i = \min(N_i + uptakeN_i, \frac{C_i + uptakeC_i}{C2N_i})  \cdot  Kmtb_i$
 
 
 Respiration is comprised of growth associated respiration controlled by $b_i$ and maintenance associated respiration controlled by $r0$ (Eq5).
@@ -52,7 +52,7 @@ The breakdown of biomass does not need occur if the cell is in balanced growth (
 
 Eq6: $requiredCStore_i = C_i + uptakeC_i - biosynthesisN_i  \cdot  C2N_i $
 
-Eq7: $biomassbreakdownC_i = max(0, respirationC_i - requiredCStore_i)$
+Eq7: $biomassbreakdownC_i = \max(0, respirationC_i - requiredCStore_i)$
 
 # Model variants
 
@@ -93,7 +93,7 @@ Eq10: $dDOC/dt = \sum{(totaldeathC_i  \cdot  \gamma_{i} + overflowC_i - grossUpt
 
 Eq11: $dRDOC/dt = \sum{totaldeathC_i  \cdot  (1 - \gamma_{i})}$
 
-Where $\gamma_{i}$ is the portion of the losses (death and leakiness) that is recalcitrant. 
+Where $\gamma_{i}$ is the portion of the losses (death and leakiness) that is labile (avaliable for consumption). 
 
 # Nitrogen Resources
 
@@ -126,7 +126,7 @@ Eq18: $deathC_i = M_i  \cdot  C_i$
 
 ## Uptake
 
-Eq19: $grossUptake_{ij} = Vmax_{ij}  \cdot  B_{i}  \cdot  limit_{ij}   \cdot  reg_{ij}  \cdot  ROSpenalty_{i}$
+Eq19: $grossUptake_{ij} = Vmax_{ij}  \cdot  B_{i}  \cdot  \frac{R_j}{R_j + Kn_{ij}}   \cdot  reg_{ij}  \cdot  ROSpenalty_{i}$
 
 Eq20: $uptakeN_i = grossUptake_{i,DIN} +  grossUptake_{i,DON}$
 
@@ -134,27 +134,24 @@ Eq21: $uptakeC_i = grossUptake_{i,DIC} +  grossUptake_{i,DOC}$
 
 
 
-We are using monod limits to model the uptake dynamics based on resource availability
-
-Eq22: $limit_{ij} = \frac{R_j}{R_j + Kn_{ij}}$
-
+We are using monod limits to model the uptake dynamics based on resource availability.
 Where $R_j$ is one of the resources ($DOC$, $DON$, $DIC$, $DIN$),
-and $Kn_{ij}$ is the $Kn$ affinity for of organism *i* for resource *j*.
+and $Kn_{ij}$ is the $Kn$ affinity for of organism $i$ for resource $j$.
 
 
 Uptake is regulated by not letting the stores grow too large. Using Droop-like equations.
 
-Eq23: $Q_{i,C} = \frac{C_i + B_i  \cdot  C2N_i}{N_i + B_i}$
+Eq22: $Q_{i,C} = \frac{C_i + B_i  \cdot  C2N_i}{N_i + B_i}$
 
-Eq24: $Q_{i,N} =  \frac{N_i + B_i}{C_i + B_i  \cdot  C2N_i}$
+Eq23: $Q_{i,N} =  \frac{N_i + B_i}{C_i + B_i  \cdot  C2N_i}$
 
-Eq25: $reg_i = \frac{Qmax_{ij} - Q_{ij}}{Qmax_{ij} - Qmin_{ij}}$
+Eq24: $reg_{ij} = \frac{Qmax_{ij} - Q_{ij}}{Qmax_{ij} - Qmin_{ij}}$
 
 
-Where $C2N_i$ is a parameter describing the C/N ratio in the biomass of organism *i*.
-$QCmax_i$ and $QCmin_i$ are the minimum and maximum C/N ratios for organism *i*.
-Both $regC_i$ and $regN_i$ are clipped to be between 0 and 1.
-$QC$ is the C/N ratio of organism *i*.
+Where $C2N_i$ is a parameter describing the C/N ratio in the biomass of organism $i$.
+$QCmax_i$ and $QCmin_i$ are the minimum and maximum C/N ratios for organism $i$.
+$reg_{ij}$ is clipped to be between 0 and 1.
+$Q_{i,C}$ is the C/N ratio of organism $i$, $Q_{i,N}$ is the N/C ratio of organism $i$.
 
 **Question: is DIC uptake by photosynthesis regulated? **
 
@@ -208,11 +205,11 @@ Eq36: $globalDON2DIN = DON2DINrate  \cdot  DON$
 
 
 ## Air water exchange
-Eq37: $DICAirWaterExchange   = - (DIC - csat) / airWaterExchangeConstant$
+Eq37: $DICAirWaterExchange   = - \frac{DIC - csat}{airWaterExchangeConstant}$
 
-Where $csat$ is the saturated DIC concentration. and $airWaterExchangeConstant$ is a constant computed as:
+Where $csat$ is the saturated DIC concentration and $airWaterExchangeConstant$ is a constant computed as:
 
-Eq38: $airWaterExchangeConstant = (h / (Kg  \cdot  B  \cdot  0.01))$
+Eq38: $airWaterExchangeConstant = \frac{h}{Kg  \cdot  B  \cdot  0.01}$
 
 Where $h$ is the height of the media in meters,  $Kg$ is the exchange rate in m sec-1 
 and $B$ is the Revelle buffer factor. 
