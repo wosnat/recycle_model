@@ -399,7 +399,7 @@ def compute_net_uptake(
 
 @njit
 def compute_losses(
-    grossbiomass, grossstoreN, grossstoreC, regN, regC, paramCN, paramOverflow, paramE_leak, paramM
+    grossbiomass, grossstoreN, grossstoreC, QC, paramCN, paramQCmax, paramQCmin, paramOverflow, paramE_leak, paramM
 ):
     # death
     # Need to explain why we used exponential decay – in ISMEJ we show that other formulations are better for co-cultures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
@@ -413,10 +413,17 @@ def compute_losses(
     # Oh/Op: enable overflow (0 or 1)
     # umol N / L
     if (paramOverflow == 1):
+        paramQNmax = 1 / paramQCmin
+        QN = 1 / QC
+        regC = 1 - np.power(QC / paramQCmax, 4)
+        regN = 1 - np.power(QN / paramQNmax, 4)
+        regN = np.clip(regN, a_min =0.0, a_max=1.0)
+        regC = np.clip(regC, a_min =0.0, a_max=1.0)
+        
         deltaN = grossstoreN - grossstoreC  / paramCN 
         deltaC = grossstoreC - grossstoreN * paramCN 
-        overflowN = np.maximum(0.0, deltaN) * np.exp(-regN) * paramE_leak
-        overflowC = np.maximum(0.0, deltaC) * np.exp(-regC) * paramE_leak
+        overflowN = np.maximum(0.0, deltaN) * regN * paramE_leak
+        overflowC = np.maximum(0.0, deltaC) * regC * paramE_leak
         #print('deltaN = ', deltaN, 'regN = ', regN, 'overflowN = ', overflowN)
     else:
         overflowN = np.zeros_like(grossstoreN)
@@ -497,7 +504,7 @@ def basic_model_cc_ode_jit1(
     deathbiomassN, deathstoreN, deathstoreC, 
     overflowN, overflowC) = compute_losses(
         grossbiomass, grossstoreN, grossstoreC, 
-        regN, regC, paramCN, paramOverflow, paramE_leak, paramM)
+        QC, paramCN, paramQCmax, paramQCmin, paramOverflow, paramE_leak, paramM)
 
     gross_uptake, uptakeN, uptakeC = compute_gross_uptake(
         biomass, storeN, storeC, resources, ROS,
