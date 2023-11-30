@@ -190,7 +190,9 @@ Eq32: $delta_{i,N} = N_i - C_i  / C2N_i $
 
 Eq33: $delta_{i,C} = C_i - N_i  \cdot  C2N_i  $
 
-Eq34: $overflow_{ij} = max(0, delta_{ij})  \cdot  e^{-reg_{ij}}  \cdot  EO_{ij}$
+Eq24: $Oreg_{ij} = 1 - [\frac{Q_{ij}}{Qmax_{ij}}]^4$
+
+Eq34: $overflow_{ij} = max(0, delta_{ij})  \cdot  Oreg_{ij}  \cdot  EO_{ij}$
 
 Where $reg_{ij}$ is the droop-like regulation (see Uptake above) and $EO_{ij}$ is the overflow rate (1/sec).
 
