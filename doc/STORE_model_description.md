@@ -161,7 +161,7 @@ $Q_{i,C}$ is the C/N ratio of organism $i$, $Q_{i,N}$ is the N/C ratio of organi
 ROS is modeled in the ROS model. ROS is produced by both organisms and is toxic, limiting growth.
 ROS is an unstable compounds and decays over time.
 
-Eq29: $ROSdecay_i = ROSdecay  \cdot  ROS $
+Eq29: $ROSdecay_i = ROSdecayRate  \cdot  ROS $
 
 ROS production depends on the biomass
 
