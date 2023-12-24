@@ -119,15 +119,19 @@ Assuming RDON/RDOC is recalcitrant to both organisms.
 Loss processes (death and leakage) is modeled linearly as a precentage of the biomass/stores.
 We use exponential decay – in ISMEJ we show that other formulations are better for co-cultures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
 
-Eq16: $deathB_i = M_i  \cdot  B_i$
+In the ROS model, ROS is a toxin, killing some of the bacteria, and ROS influence is modeled as additional mortality. (See ROS below for calculation of ROS related mortality).
 
-Eq17: $deathN_i = M_i  \cdot  N_i$
+EQ15: $lossRate_i = M_i + ROSDeathRate_i$
 
-Eq18: $deathC_i = M_i  \cdot  C_i$
+Eq16: $deathB_i = lossRate_i   \cdot  B_i$
+
+Eq17: $deathN_i = lossRate_i   \cdot  N_i$
+
+Eq18: $deathC_i = lossRate_i  \cdot  C_i$
 
 ## Uptake
 
-Eq19: $grossUptake_{ij} = Vmax_{ij}  \cdot  B_{i}  \cdot  \frac{R_j}{R_j + Kn_{ij}}   \cdot  reg_{ij}  \cdot  ROSpenalty_{i}$
+Eq19: $grossUptake_{ij} = Vmax_{ij}  \cdot  B_{i}  \cdot  \frac{R_j}{R_j + Kn_{ij}}   \cdot  reg_{ij}$
 
 Eq20: $uptakeN_i = grossUptake_{i,DIN} +  grossUptake_{i,DON}$
 
@@ -176,8 +180,7 @@ Eq30: $ROSbreakdown_i = KlossROS_{i}  \cdot  B_{i}  \cdot  ROS$
 Eq31: $dROS/dt = \sum{(ROSrelease_i - ROSbreakdown_i)} - ROSdecay $
 
 ROS penalty is imposed in the ROS model. 
-
-Eq26: $ROSpenalty_i = e^{- \omega_{i} \cdot ROS}$
+Eq26: ROSDeathRate_i = max(\omega_{i} \cdot ROS, maxROSDeathRate_i)
 
 ## Overflow
 
