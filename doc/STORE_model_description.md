@@ -156,28 +156,28 @@ $Q_{i,C}$ is the C/N ratio of organism $i$, $Q_{i,N}$ is the N/C ratio of organi
 
 **Question: is DIC uptake by photosynthesis regulated? **
 
-ROS penalty is imposed in the ROS model. 
-
-Eq26: $ROSpenalty_i = e^{- \omega_{i} \cdot ROS}$
 
 ## ROS
 ROS is modeled in the ROS model. ROS is produced by both organisms and is toxic, limiting growth.
 ROS is an unstable compounds and decays over time.
 
-Eq27: $ROSdecay = ROS  \cdot  ROSdecayRate$
-
-Eq28: $netROS = ROS - ROSdecay$
+Eq29: $ROSdecay_i = ROSdecayRate  \cdot  ROS $
 
 ROS production depends on the biomass
 
-Eq29: $ROSrelease_i = E_{i,ROS}  \cdot  B_i$
+Eq29: $ROSrelease_i = KprodROS_{i}  \cdot  B_i$
+
 
 ROS breakdown is a common good that may be part of the positive interaction between *Prochlorococcus* and the heterotrophs.
 *Prochlorococcus* cannot break down ROS, and may benefit from the breakdown performed by the heterotroph.
 
-Eq30: $ROSbreakdown_H = Vmax_{H,ROS}  \cdot  B_H  \cdot  \frac{netROS}{netROS + Kn_{H,ROS}}$
+Eq30: $ROSbreakdown_i = KlossROS_{i}  \cdot  B_{i}  \cdot  ROS$
 
-Eq31: $dROS/dt = \sum{ROSrelease_i} - ROSdecay - ROSbreakdown_H$
+Eq31: $dROS/dt = \sum{(ROSrelease_i - ROSbreakdown_i)} - ROSdecay $
+
+ROS penalty is imposed in the ROS model. 
+
+Eq26: $ROSpenalty_i = e^{- \omega_{i} \cdot ROS}$
 
 ## Overflow
 
@@ -190,7 +190,9 @@ Eq32: $delta_{i,N} = N_i - C_i  / C2N_i $
 
 Eq33: $delta_{i,C} = C_i - N_i  \cdot  C2N_i  $
 
-Eq34: $overflow_{ij} = max(0, delta_{ij})  \cdot  e^{-reg_{ij}}  \cdot  EO_{ij}$
+Eq24: $Oreg_{ij} = 1 - [\frac{Q_{ij}}{Qmax_{ij}}]^4$
+
+Eq34: $overflow_{ij} = max(0, delta_{ij})  \cdot  Oreg_{ij}  \cdot  EO_{ij}$
 
 Where $reg_{ij}$ is the droop-like regulation (see Uptake above) and $EO_{ij}$ is the overflow rate (1/sec).
 

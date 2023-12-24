@@ -66,8 +66,8 @@ R_P = 7
 R_H = 4.5 # in the range 4-6 (for DSS N limited, 11)
 
 # fg -> umol 14 (N mulecular weight) * 1e-9 (fmol -> umol)
-Qp = 12.5  * 1e-9 / 14
-Qh = 40 * 1e-9 / 14
+Qp = 7  * 1e-9 / 14
+Qh = 25 * 1e-9 / 14
 
 
 
@@ -108,7 +108,7 @@ air_water_exchange_constant = (h / (Kg * B * 0.01))
 # initial concentrations
 INIT_DIN = 100
 INIT_DIN_PRO99 = 800
-INIT_DON = 20
+INIT_DON = 3
 INIT_RDON = 0
 INIT_RDOC = 0
 # Dalit DIC: 1618.825333  or 1.62E+03 uM
