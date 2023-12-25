@@ -736,8 +736,8 @@ def solver2df(sol, var_names, par_tuple, t_eval=None,  intermediate_names=None, 
         df['Bp[C]'] = df['Bp']*paramCN[0]
         df['Bptotal[N]'] = df['Bp']+df['Np']
         df['Bptotal[C]'] = df['Bp[C]']+df['Cp']
-        df['log_Bptotal[N]'] = np.log(df['Bptotal[N]'])
-        df['log_Bptotal[C]'] = np.log(df['Bptotal[C]'])
+        #df['log_Bptotal[N]'] = np.log(df['Bptotal[N]'])
+        #df['log_Bptotal[C]'] = np.log(df['Bptotal[C]'])
         
     if 'Bh' in df.columns:
         # TODO: will not work in honly mode
@@ -793,11 +793,11 @@ def run_solver_from_new_params(
         try:
             mse_df = compute_mse(
                 df, refdf, 
-                refcol= ['ref_Bp[N]' , 'ref_Bp[C]' , 'log_ref_Bp[N]' , 'log_ref_Bp[C]' ], 
-                col=    ['Bptotal[N]', 'Bptotal[C]', 'log_Bptotal[N]', 'log_Bptotal[C]'], 
+                refcol= ['ref_Bp[N]' , 'ref_Bp[C]' ], # 'log_ref_Bp[N]' , 'log_ref_Bp[C]' ], 
+                col=    ['Bptotal[N]', 'Bptotal[C]'], # 'log_Bptotal[N]', 'log_Bptotal[C]'], 
                 timecol='t', tolerance=100)
             mse_df['RMSE'] = np.prod(mse_df[['RMSE_Bptotal[N]', 'RMSE_Bptotal[C]']], axis=1)
-            mse_df['lRMSE'] = np.prod(mse_df[['RMSE_log_Bptotal[N]', 'RMSE_log_Bptotal[C]']], axis=1)
+            #mse_df['lRMSE'] = np.prod(mse_df[['RMSE_log_Bptotal[N]', 'RMSE_log_Bptotal[C]']], axis=1)
             perr = mse_df['RMSE'].min()
 
         except Exception as inst:
@@ -965,19 +965,20 @@ def create_random_param_vals(params_to_update, log_params, rng, i, ):
 
 def get_monte_json_fnames(jsondpath, number_of_runs, rng):
 
-    json_files = os.listdir(jsondpath)
-    json_files = [f for f in json_files if f.endswith('json')]
+    if jsondpath != 'None':
+        json_files = os.listdir(jsondpath)
+        json_files = [f for f in json_files if f.endswith('json')]
+    else:
+        json_files = [None]
     # return file names without path so easier to make run_id
     return rng.choice(json_files, number_of_runs)
 
     
 def get_monte_sample(params_to_update, log_params, param_bounds, jsondpath, number_of_runs):
     rng = np.random.default_rng()
-    number_of_params = rng.integers(low=2,high=8, size=number_of_runs)
+    number_of_params = rng.integers(low=3,high=len(params_to_update), size=number_of_runs)
     random_param_values = [rng.uniform(low=l, high=h, size=number_of_runs) for l,h in param_bounds]
-    json_fnames = None
-    if jsondpath != 'None':
-        json_fnames =  get_monte_json_fnames(jsondpath, number_of_runs, rng)
+    json_fnames =  get_monte_json_fnames(jsondpath, number_of_runs, rng)
     random_param_list = [create_random_param_vals(params_to_update, log_params, rng, i) for i in zip(number_of_params, *random_param_values)]
     return json_fnames, random_param_list
         #random_params, random_values, random_log_params = 
@@ -1107,9 +1108,13 @@ if __name__ == '__main__':
         
         for i, (json_fname, (random_params_to_update, random_values, random_log_params)) in enumerate(zip(json_fnames, sample)):
             try:
-                json_fpath = os.path.join(json_dpath, json_fname)
-                updated_param_vals = get_param_vals_from_json_list(args.model, [json_fpath])
-                vpro_id = json_fname.replace('.json','')
+                if json_fname is not None:
+                    json_fpath = os.path.join(json_dpath, json_fname)
+                    updated_param_vals = get_param_vals_from_json_list(args.model, [json_fpath])
+                    vpro_id = json_fname.replace('.json','')
+                else:
+                    updated_param_vals = get_param_vals_from_json_list(args.model, [])
+                    vpro_id = ''
                 sen_run_id = f"{args.run_id}_monte_{vpro_id}_{i}{suffix}"
                 print(sen_run_id)
                 MSE_err = run_solver_from_X_and_save(
@@ -1118,6 +1123,16 @@ if __name__ == '__main__':
                     calc_dydt, prepare_params_tuple, 
                     t_end , t_eval, var_names, intermediate_names)
                 print ('MSE:', MSE_err)
+                if ref_pro99_df is not None:
+                    sen_run_id = f"{args.run_id}_monte_{vpro_id}_{i}{pro99_suffix}"
+                    print(sen_run_id)
+                    
+                    MSE_err = run_solver_from_X_and_save(
+                        random_values, random_params_to_update, updated_param_vals, ref_pro99_df, args.outdpath, sen_run_id, 
+                        random_log_params, init_var_pro99_vals, 
+                        calc_dydt, prepare_params_tuple, 
+                        t_end_pro99, t_eval_pro99, var_names, intermediate_names)
+                    print ('MSE:', MSE_err)
             except Exception as inst:
                 print('ERROR:', i, X)
                 print(inst)
