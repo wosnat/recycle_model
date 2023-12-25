@@ -228,9 +228,10 @@ def prepare_params_tuple_cc(param_vals):
         [[pars['KINp'], pars['KONp'], pars['KICp'], pars['KOCp']],
         [pars['KINh'], pars['KONh'], pars['KICh'], pars['KOCh'], ]], dtype=np.float64
     ).T
+    # make Vmax N specific by multiplying C Vmax by R_i
     vmax = np.array(
-        [[pars['VmaxINp'], pars['VmaxONp'], pars['VmaxICp'], pars['VmaxOCp']],
-        [pars['VmaxINh'], pars['VmaxONh'], pars['VmaxICh'], pars['VmaxOCh'], ]], dtype=np.float64
+        [[pars['VmaxINp'], pars['VmaxONp'], pars['VmaxICp']*pars['Rp'], pars['VmaxOCp']*pars['Rp']],
+        [pars['VmaxINh'], pars['VmaxONh'], pars['VmaxICh']*pars['Rh'], pars['VmaxOCh']*pars['Rh'], ]], dtype=np.float64
     ).T
     return (
         paramCN, paramQCmax, paramQCmin, kns, vmax, paramKmtb,paramOverflow, 
@@ -263,8 +264,9 @@ def prepare_params_tuple_ponly(param_vals):
         [[pars['KINp'], pars['KONp'], pars['KICp'], pars['KOCp']],
         ], dtype=np.float64
     ).T
+    # make Vmax N specific by multiplying C Vmax by R_i
     vmax = np.array(
-        [[pars['VmaxINp'], pars['VmaxONp'], pars['VmaxICp'], pars['VmaxOCp']],
+        [[pars['VmaxINp'], pars['VmaxONp'], pars['VmaxICp']*pars['Rp'], pars['VmaxOCp']*pars['Rp']],
         ], dtype=np.float64
     ).T
     return (
@@ -400,7 +402,7 @@ def compute_losses(
     # Need to explain why we used exponential decay – in ISMEJ we show that other formulations are better for co-cultures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
     
     # additional death due to ROS
-    additionalLossRate = np.min(ROS * paramomega_ROS, paramROSmaxD)
+    additionalLossRate = np.minimum(ROS * paramomega_ROS, paramROSmaxD)
     lossRate = paramM + additionalLossRate 
     
     deathbiomassN = lossRate * grossbiomass
@@ -652,8 +654,9 @@ def print_dydt0(calc_dydt, var_names, init_vars, par_tuple):
         print(f'd{i}/dt = {j:.2e}, init {i} = {k:.2e}, newval = {k+j:.2e}')
 
 
-def print_intermediate0(intermediate_func, interm_names, init_vars):
-    for i,j in zip(interm_names, intermediate_func(*init_vars)):
+def print_intermediate0(calc_dydt, var_names, init_vars, par_tuple, intermediate_names):
+    intermediate_vals = calc_dydt(0, init_vars, par_tuple=par_tuple, return_intermediate=True)
+    for i,j in zip(intermediate_names, intermediate_vals):
         print(f'{i:<4} = {j:.2e}')
 
 
@@ -664,10 +667,14 @@ def biomass_diff0(calc_dydt, var_names, init_vars, par_tuple):
     print (f"dBp/dt + dBh/dt + dDON/dt + dRDON/dt + dDIN/dt = { V['Bp'] + V['Np'] + V['Bh'] + V['Nh'] + V['DON'] + V['RDON'] + V['DIN'] }")
     print (f"dBp/dt + dBh/dt + dDOC/dt + dRDOC/dt + dDIC/dt = { V['Bp']*paramCN[0] + V['Cp'] + V['Bh']*paramCN[1] + V['Ch'] + V['DOC'] + V['RDOC'] + V['DIC'] }")
 
-def biomass_diff0_ponly(calc_dydt, var_names, init_vars):
-    dydt0 = calc_dydt(0, init_vars)
+
+def biomass_diff0_ponly(calc_dydt, var_names, init_vars, par_tuple):
+    dydt0 = calc_dydt(0, init_vars, par_tuple)
+    paramCN = par_tuple[0]
     V = dict(zip(var_names, dydt0))
-    print (f"dBp/dt  + dDON/dt + dRDON/dt + dDIN/dt = { V['Bp']  + V['DON'] + V['RDON'] + V['DIN'] }")
+    print (f"dBp/dt +  dDON/dt + dRDON/dt + dDIN/dt = { V['Bp'] + V['Np'] + V['DON'] + V['RDON'] + V['DIN'] }")
+    print (f"dBp/dt +  dDOC/dt + dRDOC/dt + dDIC/dt = { V['Bp']*paramCN[0] + V['Cp'] + V['DOC'] + V['RDOC'] + V['DIC'] }")
+
 
 def biomass_diff0_honly(calc_dydt, var_names, init_vars):
     dydt0 = calc_dydt(0, init_vars)
