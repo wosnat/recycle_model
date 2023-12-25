@@ -66,8 +66,8 @@ R_P = 7
 R_H = 4.5 # in the range 4-6 (for DSS N limited, 11)
 
 # fg -> umol 14 (N mulecular weight) * 1e-9 (fmol -> umol)
-Qp = 7  * 1e-9 / 14
-Qh = 25 * 1e-9 / 14
+Qp = 12.5  * 1e-9 / 14
+Qh = 40 * 1e-9 / 14
 
 
 
@@ -214,17 +214,16 @@ def prepare_params_tuple_cc(param_vals):
     paramr0  = np.array([pars['r0p'], pars['r0h']], dtype=np.float64)
     paramM = np.array([pars['Mp'], pars['Mh']], dtype=np.float64)
     paramOverflow = pars['OverflowMode']
-    paramE_leak = np.array([pars['E_leakp'], pars['E_leakh']], dtype=np.float64)
-    paramE_ROS = np.array([pars['E_ROSp'], pars['E_ROSp']], dtype=np.float64)
+    paramKoverflow = np.array([pars['Koverflowp'], pars['Koverflowh']], dtype=np.float64)
+    paramKprodROS = np.array([pars['KprodROSp'], pars['KprodROSh']], dtype=np.float64)
     paramomega_ROS = np.array([pars['omegaP'], pars['omegaH']], dtype=np.float64)
     
-    paramVmaxROSh = pars['VmaxROSh']
-    paramK_ROSh = pars['K_ROSh']
+    paramKlossROS = np.array([pars['KlossROSp'], pars['KlossROSh']], dtype=np.float64)
     paramROSMode = pars['ROSMode']
-    paramgamma_DON2DIN_exo = np.array([pars['gamma_DON2DINexop'], pars['gamma_DON2DINexoh']], dtype=np.float64)
-    paramgamma_DON2DIN = pars['gamma_DON2DIN']
+    paramKprodEXO = np.array([pars['KprodEXOp'], pars['KprodEXOh']], dtype=np.float64)
+    paramKdecayDON = pars['KdecayDON']
     paramgammaD = np.array([pars['gammaDp'], pars['gammaDh']], dtype=np.float64)
-    paramROS_decay = pars['ROS_decay']
+    paramKdecayROS = pars['KdecayROS']
     kns = np.array(
         [[pars['KINp'], pars['KONp'], pars['KICp'], pars['KOCp']],
         [pars['KINh'], pars['KONh'], pars['KICh'], pars['KOCh'], ]], dtype=np.float64
@@ -235,8 +234,8 @@ def prepare_params_tuple_cc(param_vals):
     ).T
     return (
         paramCN, paramQCmax, paramQCmin, kns, vmax, paramKmtb,paramOverflow, 
-        paramb, paramr0, paramM, paramE_leak, paramE_ROS, paramVmaxROSh, paramK_ROSh,
-        paramgamma_DON2DIN_exo, paramgamma_DON2DIN, paramgammaD, paramROS_decay, paramROSMode, paramomega_ROS)
+        paramb, paramr0, paramM, paramKoverflow, paramKprodROS, paramKlossROS, 
+        paramKprodEXO, paramKdecayDON, paramgammaD, paramKdecayROS, paramROSMode, paramomega_ROS)
 
 def prepare_params_tuple_ponly(param_vals):
     pars = param_vals
@@ -248,17 +247,16 @@ def prepare_params_tuple_ponly(param_vals):
     paramr0  = np.array([pars['r0p'], ], dtype=np.float64)
     paramM = np.array([pars['Mp'], ], dtype=np.float64)
     paramOverflow = pars['OverflowMode']
-    paramE_leak = np.array([pars['E_leakp'], ], dtype=np.float64)
-    paramE_ROS = np.array([pars['E_ROSp'], ], dtype=np.float64)
+    paramKoverflow = np.array([pars['Koverflowp'], ], dtype=np.float64)
+    paramKprodROS = np.array([pars['KprodROSp'], ], dtype=np.float64)
     paramomega_ROS = np.array([pars['omegaP'], ], dtype=np.float64)
     
-    paramVmaxROSh = pars['VmaxROSh']
-    paramK_ROSh = pars['K_ROSh']
+    paramKlossROS = pars['KlossROSp']
     paramROSMode = pars['ROSMode']
-    paramgamma_DON2DIN_exo = pars['gamma_DON2DINexop']
-    paramgamma_DON2DIN = pars['gamma_DON2DIN']
+    paramKprodEXO = pars['KprodEXOp']
+    paramKdecayDON = pars['KdecayDON']
     paramgammaD = np.array([pars['gammaDp'], ], dtype=np.float64)
-    paramROS_decay = pars['ROS_decay']
+    paramKdecayROS = pars['KdecayROS']
     kns = np.array(
         [[pars['KINp'], pars['KONp'], pars['KICp'], pars['KOCp']],
         ], dtype=np.float64
@@ -269,8 +267,8 @@ def prepare_params_tuple_ponly(param_vals):
     ).T
     return (
         paramCN, paramQCmax, paramQCmin, kns, vmax, paramKmtb,paramOverflow, 
-        paramb, paramr0, paramM, paramE_leak, paramE_ROS, paramVmaxROSh, paramK_ROSh,
-        paramgamma_DON2DIN_exo, paramgamma_DON2DIN, paramgammaD, paramROS_decay, paramROSMode, paramomega_ROS)
+        paramb, paramr0, paramM, paramKoverflow, paramKprodROS, paramKlossROS, 
+        paramKprodEXO, paramKdecayDON, paramgammaD, paramKdecayROS, paramROSMode, paramomega_ROS)
 
 
 @njit
@@ -399,7 +397,7 @@ def compute_net_uptake(
 
 @njit
 def compute_losses(
-    grossbiomass, grossstoreN, grossstoreC, QC, paramCN, paramQCmax, paramQCmin, paramOverflow, paramE_leak, paramM
+    grossbiomass, grossstoreN, grossstoreC, QC, paramCN, paramQCmax, paramQCmin, paramOverflow, paramKoverflow, paramM
 ):
     # death
     # Need to explain why we used exponential decay – in ISMEJ we show that other formulations are better for co-cultures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
@@ -422,8 +420,8 @@ def compute_losses(
         
         deltaN = grossstoreN - grossstoreC  / paramCN 
         deltaC = grossstoreC - grossstoreN * paramCN 
-        overflowN = np.maximum(0.0, deltaN) * regN * paramE_leak
-        overflowC = np.maximum(0.0, deltaC) * regC * paramE_leak
+        overflowN = np.maximum(0.0, deltaN) * regN * paramKoverflow
+        overflowC = np.maximum(0.0, deltaC) * regC * paramKoverflow
         #print('deltaN = ', deltaN, 'regN = ', regN, 'overflowN = ', overflowN)
     else:
         overflowN = np.zeros_like(grossstoreN)
@@ -437,14 +435,14 @@ def compute_losses(
 
 @njit
 def compute_ROS(
-    biomass, Bh, ROS, paramROSMode, paramROS_decay, paramE_ROS, paramVmaxROSh, paramK_ROSh
+    biomass, Bh, ROS, paramROSMode, paramKdecayROS, paramKprodROS, paramKlossROS
 ):
     if paramROSMode == 1:
-        ROSdecay = ROS * paramROS_decay
+        ROSdecay = ROS * paramKdecayROS
         netROS = ROS - ROSdecay
         # ROS production depends on biomass
-        ROSrelease = paramE_ROS * biomass
-        ROSbreakdownh = paramVmaxROSh * Bh * netROS / (netROS + paramK_ROSh)
+        ROSrelease = paramKprodROS * biomass
+        ROSbreakdownh = paramKlossROS * Bh * netROS / (netROS + paramK_ROSh)
         dROSdt = np.sum(ROSrelease) - ROSdecay - ROSbreakdownh
         return dROSdt 
     else:
@@ -468,12 +466,12 @@ def compute_C_odes(
 @njit
 def compute_N_odes(
     DON, biomass, netDeltaN, gross_uptake, biosynthesisN, biomass_breakdownC, overflowN, 
-    deathbiomassN, deathstoreN, deathstoreC, paramCN, paramgammaD, paramgamma_DON2DIN_exo, paramgamma_DON2DIN
+    deathbiomassN, deathstoreN, deathstoreC, paramCN, paramgammaD, paramKprodEXO, paramKdecayDON
 ):
     # DON breakdown due to exoenzymes
     deathN = deathbiomassN + deathstoreN
-    DON2DIN_exo = paramgamma_DON2DIN_exo * biomass * DON 
-    DON2DIN = paramgamma_DON2DIN * DON 
+    DON2DIN_exo = paramKprodEXO * biomass * DON 
+    DON2DIN = paramKdecayDON * DON 
     dBdt = biosynthesisN - biomass_breakdownC / paramCN - deathbiomassN
     dNdt = netDeltaN - overflowN - deathstoreN
     dDONdt = np.sum(
@@ -492,8 +490,8 @@ def compute_N_odes(
 def basic_model_cc_ode_jit1(
     grossbiomass, grossstoreN, grossstoreC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS, Bh,
     paramCN, paramQCmax, paramQCmin, paramkns, paramvmax, paramKmtb,paramOverflow,
-    paramb, paramr0, paramM, paramE_leak, paramE_ROS, paramVmaxROSh, paramK_ROSh,
-    paramgamma_DON2DIN_exo, paramgamma_DON2DIN, paramgammaD, paramROS_decay, paramROSMode, paramomega_ROS
+    paramb, paramr0, paramM, paramKoverflow, paramKprodROS, paramKlossROS, 
+    paramKprodEXO, paramKdecayDON, paramgammaD, paramKdecayROS, paramROSMode, paramomega_ROS
 ):
 
     regN, regC, QC = compute_reg(
@@ -504,7 +502,7 @@ def basic_model_cc_ode_jit1(
     deathbiomassN, deathstoreN, deathstoreC, 
     overflowN, overflowC) = compute_losses(
         grossbiomass, grossstoreN, grossstoreC, 
-        QC, paramCN, paramQCmax, paramQCmin, paramOverflow, paramE_leak, paramM)
+        QC, paramCN, paramQCmax, paramQCmin, paramOverflow, paramKoverflow, paramM)
 
     gross_uptake, uptakeN, uptakeC = compute_gross_uptake(
         biomass, storeN, storeC, resources, ROS,
@@ -522,10 +520,10 @@ def basic_model_cc_ode_jit1(
 
     dBdt, dNdt, dDINdt, dDONdt, dRDONdt, DON2DIN_exo, DON2DIN = compute_N_odes(
         DON, biomass, netDeltaN, gross_uptake, biosynthesisN, biomass_breakdownC, overflowN, 
-        deathbiomassN, deathstoreN, deathstoreC, paramCN, paramgammaD, paramgamma_DON2DIN_exo, paramgamma_DON2DIN)
+        deathbiomassN, deathstoreN, deathstoreC, paramCN, paramgammaD, paramKprodEXO, paramKdecayDON)
         
     dROSdt = compute_ROS(
-        biomass, Bh, ROS, paramROSMode, paramROS_decay, paramE_ROS, paramVmaxROSh, paramK_ROSh)
+        biomass, Bh, ROS, paramROSMode, paramKdecayROS, paramKprodROS, paramKlossROS)
 
     return (dBdt, dNdt, dCdt, 
         dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt,
