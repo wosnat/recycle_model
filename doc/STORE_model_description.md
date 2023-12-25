@@ -79,7 +79,7 @@ We did not model spontaneous breakdown of DON, only exoenzyme mediated. Also the
 ### ROS detoxyfication
 ROS (reactive oxygen species) is a natural byproduct of core metabolic processes as well as photosynthesis.
 It is toxic to living organism. *Prochlorococcus* lost the cabability of to degrade ROS, and relies on the heterotrophs to degrade it.
-In the ROS model, ROS is produced by both organisms and is toxic, limiting growth. The heterotroph degrades it.
+In the ROS model, ROS is produced by both organisms and is toxic, increasing the loss rate. Both organisms can also degrade it. 
 ROS is an unstable compounds and also decays over time.
 
 # Carbon Resources
@@ -121,7 +121,10 @@ We use exponential decay – in ISMEJ we show that other formulations are better
 
 In the ROS model, ROS is a toxin, killing some of the bacteria, and ROS influence is modeled as additional mortality. (See ROS below for calculation of ROS related mortality).
 
-EQ15: $lossRate_i = M_i + ROSDeathRate_i$
+
+Eq12: $additionalLossRate_i = np.minimum(ROS * \omega_i, ROSmaxD)$
+
+Eq12: $lossRate_i = M_i + additionalLossRate_i$ 
 
 Eq16: $deathB_i = lossRate_i   \cdot  B_i$
 
