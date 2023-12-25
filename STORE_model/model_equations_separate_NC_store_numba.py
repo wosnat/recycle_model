@@ -217,7 +217,7 @@ def prepare_params_tuple_cc(param_vals):
     paramKoverflow = np.array([pars['Koverflowp'], pars['Koverflowh']], dtype=np.float64)
     paramKprodROS = np.array([pars['KprodROSp'], pars['KprodROSh']], dtype=np.float64)
     paramomega_ROS = np.array([pars['omegaP'], pars['omegaH']], dtype=np.float64)
-    
+    paramROSmaxD = pars['ROSmaxD']
     paramKlossROS = np.array([pars['KlossROSp'], pars['KlossROSh']], dtype=np.float64)
     paramROSMode = pars['ROSMode']
     paramKprodEXO = np.array([pars['KprodEXOp'], pars['KprodEXOh']], dtype=np.float64)
@@ -235,7 +235,8 @@ def prepare_params_tuple_cc(param_vals):
     return (
         paramCN, paramQCmax, paramQCmin, kns, vmax, paramKmtb,paramOverflow, 
         paramb, paramr0, paramM, paramKoverflow, paramKprodROS, paramKlossROS, 
-        paramKprodEXO, paramKdecayDON, paramgammaD, paramKdecayROS, paramROSMode, paramomega_ROS)
+        paramKprodEXO, paramKdecayDON, paramgammaD, 
+        paramKdecayROS, paramROSMode, paramomega_ROS, paramROSmaxD)
 
 def prepare_params_tuple_ponly(param_vals):
     pars = param_vals
@@ -250,6 +251,7 @@ def prepare_params_tuple_ponly(param_vals):
     paramKoverflow = np.array([pars['Koverflowp'], ], dtype=np.float64)
     paramKprodROS = np.array([pars['KprodROSp'], ], dtype=np.float64)
     paramomega_ROS = np.array([pars['omegaP'], ], dtype=np.float64)
+    paramROSmaxD = pars['ROSmaxD']
     
     paramKlossROS = pars['KlossROSp']
     paramROSMode = pars['ROSMode']
@@ -268,7 +270,7 @@ def prepare_params_tuple_ponly(param_vals):
     return (
         paramCN, paramQCmax, paramQCmin, kns, vmax, paramKmtb,paramOverflow, 
         paramb, paramr0, paramM, paramKoverflow, paramKprodROS, paramKlossROS, 
-        paramKprodEXO, paramKdecayDON, paramgammaD, paramKdecayROS, paramROSMode, paramomega_ROS)
+        paramKprodEXO, paramKdecayDON, paramgammaD, paramKdecayROS, paramROSMode, paramomega_ROS, paramROSmaxD)
 
 
 @njit
@@ -281,19 +283,18 @@ def prepare_vals_tuple_cc(var_vals):
     biomass = np.array([Bp, Bh], dtype=np.float64)
     storeN  = np.array([Np, Nh], dtype=np.float64)
     storeC  = np.array([Cp, Ch], dtype=np.float64)
-    return (biomass, storeN, storeC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS, Bh)
+    return (biomass, storeN, storeC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS)
 
 @njit
 def prepare_vals_tuple_ponly(var_vals):
     Bp,   Np,    Cp,    DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS = var_vals
-    Bh = 0 # for ROS
     resources = np.array(
         [DIN, DON, DIC, DOC, ], dtype=np.float64
     ).reshape(4, 1)
     biomass = np.array([Bp], dtype=np.float64)
     storeN  = np.array([Np], dtype=np.float64)
     storeC  = np.array([Cp], dtype=np.float64)
-    return (biomass, storeN, storeC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS, Bh)
+    return (biomass, storeN, storeC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS)
 
 
 @njit
@@ -340,8 +341,8 @@ def compute_reg(
 
 @njit
 def compute_gross_uptake(
-    biomass, storeN, storeC, resources, ROS, regN, regC,
-    paramkns, paramvmax, paramROSMode, paramomega_ROS, 
+    biomass, storeN, storeC, resources, regN, regC,
+    paramkns, paramvmax, 
 ):
   
     # monod ratios
@@ -353,16 +354,10 @@ def compute_gross_uptake(
     regC = np.atleast_2d(regC)
     reg =  np.vstack((regN, regN, regC, regC))
     
-    # ROS
-    if paramROSMode == 1:
-        ROS_penalty = np.exp( - paramomega_ROS*ROS)
-    else:
-        ROS_penalty = np.ones_like(paramomega_ROS)
-
     # gross uptake (regardless of C:N ratio)
     # vmax = muinfp* VmaxIp / Qp
     # umol N /L  or umol C /L  
-    gross_uptake = paramvmax * biomass * limits  * reg * ROS_penalty
+    gross_uptake = paramvmax * biomass * limits  * reg
     uptakeN = gross_uptake[DIN_IDX,:] + gross_uptake[DON_IDX,: ]
     uptakeC = gross_uptake[DIC_IDX,:] + gross_uptake[DOC_IDX,: ]   
     return (gross_uptake, uptakeN, uptakeC)
@@ -397,13 +392,20 @@ def compute_net_uptake(
 
 @njit
 def compute_losses(
-    grossbiomass, grossstoreN, grossstoreC, QC, paramCN, paramQCmax, paramQCmin, paramOverflow, paramKoverflow, paramM
+    grossbiomass, grossstoreN, grossstoreC, QC, ROS, 
+    paramCN, paramQCmax, paramQCmin, paramOverflow, paramKoverflow, paramM, 
+    paramomega_ROS, paramROSmaxD
 ):
     # death
     # Need to explain why we used exponential decay – in ISMEJ we show that other formulations are better for co-cultures but these are emergent properties which we are explicitly testing here, and for the axenic cultures the exponential decay was good.
-    deathbiomassN = paramM * grossbiomass
-    deathstoreN = paramM * grossstoreN
-    deathstoreC = paramM * grossstoreC
+    
+    # additional death due to ROS
+    additionalLossRate = np.min(ROS * paramomega_ROS, paramROSmaxD)
+    lossRate = paramM + additionalLossRate 
+    
+    deathbiomassN = lossRate * grossbiomass
+    deathstoreN = lossRate * grossstoreN
+    deathstoreC = lossRate * grossstoreC
 
     # overflow -
     # make the store maintain the C:N ratio and exude the rest
@@ -435,15 +437,15 @@ def compute_losses(
 
 @njit
 def compute_ROS(
-    biomass, Bh, ROS, paramROSMode, paramKdecayROS, paramKprodROS, paramKlossROS
+    biomass, ROS, paramROSMode, paramKdecayROS, paramKprodROS, paramKlossROS
 ):
     if paramROSMode == 1:
         ROSdecay = ROS * paramKdecayROS
         netROS = ROS - ROSdecay
         # ROS production depends on biomass
-        ROSrelease = paramKprodROS * biomass
-        ROSbreakdownh = paramKlossROS * Bh * netROS / (netROS + paramK_ROSh)
-        dROSdt = np.sum(ROSrelease) - ROSdecay - ROSbreakdownh
+        ROSproduction = paramKprodROS * biomass
+        ROSloss = paramKlossROS * biomass * netROS 
+        dROSdt = np.sum(ROSproduction - ROSloss) - ROSdecay 
         return dROSdt 
     else:
         return 0.0
@@ -488,10 +490,11 @@ def compute_N_odes(
 
 #@njit
 def basic_model_cc_ode_jit1(
-    grossbiomass, grossstoreN, grossstoreC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS, Bh,
+    grossbiomass, grossstoreN, grossstoreC, resources, DON,    RDON,    DIN,    DOC,   RDOC,    DIC,    ROS, 
     paramCN, paramQCmax, paramQCmin, paramkns, paramvmax, paramKmtb,paramOverflow,
     paramb, paramr0, paramM, paramKoverflow, paramKprodROS, paramKlossROS, 
-    paramKprodEXO, paramKdecayDON, paramgammaD, paramKdecayROS, paramROSMode, paramomega_ROS
+    paramKprodEXO, paramKdecayDON, paramgammaD, 
+    paramKdecayROS, paramROSMode, paramomega_ROS, paramROSmaxD
 ):
 
     regN, regC, QC = compute_reg(
@@ -502,11 +505,12 @@ def basic_model_cc_ode_jit1(
     deathbiomassN, deathstoreN, deathstoreC, 
     overflowN, overflowC) = compute_losses(
         grossbiomass, grossstoreN, grossstoreC, 
-        QC, paramCN, paramQCmax, paramQCmin, paramOverflow, paramKoverflow, paramM)
+        QC, ROS, paramCN, paramQCmax, paramQCmin, paramOverflow, paramKoverflow, 
+        paramM, paramomega_ROS, paramROSmaxD)
 
     gross_uptake, uptakeN, uptakeC = compute_gross_uptake(
-        biomass, storeN, storeC, resources, ROS,
-        regN, regC, paramkns, paramvmax, paramROSMode, paramomega_ROS)
+        biomass, storeN, storeC, resources, 
+        regN, regC, paramkns, paramvmax)
 
     biosynthesisN, respirationC, biomass_breakdownC, netDeltaN, netDeltaC = compute_net_uptake(
         biomass, storeN, storeC, uptakeN, uptakeC,
@@ -523,7 +527,7 @@ def basic_model_cc_ode_jit1(
         deathbiomassN, deathstoreN, deathstoreC, paramCN, paramgammaD, paramKprodEXO, paramKdecayDON)
         
     dROSdt = compute_ROS(
-        biomass, Bh, ROS, paramROSMode, paramKdecayROS, paramKprodROS, paramKlossROS)
+        biomass, ROS, paramROSMode, paramKdecayROS, paramKprodROS, paramKlossROS)
 
     return (dBdt, dNdt, dCdt, 
         dDONdt, dRDONdt, dDINdt, dDOCdt, dRDOCdt, dDICdt, dROSdt,
