@@ -10,8 +10,9 @@ def print_sbatch_file(model, vpro, template, outdpath):
     out_fpath = os.path.join(outdpath, f'run_monte_ponly_high_{model}_{vpro}.sbatch')
     with open(template) as vfh:
         with open(out_fpath, 'w') as ofh:
-            for line in vfh:
-            l =  re.sub(r'<MODEL>', model, line)
+            for l in vfh:
+            l =  re.sub(r'<MODEL>', model, l)
+            l =  re.sub(r'<VPRO>', vpro, l)
             ofh.write(l)
     
 
