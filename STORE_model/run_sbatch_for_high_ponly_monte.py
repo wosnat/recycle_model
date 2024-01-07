@@ -11,9 +11,9 @@ def print_sbatch_file(model, vpro, template, outdpath):
     with open(template) as vfh:
         with open(out_fpath, 'w') as ofh:
             for l in vfh:
-            l =  re.sub(r'<MODEL>', model, l)
-            l =  re.sub(r'<VPRO>', vpro, l)
-            ofh.write(l)
+                l =  re.sub(r'<MODEL>', model, l)
+                l =  re.sub(r'<VPRO>', vpro, l)
+                ofh.write(l)
     
 
 
