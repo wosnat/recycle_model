@@ -67,11 +67,12 @@ if __name__ == '__main__':
     
     #todo
     X = sim_df.pivot(columns='day', index='run_id', values='Bptotal[N]')
-    X_logged = np.log10(X.clip(lower=1))
+    X_logged = np.log10(X.clip(lower=1e-10))
     tslearn_dataset = to_time_series_dataset(X_logged)
 
 
-    tslearn_dataset_norm = TimeSeriesScalerMeanVariance().fit_transform(tslearn_dataset)
+    #tslearn_dataset_norm = TimeSeriesScalerMeanVariance().fit_transform(tslearn_dataset)
+    tslearn_dataset_norm = tslearn_dataset
 
     dba_km = TimeSeriesKMeans(
         n_clusters=args.n_clusters,
