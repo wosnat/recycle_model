@@ -1134,7 +1134,7 @@ if __name__ == '__main__':
                         t_end_pro99, t_eval_pro99, var_names, intermediate_names)
                     print ('MSE:', MSE_err)
             except Exception as inst:
-                print('ERROR:', i, X)
+                print('ERROR:', i)
                 print(inst)
                 pass
 
