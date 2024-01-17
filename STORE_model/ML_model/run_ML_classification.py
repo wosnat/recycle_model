@@ -27,6 +27,7 @@ from sklearn.ensemble import StackingClassifier
 
 from sklearn.metrics import balanced_accuracy_score
 from joblib import dump, load
+from sklearn.preprocessing import LabelEncoder
 
 
 # https://www.kaggle.com/code/rafjaa/dealing-with-very-small-datasets#t1
@@ -62,13 +63,20 @@ def interpolate_dataframe(df, groupby_cols, interpolate_cols, index_col, timepoi
     refdf_interpolate.reset_index(inplace=True)
     return refdf_interpolate
 
-
-def gen_X_logged_from_interpolate_dataframe(interpolate_df, groupby_cols, interpolate_cols, index_col='day', max_X_day=91, clip_value=1):
-
+def df2clipped(df, X_cols=['ref_Bp[N]', 'ref_Bp[C]'], max_X_day=91, clip_value=1):
     # only use the first 90 days because that's what we have from Yara
-    df = interpolate_df.loc[interpolate_df.day.le(max_X_day)]
-    X = df.pivot_table(index=groupby_cols, values=interpolate_cols,columns=index_col)
-    X_logged = np.log10(X.clip(lower=clip_value))
+    df1 = df.loc[df.day.le(max_X_day)].copy()
+    for i in X_cols:
+        df1[i] = df1[i].clip(lower=clip_value)
+    return df1
+
+def df2X(df, groupby_cols, X_cols=['ref_Bp[N]', 'ref_Bp[C]'], index_col='day', max_X_day=91, clip_value=1):
+    # only use the first 90 days because that's what we have from Yara
+    X = df.pivot_table(index=groupby_cols, values=X_cols,columns=index_col)
+    return X
+
+def X2logged(X):
+    X_logged = np.log(X)
     return X_logged
 
 #    y = X.index.get_level_values(0)
@@ -79,26 +87,24 @@ def gen_X_logged_from_interpolate_dataframe(interpolate_df, groupby_cols, interp
 
 
 
-def _compute_max_features(df, groupby_col, nutrient, biomass_prefix, index_col='day'):
+def _compute_max_features(df, groupby_cols, nutrient, biomass_prefix, index_col='day'):
     bcol=f'{biomass_prefix}[{nutrient}]'
-    refmaxbp_df = df.loc[df.groupby(groupby_col)[bcol].idxmax()].reset_index(drop=True)
-    refmaxbp_df = refmaxbp_df.set_index(groupby_col)
+    refmaxbp_df = df.loc[df.groupby(groupby_cols)[bcol].idxmax()].reset_index(drop=True)
+    refmaxbp_df = refmaxbp_df.set_index(groupby_cols)
     refmaxbp_df = refmaxbp_df[[index_col, bcol]]
-    refmaxbp_df[bcol] = np.power(10, refmaxbp_df[bcol])
     refmaxbp_df.rename(columns={
         index_col : f'max_{nutrient}day', 
         bcol  : f'max_{nutrient}biomass',
     }, inplace=True)
     return refmaxbp_df
 
-def _compute_mean_features(df, groupby_col, nutrient, biomass_prefix):
+def _compute_mean_features(df, groupby_cols, nutrient, biomass_prefix):
     bcol=f'{biomass_prefix}[{nutrient}]'
     min_day = 30
     max_day = 60
-    df['bcol2'] = np.power(10, df[bcol])
     lterm_df = df.loc[df.day.ge(min_day) & df.day.le(max_day)]
     
-    reflterm_df = lterm_df.groupby(groupby_col)['bcol2'].agg(['mean', 'std', 'median'])
+    reflterm_df = lterm_df.groupby(groupby_cols)[bcol].agg(['mean', 'std', 'median'])
     reflterm_df.rename(columns={
         'mean' : f'mean_{nutrient}biomass',
         'median' : f'median_{nutrient}biomass',
@@ -106,22 +112,25 @@ def _compute_mean_features(df, groupby_col, nutrient, biomass_prefix):
     }, inplace=True)
     return reflterm_df
 
-def _compute_lastday_features(df, groupby_col, nutrient, biomass_prefix):
+def _compute_lastday_features(df, groupby_cols, nutrient, biomass_prefix):
     bcol=f'{biomass_prefix}[{nutrient}]'
-    lod_lastday_threshold = np.log10(2)
-    refmaxday_df = df.loc[df[bcol].ge(lod_lastday_threshold)].groupby(groupby_col).day.max()
+    lod_lastday_threshold = 2
+    refmaxday_df = df.loc[df[bcol].ge(lod_lastday_threshold)].groupby(groupby_cols).day.max()
     #refmaxday_df.rename(columns=dict(day=f'last_day{nutrient}'), inplace=True)
     refmaxday_df.name = f'last_day{nutrient}'
     return refmaxday_df
 
 
-def compute_features(df, groupby_col, biomass_prefix):
+def compute_features(df, groupby_cols, biomass_prefix='ref_Bp'):
     ''' compute features for random forest
     '''
+    # need to do that so idxmax will give the correct results
+    df1 = df.reset_index(drop=True)
+
     df_list = (
-        [_compute_max_features(df, groupby_col, nutrient, biomass_prefix) for nutrient in 'NC'] +
-        [_compute_mean_features(df, groupby_col, nutrient, biomass_prefix) for nutrient in 'NC'] +
-        [_compute_lastday_features(df, groupby_col, nutrient, biomass_prefix) for nutrient in 'NC']
+        [_compute_max_features(df1, groupby_cols, nutrient, biomass_prefix) for nutrient in 'NC'] +
+        [_compute_mean_features(df1, groupby_cols, nutrient, biomass_prefix) for nutrient in 'NC'] +
+        [_compute_lastday_features(df1, groupby_cols, nutrient, biomass_prefix) for nutrient in 'NC']
     )
     df_merge = df_list[0].join(df_list[1:])
         
@@ -131,10 +140,10 @@ def compute_features(df, groupby_col, biomass_prefix):
 
 
 # log the biomass
-def add_log_cols(df, biomass_prefix):
+def add_log_cols(df, biomass_prefix='ref_Bp'):
     lod_threshold = 1
     for nutrient in 'NC':
-        df[f'log_{nutrient}biomass'] = np.log10(df[f'{biomass_prefix}[{nutrient}]'].clip(lower=lod_threshold))
+        df[f'log_{nutrient}biomass'] = np.log(df[f'{biomass_prefix}[{nutrient}]'].clip(lower=lod_threshold))
     return df
 
 
@@ -147,23 +156,27 @@ def _X_smt_to_features(X_smt):
 
 
 
-#x_groupby_col = ['shuffle_id', 'id', 'full name', ]# 'Group']
-#x_log_col = [f'log_{nutrient}biomass' for nutrient in 'NC']
-def X_logged_to_final_X(X_logged):
-    X_logged1 = X_logged.copy()
+def df2finalX(df, groupby_cols, log_mode=True):
+    dfclipped =  df2clipped(df)
+    Xclipped = df2X(dfclipped, groupby_cols)
+    if log_mode:
+        X_logged = X2logged(Xclipped)
+    else:
+        X_logged = Xclipped
 
-    X_logged1.columns = [f'{col}_{day:2.1f}' for col,day in X_logged1.columns.values]
+    feat_df = compute_features(dfclipped, groupby_cols)
 
-    logistic_Nfeatures = [c for c in X_logged1.columns if c.startswith('ref_Bp[N]')]
-    logistic_Cfeatures = [c for c in X_logged1.columns if c.startswith('ref_Bp[C]')]
-    #TODO - feature DF
-    forest_features = X_smt_features.columns
-    X_final = X_smt_features.join(X_logged1)
+    X_logged.columns = [f'{col}_{day:2.1f}' for col,day in X_logged.columns.values]
+    X_final = feat_df.join(X_logged)
+
+    logistic_Nfeatures = [c for c in X_final.columns if c.startswith('ref_Bp[N]')]
+    logistic_Cfeatures = [c for c in X_final.columns if c.startswith('ref_Bp[C]')]
+    forest_features = feat_df.columns
     return (X_final, forest_features, logistic_Nfeatures, logistic_Cfeatures)
     
 
-def X_logged_to_final_X(X_logged):
-
+#def X_logged_to_final_X(X_logged):
+#def df2finalX(df, groupbycols):
 # sim_df = sim_df[['run_id', 'day', 'Bptotal[N]','Bptotal[C]']]
 # sim_df.rename(columns={'Bptotal[N]':'ref_Bp[N]','Bptotal[C]':'ref_Bp[C]'}, inplace=True)
 # for c in ['ref_Bp[N]', 'ref_Bp[C]']:
@@ -196,7 +209,10 @@ def X_logged_to_final_X(X_logged):
 
 
 # Classifiers
-def build_classifier(forest_features, logistic_Nfeatures, logistic_Cfeatures):
+def build_classifier(forest_features, logistic_Nfeatures, logistic_Cfeatures, y_train):
+    le = LabelEncoder()
+    le.fit_transform(y_train), le.classes_
+
     class_weight_map = {'Axenic' : 100, 'Inhibited' : 10000, 'Other': 1, 'Strong' : 10000, 'Sustained' : 10000, 'Weak': 100}
     # TODO le.classes_
     class_weight = {i : class_weight_map[c] for i,c in enumerate(le.classes_)}
