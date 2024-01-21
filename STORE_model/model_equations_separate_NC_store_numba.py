@@ -1110,10 +1110,10 @@ if __name__ == '__main__':
             try:
                 if json_fname is not None:
                     json_fpath = os.path.join(json_dpath, json_fname)
-                    updated_param_vals = get_param_vals_from_json_list(args.model, [json_fpath])
+                    updated_param_vals = get_param_vals_from_json_list(args.model, args.json + [json_fpath])
                     vpro_id = json_fname.replace('.json','')
                 else:
-                    updated_param_vals = get_param_vals_from_json_list(args.model, [])
+                    updated_param_vals = get_param_vals_from_json_list(args.model, args.json)
                     vpro_id = ''
                 sen_run_id = f"{args.run_id}_monte_{vpro_id}_{i}{suffix}"
                 print(sen_run_id)
