@@ -974,9 +974,12 @@ def get_monte_json_fnames(jsondpath, number_of_runs, rng):
     return rng.choice(json_files, number_of_runs)
 
     
-def get_monte_sample(params_to_update, log_params, param_bounds, jsondpath, number_of_runs):
+def get_monte_sample(params_to_update, log_params, param_bounds, jsondpath, number_of_runs, monte_max_params):
     rng = np.random.default_rng()
-    number_of_params = rng.integers(low=3,high=len(params_to_update), size=number_of_runs)
+    len_params_to_update = len(params_to_update)
+    if (monte_max_params == -1) or monte_max_params > len_params_to_update:
+        monte_max_params = len_params_to_update
+    number_of_params = rng.integers(low=3,high=monte_max_params, size=number_of_runs)
     random_param_values = [rng.uniform(low=l, high=h, size=number_of_runs) for l,h in param_bounds]
     json_fnames =  get_monte_json_fnames(jsondpath, number_of_runs, rng)
     random_param_list = [create_random_param_vals(params_to_update, log_params, rng, i) for i in zip(number_of_params, *random_param_values)]
@@ -1009,6 +1012,8 @@ if __name__ == '__main__':
     parser.add_argument("--organism_to_tune", help="which organism to tune", choices=['PRO', 'HET'], default='PRO')
     parser.add_argument("--number_of_runs", help="number of simulations to run",  type=int, default=1024)
     parser.add_argument("--sobol", help="run sobol (will run 2^<sobol> simulation",  type=int, default=-1)
+    parser.add_argument("--monte_max_params", help="max number of params to update per monte simulations",  type=int, default=-1)
+    parser.add_argument("--monte_add_noise", help="add noise to monte fixed params",  action="store_true")
     parser.add_argument("--monte", help="run monte carlo",
                         action="store_true")
     
@@ -1104,7 +1109,9 @@ if __name__ == '__main__':
         bounds_logged = [(np.log(b[0]),  np.log(b[1]))  if lg else b for b,lg in zip(bounds, log_params)]
         param_bounds =  bounds_logged
         json_dpath = args.jsondpath
-        json_fnames, sample = get_monte_sample(params_to_update, log_params, param_bounds, args.jsondpath, args.number_of_runs)
+        json_fnames, sample = get_monte_sample(
+            params_to_update, log_params, param_bounds, args.jsondpath, args.number_of_runs, args.monte_max_params
+        )
         
         for i, (json_fname, (random_params_to_update, random_values, random_log_params)) in enumerate(zip(json_fnames, sample)):
             try:
