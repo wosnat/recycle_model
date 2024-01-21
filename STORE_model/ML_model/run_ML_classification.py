@@ -98,17 +98,16 @@ def _compute_max_features(df, groupby_cols, nutrient, biomass_prefix, index_col=
     }, inplace=True)
     return refmaxbp_df
 
-def _compute_mean_features(df, groupby_cols, nutrient, biomass_prefix):
+def _compute_mean_features(df, groupby_cols, nutrient, biomass_prefix, min_day = 30, max_day = 60):
     bcol=f'{biomass_prefix}[{nutrient}]'
-    min_day = 30
-    max_day = 60
     lterm_df = df.loc[df.day.ge(min_day) & df.day.le(max_day)]
     
-    reflterm_df = lterm_df.groupby(groupby_cols)[bcol].agg(['mean', 'std', 'median'])
+    reflterm_df = lterm_df.groupby(groupby_cols)[bcol].agg(['std', 
+        'median', 'mean'])
     reflterm_df.rename(columns={
-        'mean' : f'mean_{nutrient}biomass',
-        'median' : f'median_{nutrient}biomass',
-        'std' : f'std_{nutrient}biomass',
+        'median' : f'median_{min_day}-{max_day}days_{nutrient}biomass',
+        'mean' : f'mean_{min_day}-{max_day}days_{nutrient}biomass',
+        'std' : f'std_{min_day}-{max_day}days_{nutrient}biomass',
     }, inplace=True)
     return reflterm_df
 
@@ -120,6 +119,19 @@ def _compute_lastday_features(df, groupby_cols, nutrient, biomass_prefix):
     refmaxday_df.name = f'last_day{nutrient}'
     return refmaxday_df
 
+def _compute_D90_features_per_group(df, nutrient, biomass_prefix):
+    bcol=f'{biomass_prefix}[{nutrient}]'
+    maxval = df[bcol].max()
+    maxday = df.loc[df[bcol].ge(maxval), 'day'].max()
+    D90val = maxval * 0.1
+    D90day = df.loc[df['day'].ge(maxday) & df[bcol].le(D90val)].day.min()
+    return D90day - maxday
+
+def _compute_D90_features(df, groupby_cols, nutrient, biomass_prefix):
+    refmaxday_df = df.groupby(groupby_cols).apply(lambda x : _compute_D90_features_per_group(x, nutrient, biomass_prefix))
+    refmaxday_df.name = f'D90_day{nutrient}'
+    return refmaxday_df
+
 
 def compute_features(df, groupby_cols, biomass_prefix='ref_Bp'):
     ''' compute features for random forest
@@ -129,8 +141,10 @@ def compute_features(df, groupby_cols, biomass_prefix='ref_Bp'):
 
     df_list = (
         [_compute_max_features(df1, groupby_cols, nutrient, biomass_prefix) for nutrient in 'NC'] +
-        [_compute_mean_features(df1, groupby_cols, nutrient, biomass_prefix) for nutrient in 'NC'] +
-        [_compute_lastday_features(df1, groupby_cols, nutrient, biomass_prefix) for nutrient in 'NC']
+        [_compute_mean_features(df1, groupby_cols, nutrient, biomass_prefix, min_day = 30, max_day = 60) for nutrient in 'NC'] +
+        [_compute_mean_features(df1, groupby_cols, nutrient, biomass_prefix, min_day = 60, max_day = 80) for nutrient in 'NC'] +
+        [_compute_lastday_features(df1, groupby_cols, nutrient, biomass_prefix) for nutrient in 'NC'] +
+        [_compute_D90_features(df1, groupby_cols, nutrient, biomass_prefix) for nutrient in 'NC']
     )
     df_merge = df_list[0].join(df_list[1:])
         
@@ -159,12 +173,13 @@ def _X_smt_to_features(X_smt):
 def df2finalX(df, groupby_cols, log_mode=True):
     dfclipped =  df2clipped(df)
     Xclipped = df2X(dfclipped, groupby_cols)
+    feat_df = compute_features(dfclipped, groupby_cols)
+
     if log_mode:
         X_logged = X2logged(Xclipped)
     else:
         X_logged = Xclipped
 
-    feat_df = compute_features(dfclipped, groupby_cols)
 
     X_logged.columns = [f'{col}_{day:2.1f}' for col,day in X_logged.columns.values]
     X_final = feat_df.join(X_logged)
@@ -318,7 +333,7 @@ def ML_model_predict_proba(stack, X_sim):
         # 'run_id' : X_sim.index,
         'y_pred' : y_sim_pred,
         'max_prob' : max_sim_prob,
-    }, index=X_sim.index,)
+    }, index=X_sim.index,).reset_index()
     #df_predicted_classes[['idx', 'media', 'which', 'model', 'hash']] = df_predicted_classes.run_id.str.rsplit('_', n=4, expand=True)
     return df_predicted_classes
 
