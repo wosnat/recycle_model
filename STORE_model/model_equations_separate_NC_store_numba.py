@@ -1112,12 +1112,14 @@ if __name__ == '__main__':
         json_fnames, sample = get_monte_sample(
             params_to_update, log_params, param_bounds, args.jsondpath, args.number_of_runs, args.monte_max_params
         )
-        
+        args_json_list = args.json
+        if args_json_list is None:
+            args_json_list = []
         for i, (json_fname, (random_params_to_update, random_values, random_log_params)) in enumerate(zip(json_fnames, sample)):
             try:
                 if json_fname is not None:
                     json_fpath = os.path.join(json_dpath, json_fname)
-                    updated_param_vals = get_param_vals_from_json_list(args.model, args.json + [json_fpath])
+                    updated_param_vals = get_param_vals_from_json_list(args.model, args_json_list + [json_fpath])
                     vpro_id = json_fname.replace('.json','')
                 else:
                     updated_param_vals = get_param_vals_from_json_list(args.model, args.json)
