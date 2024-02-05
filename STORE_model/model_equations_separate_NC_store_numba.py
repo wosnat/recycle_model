@@ -250,11 +250,11 @@ def prepare_params_tuple_ponly(param_vals):
     paramM = np.array([pars['Mp'], ], dtype=np.float64)
     paramOverflow = pars['OverflowMode']
     paramKoverflow = np.array([pars['Koverflowp'], ], dtype=np.float64)
+    paramKlossROS = np.array([pars['KlossROSp'], ], dtype=np.float64)
     paramKprodROS = np.array([pars['KprodROSp'], ], dtype=np.float64)
     paramomega_ROS = np.array([pars['omegaP'], ], dtype=np.float64)
     paramROSmaxD = pars['ROSmaxD']
     
-    paramKlossROS = pars['KlossROSp']
     paramROSMode = pars['ROSMode']
     paramKprodEXO = pars['KprodEXOp']
     paramKdecayDON = pars['KdecayDON']
@@ -450,7 +450,9 @@ def compute_ROS(
         dROSdt = np.sum(ROSproduction - ROSloss) - ROSdecay 
         return dROSdt, ROSproduction, ROSloss
     else:
-        return 0.0, 0.0, 0.0
+        #return 0.0, 0.0, 0.0
+        return 0.0, np.zeros_like(paramKprodROS) , np.zeros_like(paramKlossROS)
+
 
 
 @njit
