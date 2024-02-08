@@ -461,13 +461,14 @@ def compute_C_odes(
     deathbiomassN, deathstoreN, deathstoreC, paramCN, paramgammaD,  
 ):
     deathC = deathbiomassN * paramCN + deathstoreC
+    deathC_DOC = deathC * paramgammaD
     dic_air_water_exchange   = - (DIC - c_sat) / air_water_exchange_constant
     dCdt = netDeltaC - overflowC - deathstoreC
     dDICdt = dic_air_water_exchange + np.sum(respirationC - gross_uptake[DIC_IDX,:])
     dDOCdt = np.sum(
-        deathC * paramgammaD + overflowC - gross_uptake[DOC_IDX,:])
+        deathC_DOC + overflowC - gross_uptake[DOC_IDX,:])
     dRDOCdt = np.sum(deathC * (1 - paramgammaD))
-    return(dCdt, dDICdt, dDOCdt, dRDOCdt)
+    return(dCdt, dDICdt, dDOCdt, dRDOCdt, deathC_DOC)
 
 @njit
 def compute_N_odes(
@@ -476,12 +477,13 @@ def compute_N_odes(
 ):
     # DON breakdown due to exoenzymes
     deathN = deathbiomassN + deathstoreN
+    deathN_DON = deathN * paramgammaD
     DON2DIN_exo = paramKprodEXO * biomass * DON 
     DON2DIN = paramKdecayDON * DON 
     dBdt = biosynthesisN - biomass_breakdownC / paramCN - deathbiomassN
     dNdt = netDeltaN - overflowN - deathstoreN
     dDONdt = np.sum(
-        deathN * paramgammaD - gross_uptake[DON_IDX,:] - DON2DIN_exo
+        deathN_DON - gross_uptake[DON_IDX,:] - DON2DIN_exo
     ) - DON2DIN
     dRDONdt = np.sum(deathN * (1 - paramgammaD))
 
@@ -489,7 +491,7 @@ def compute_N_odes(
     # Assuming that recalcitrant DON isd released only during mortality (discuss release through leakiness)
     # Assuming RDON/RDOC is recalcitrant to both organisms   
     dDINdt = np.sum(overflowN + DON2DIN_exo - gross_uptake[DIN_IDX,:]) + DON2DIN
-    return(dBdt, dNdt, dDINdt, dDONdt, dRDONdt, DON2DIN_exo, DON2DIN)
+    return(dBdt, dNdt, dDINdt, dDONdt, dRDONdt, DON2DIN_exo, DON2DIN, deathN_DON)
 
 
 #@njit
@@ -522,11 +524,11 @@ def basic_model_cc_ode_jit1(
 
     # final differential equations
 
-    dCdt, dDICdt, dDOCdt, dRDOCdt = compute_C_odes(
+    dCdt, dDICdt, dDOCdt, dRDOCdt, deathC_DOC = compute_C_odes(
         DIC, netDeltaC, gross_uptake, respirationC, overflowC, 
         deathbiomassN, deathstoreN, deathstoreC, paramCN, paramgammaD)
 
-    dBdt, dNdt, dDINdt, dDONdt, dRDONdt, DON2DIN_exo, DON2DIN = compute_N_odes(
+    dBdt, dNdt, dDINdt, dDONdt, dRDONdt, DON2DIN_exo, DON2DIN, deathN_DON = compute_N_odes(
         DON, biomass, netDeltaN, gross_uptake, biosynthesisN, biomass_breakdownC, overflowN, 
         deathbiomassN, deathstoreN, deathstoreC, paramCN, paramgammaD, paramKprodEXO, paramKdecayDON)
         
@@ -538,7 +540,8 @@ def basic_model_cc_ode_jit1(
         gross_uptake, uptakeN, uptakeC, QC,
         biosynthesisN, respirationC, biomass_breakdownC,
         overflowN, overflowC, ROSproduction, ROSloss, 
-        deathbiomassN, deathstoreN, deathstoreC, DON2DIN_exo, DON2DIN, additionalLossRate
+        deathbiomassN, deathstoreN, deathstoreC, DON2DIN_exo, DON2DIN, additionalLossRate,
+        regN, regC,  deathC_DOC, deathN_DON
         )
 
 
@@ -549,7 +552,8 @@ def basic_model_cc_ode(time, var_vals, par_tuple, return_intermediate=False):
         gross_uptake, uptakeN, uptakeC, QC,
         biosynthesisN, respirationC, biomass_breakdownC,
         overflowN, overflowC, ROSproduction, ROSloss,
-        deathbiomassN, deathstoreN, deathstoreC, DON2DIN_exo, DON2DIN, additionalLossRate
+        deathbiomassN, deathstoreN, deathstoreC, DON2DIN_exo, DON2DIN, additionalLossRate,
+        regN, regC,  deathC_DOC, deathN_DON
     ) = basic_model_cc_ode_jit1(*var_tuple,*par_tuple)
     if not return_intermediate:
         return (
@@ -563,7 +567,8 @@ def basic_model_cc_ode(time, var_vals, par_tuple, return_intermediate=False):
             gross_uptake, uptakeN, uptakeC, QC,
             biosynthesisN, respirationC, biomass_breakdownC,
             overflowN, overflowC, ROSproduction, ROSloss,
-            deathbiomassN, deathstoreN, deathstoreC, DON2DIN_exo, DON2DIN, additionalLossRate
+            deathbiomassN, deathstoreN, deathstoreC, DON2DIN_exo, DON2DIN, additionalLossRate,
+            regN, regC,  deathC_DOC, deathN_DON
         )
         flat_intermediates = [i  for f in intermediates for i in (f.flat if isinstance(f, np.ndarray) else [f])]
 
@@ -577,7 +582,8 @@ def basic_model_ponly_ode(time, var_vals, par_tuple, return_intermediate=False):
         gross_uptake, uptakeN, uptakeC, QC,
         biosynthesisN, respirationC, biomass_breakdownC,
         overflowN, overflowC, ROSproduction, ROSloss,
-        deathbiomassN, deathstoreN, deathstoreC, DON2DIN_exo, DON2DIN, additionalLossRate
+        deathbiomassN, deathstoreN, deathstoreC, DON2DIN_exo, DON2DIN, additionalLossRate,
+        regN, regC,  deathC_DOC, deathN_DON
     ) = basic_model_cc_ode_jit1(*var_tuple,*par_tuple)
     if not return_intermediate:
         return (
@@ -591,7 +597,8 @@ def basic_model_ponly_ode(time, var_vals, par_tuple, return_intermediate=False):
             gross_uptake, uptakeN, uptakeC, QC,
             biosynthesisN, respirationC, biomass_breakdownC,
             overflowN, overflowC, ROSproduction, ROSloss,
-            deathbiomassN, deathstoreN, deathstoreC, DON2DIN_exo, DON2DIN, additionalLossRate
+            deathbiomassN, deathstoreN, deathstoreC, DON2DIN_exo, DON2DIN, additionalLossRate,
+            regN, regC,  deathC_DOC, deathN_DON
         )
         flat_intermediates = [i  for f in intermediates for i in (f.flat if isinstance(f, np.ndarray) else [f])]
 
@@ -617,6 +624,7 @@ def get_main_init_vars(pro99_mode):
             'overflowNp', 'overflowNh', 'overflowCp','overflowCh', 'ROSproductionp', 'ROSproductionh', 'ROSlossp', 'ROSlossh',
             'deathbiomassNp','deathbiomassNh', 'deathstoreNp','deathstoreNh', 'deathstoreCp','deathstoreCh', 
             'DON2DIN_exop','DON2DIN_exoh', 'DON2DIN', 'additionalLossRatep', 'additionalLossRateh',
+            'regNp', 'regNh', 'regCp', 'regCh',  'deathC_DOCp', 'deathC_DOCh',  'deathN_DONp', 'deathN_DONh',
     ]
     if pro99_mode:        
         init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_BH,INIT_NH,INIT_CH,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC, INIT_DIC,INIT_ROS]
@@ -636,6 +644,7 @@ def get_ponly_init_vars(pro99_mode):
             'overflowNp', 'overflowCp','ROSproductionp', 'ROSlossp',
             'deathbiomassNp', 'deathstoreNp', 'deathstoreCp',
             'DON2DIN_exop','DON2DIN', 'additionalLossRatep',
+            'regNp', 'regCp',  'deathC_DOCp', 'deathN_DONp',
     ]
     if pro99_mode:        
         init_vars = [INIT_BP,INIT_NP,INIT_CP,INIT_DON,INIT_RDON,INIT_DIN_PRO99,INIT_DOC,INIT_RDOC,INIT_DIC,INIT_ROS]
