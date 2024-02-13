@@ -417,8 +417,8 @@ def compute_losses(
     if (paramOverflow == 1):
         paramQNmax = 1 / paramQCmin
         QN = 1 / QC
-        regC = 1 - np.power(QC / paramQCmax, 4)
-        regN = 1 - np.power(QN / paramQNmax, 4)
+        regC = np.power(QC / paramQCmax, 4)
+        regN = np.power(QN / paramQNmax, 4)
         regN = np.clip(regN, a_min =0.0, a_max=1.0)
         regC = np.clip(regC, a_min =0.0, a_max=1.0)
         
