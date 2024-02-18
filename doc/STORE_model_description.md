@@ -98,12 +98,15 @@ Where $\gamma_{i}$ is the portion of the losses (death and leakiness) that is la
 # Nitrogen Resources
 
 The system is closed to nitrogen. The nitrogen budget consists of the initial nitrogen in organic (DON), inroganic (DIN) and  recalcitrant, non-labile organic (RDON), as well as the nitrogen in the  cells biomass and nitrogen store. Thus the system as a whole is nitrogen limited.
+DON is constantly degrated abiotically into DIN (in all models). In the EXOENZYME model it is also degraded by exoenzymes released be the heterotroph (see DON breakdown due to exoenzymes)
 
 Eq12: $totaldeathN_i = deathB_i + deathN_i$
 
 Eq13: $dDIN/dt = \sum{(overflowN_i + DON2DIN_i - grossUptake_{i,DIN})} + globalDON2DIN$
 
-Eq14: $dDON/dt = \sum{(totaldeathN_i  \cdot  \gamma_{i} - grossUptake_{i,DON} - DON2DIN_i)} - globalDON2DIN $
+Eq14: $dDON/dt = \sum{(totaldeathN_i  \cdot  \gamma_{i} - grossUptake_{i,DON} - DON2DINexo_i)} - globalDON2DIN $
+Eq35: $DON2DINexo_i = KprodEXO_i  \cdot  B_i  \cdot  DON$
+
 
 Eq15: $dRDON/dt = \sum{totaldeathN_i  \cdot  (1 - \gamma_{i})}$
 
@@ -196,18 +199,16 @@ Eq24: $Oreg_{ij} = [\frac{Q_{ij}}{Qmax_{ij}}]^4$
 
 Eq34: $overflow_{ij} = max(0, delta_{ij})  \cdot  Oreg_{ij}  \cdot  Koverflow_{ij}$
 
-Where $Oreg_{ij}$ is the regulation of the overflow release (increases as the nutrient imbalance increases), see Uptake section for description of $Q_i$ and $Qmax_i$ and $Koverflow_{ij}$ is the overflow rate (sec-1).
+Where $Oreg_{ij}$ is the regulation of the overflow release (increases as the nutrient imbalance increases), see Uptake section for description of $Q_{ij}$ and $Qmax_{ij}$ and $Koverflow_{i}$ is the overflow rate (sec-1).
 
 
-## DON breakdown due to exoenzymes. 
+## DON breakdown due to exoenzymes
 In the exoenzyme model, DON is degraded to DIN by exoenzymes released by the bacteria. This DIN is then available to both bacteria for uptake.
 We did not model spontaneous breakdown of DON, only exoenzyme mediated. Also there is no cost for the bacteria to release these enzymes.
 
-Eq35: $DON2DIN_i = EXOrate_i  \cdot  B_i  \cdot  DON$
+Eq35: $DON2DINexo_i = KprodEXO_i  \cdot  B_i  \cdot  DON$
 
-Eq36: $globalDON2DIN = DON2DINrate  \cdot  DON$
-
-
+Eq36: $globalDON2DIN = KdecayDON  \cdot  DON$
 
 ## Air water exchange
 Eq37: $DICAirWaterExchange   = - \frac{DIC - csat}{airWaterExchangeConstant}$
