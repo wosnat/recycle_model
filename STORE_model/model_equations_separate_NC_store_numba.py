@@ -1024,7 +1024,12 @@ if __name__ == '__main__':
 
     parser.add_argument("--outdpath", help="output dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
-    parser.add_argument("--model", help="model to run", choices=['MIN', 'MIXOTROPH', 'OVERFLOW', 'ROS', 'EXOENZYME'], required=True)
+    parser.add_argument("--model", help="model to run", choices=[
+            'MIN', 'MIXOTROPH', 'OVERFLOW', 'ROS', 'EXOENZYME',
+            'ROS_MIXOTROPH_OVERFLOW_EXOENZYME', 'ROS_MIXOTROPH', 'EXOENZYME_ROS',
+            'EXOENZYME_MIXOTROPH', 'OVERFLOW_MIXOTROPH', 'OVERFLOW_EXOENZYME', 'OVERFLOW_ROS',
+        ], required=True)
+
     parser.add_argument("--which_organism", help="which organism to run", choices=['ponly', 'honly', 'all'], default='all')
     parser.add_argument("--pro99_mode", help="run on pro99 media",
                         action="store_true")
