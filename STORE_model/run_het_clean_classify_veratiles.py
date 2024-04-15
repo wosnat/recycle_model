@@ -120,7 +120,7 @@ def classify_samples(sim_df1, mse_df):
 
 
     # rename Axenic to neutral
-    df_predicted_classes_merged_min.loc[df_predicted_classes.y_pred.isin(['Axenic']), 'y_pred] = 'Neutral'
+    df_predicted_classes_merged_min.loc[df_predicted_classes.y_pred.isin(['Axenic']), 'y_pred'] = 'Neutral'
     
     return df_predicted_classes_merged_min
 
