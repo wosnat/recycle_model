@@ -33,8 +33,10 @@ if __name__ == '__main__':
     if outdpath != '':
         os.makedirs(outdpath, exist_ok=True)
 
-    for model in ['MIN', 'MIXOTROPH', 'OVERFLOW', 'ROS', 'EXOENZYME']:
-        vprocsv = f'VPRO/high_growing_vpro_{model}.csv'
+    #for model in ['MIN', 'MIXOTROPH', 'OVERFLOW', 'ROS', 'EXOENZYME']:
+    for model in [ 'ROS', ]:
+        #vprocsv = f'VPRO/high_growing_vpro_{model}.csv'
+        vprocsv = f'VPRO/high_growing_vpro_round2_{model}.csv'
         with open(vprocsv) as vfh:
             for line in vfh:
                 vpro = line.strip()

@@ -13,14 +13,6 @@ import os
 from model_equations_separate_NC_store_numba import *
 
 
-morder = ['MIN', 'OVERFLOW', 'MIXOTROPH', 'EXOENZYME', 'ROS',]
-
-
-refdf = pd.read_excel('reference_10cc_axenic.xlsx')
-refp99df = pd.read_excel('reference_pro99_axenic.xlsx')
-
-
-
 # pro99_mode = False 
 # which_organism = 'ponly'
 # organism_to_tune = 'PRO'
@@ -29,7 +21,6 @@ refp99df = pd.read_excel('reference_pro99_axenic.xlsx')
 # for model in ['OVERFLOW', 'MIXOTROPH', 'ROS', 'MIN', 'EXOENZYME']:
     # params_to_update, bounds, log_params = get_param_tuning_values(model, organism_to_tune)
     
-session_id = 'ponly_monte_add_ROS_round2'
 
 
 # cleanup
@@ -55,34 +46,31 @@ def cleanup_session(session_id, sim_df, mse_df, sum_df, out_dpath):
 
     min_values = sim_df[var_names+['idx']].groupby('idx').min().min(axis=1)
     bad_ids_negative_values = set(min_values[min_values< -1e-9].index)
-    print('bad_ids_negative_values: ',len(bad_ids_negative_values)
+    print('bad_ids_negative_values: ',len(bad_ids_negative_values))
 
     max_values = sim_df[var_names+['idx']].groupby('idx').max().max(axis=1)
     bad_ids_toolarge_values = set(max_values[max_values > 1e9].index)
-    print('bad_ids_toolarge_values: ',len(bad_ids_toolarge_values)
+    print('bad_ids_toolarge_values: ',len(bad_ids_toolarge_values))
 
 
     mse_df['ref_compare_points'] = mse_df.media.map({'lowN' : 74, 'pro99': 58})
     bad_ids_missing_points = set(mse_df.loc[mse_df.ref_compare_points != mse_df.compare_points, 'idx' ])
-    print('bad_ids_missing_points: ',len(bad_ids_missing_points)
+    print('bad_ids_missing_points: ',len(bad_ids_missing_points))
 
     bad_ids = set(bad_ids_missing_points) | set(bad_ids_negative_values) | set(bad_ids_toolarge_values)
-    print('bad_ids: ',len(bad_ids)
+    print('bad_ids: ',len(bad_ids))
 
-    pd.Dataframe({
-        'Montecarlo samples'=mse_df.idx.nunique(), 
-        'Bad Samples'=len(bad_ids), 
         
     sim_df1 = sim_df.loc[~sim_df['idx'].isin(bad_ids)].copy()
     mse_df1 = mse_df.loc[~mse_df['idx'].isin(bad_ids)].copy()
     sum_df1 = sum_df.loc[~sum_df['idx'].isin(bad_ids)].copy()
 
-    stats_df = pd.Dataframe({
-        'session_id': session_id
-        'Montecarlo samples'=mse_df.idx.nunique(), 
-        'Bad Samples'=len(bad_ids), 
-        'Montecarlo cleaned'=mse_df1.idx.nunique(), 
-    }) #.to_csv(os.path.join(out_dpath, f'cleanup_stats_{session_id}.csv')
+    stats_df = pd.DataFrame([{
+        'session_id': session_id,
+        'Montecarlo samples':mse_df.idx.nunique(), 
+        'Bad Samples':len(bad_ids), 
+        'Montecarlo cleaned':mse_df1.idx.nunique(), 
+    }]) #.to_csv(os.path.join(out_dpath, f'cleanup_stats_{session_id}.csv')
     
 
     sim_df1.to_csv(os.path.join(out_dpath,f'{session_id}_clean_df.csv.gz',), index=False)
@@ -95,7 +83,7 @@ def cleanup_session(session_id, sim_df, mse_df, sum_df, out_dpath):
 NBIOMASS_LOD_NOT_GROWING = 2.34502821
 
 
-def print_vpros(session_id, mse_df, sum_df, stats_df, vprodpath):
+def print_vpros(session_id, mse_df, sum_df, stats_df, vprodpath, vproprefix, extendvpro):
 
     mse_df['RMSE'] = np.sqrt(mse_df['RMSE'])
 
@@ -106,8 +94,9 @@ def print_vpros(session_id, mse_df, sum_df, stats_df, vprodpath):
     bestids = mean_scores.loc[mean_scores.RMSE.le(60), 'idx'] 
 
 
-    sum_df1 = sum_df.loc[sum_df.idx.isin(bestids.idx)].drop_duplicates(subset='idx')
+    sum_df1 = sum_df.loc[sum_df.idx.isin(bestids)].drop_duplicates(subset='idx')
     def _get_params_df(model):
+        organism_to_tune = 'PRO'
         id_vars= ['model', 'idx']
         params_to_update, bounds, log_params = get_param_tuning_values(model, organism_to_tune)
         param_vals_df = sum_df1.loc[sum_df1.model.isin([model]), 
@@ -124,13 +113,18 @@ def print_vpros(session_id, mse_df, sum_df, stats_df, vprodpath):
 
     stats_df['VPROs'] = bestids.shape[0]
 
-    for idx in bestids.idx:
+    for idx in bestids:
         ser_x = mparams_df.loc[
             mparams_df.idx.isin([idx]), ['variable', 'value']
         ]
         ser_x.index= ser_x.variable
         actual_finalX = ser_x.value.to_dict()
-        vpro_id = idx.replace(vproprefix,'vpro_').replace('_monte_','')
+        if extendvpro:
+            vpro_id = re.sub(r'.*_vpro', 'vpro_3', idx)
+        else:
+            vpro_id = idx.replace(vproprefix, 'vpro')
+        vpro_id = vpro_id.replace('_monte__','_')
+
         fname = vpro_id
         model = mparams_df.loc[mparams_df.idx.isin([idx])]['model'].unique()[0]
         res_fpath = os.path.join(vprodpath, model, f'{fname}.json')
@@ -151,19 +145,23 @@ if __name__ == '__main__':
 
     parser.add_argument("--outdpath", help="output dir", default='.')
     parser.add_argument("--vprooutdpath", help="output dir", default='.')
+    parser.add_argument("--extendvpro", help="this is a run extending existing vpros",  action="store_true")
+    parser.add_argument("--prefixvpro", help="prefix to remove from idx when constracting VPRO name", default='.')
     parser.add_argument("--indpath", help="input dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
     
     
     args = parser.parse_args()
-    dpath = args.outdpath
-    if dpath != '':
-        os.makedirs(dpath, exist_ok=True)
+    out_dpath = args.outdpath
+    if out_dpath != '':
+        os.makedirs(out_dpath, exist_ok=True)
     vprodpath = args.vprooutdpath
     if vprodpath != '':
         os.makedirs(vprodpath, exist_ok=True)
     
 
+    vproprefix = args.prefixvpro
+    extendvpro = args.extendvpro
     dpath = args.indpath
     
     session_id = args.run_id
@@ -173,6 +171,6 @@ if __name__ == '__main__':
 
     (sim_df, mse_df, sum_df, stats_df) = cleanup_session(session_id, sim_df, mse_df, sum_df, out_dpath)
     
-    stats_df = print_vpros(session_id, mse_df, sum_df, stats_df, vprodpath)
-    stats_df.to_csv(os.path.join(out_dpath, f'cleanup_stats_{session_id}.csv')
+    stats_df = print_vpros(session_id, mse_df, sum_df, stats_df, vprodpath, vproprefix, extendvpro)
+    stats_df.to_csv(os.path.join(out_dpath, f'cleanup_stats_{session_id}.csv'))
 
