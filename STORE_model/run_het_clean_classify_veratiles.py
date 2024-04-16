@@ -57,7 +57,7 @@ def cleanup_session(session_id, sim_df, mse_df, sum_df, out_dpath):
     print('bad_ids_toolarge_values: ',len(bad_ids_toolarge_values))
 
     bad_ids_missing_compare_points =  mse_df.loc[mse_df.compare_points != 74, 'run_id']
-    print('bad_ids_missing_points: ',len(bad_ids_missing_points))
+    print('bad_ids_missing_compare_points: ',len(bad_ids_missing_compare_points))
 
 
     problematic_C2N_runids = sim_df.loc[
@@ -94,9 +94,9 @@ def cleanup_session(session_id, sim_df, mse_df, sum_df, out_dpath):
     
 
 def classify_samples(sim_df1, mse_df):
-
-    stack = load('ML_model/10CC_ML_classifier.joblib') 
-    sim_df = sim_df1[['run_id', 'day', 'Bptotal[N]','Bptotal[C]']]
+    model_fpath = os.path.join(os.path.dirname(__file__),'ML_model','10CC_ML_classifier.joblib')
+    stack = load(model_fpath) 
+    sim_df = sim_df1[['run_id', 'day', 'Bptotal[N]','Bptotal[C]']].copy()
     sim_df.rename(columns={
             'Bptotal[N]':'ref_Bp[N]',
             'Bptotal[C]':'ref_Bp[C]'
@@ -120,7 +120,7 @@ def classify_samples(sim_df1, mse_df):
 
 
     # rename Axenic to neutral
-    df_predicted_classes_merged_min.loc[df_predicted_classes.y_pred.isin(['Axenic']), 'y_pred'] = 'Neutral'
+    df_predicted_classes_merged_min.loc[df_predicted_classes_merged_min.y_pred.isin(['Axenic']), 'y_pred'] = 'Neutral'
     
     return df_predicted_classes_merged_min
 
@@ -134,8 +134,18 @@ def find_versatile_vpros(df_predicted_classes):
         aggfunc='count', fill_value=0,
     )
 
-    vpro_df['pos_interaction'] = vpro_df.Strong + vpro_df.Sustained
-    vpro_df['neg_interaction'] = vpro_df.Inhibited + vpro_df.Weak 
+    poscolumns = [c for c in ['Strong','Sustained'] if c in vpro_df.columns]
+    negcolumns = [c for c in ['Inhibited','Weak'] if c in vpro_df.columns]
+    if poscolumns:
+        vpro_df['pos_interaction'] = vpro_df[poscolumns].sum(axis=1) 
+    else:
+        vpro_df['pos_interaction'] = 0
+
+    if negcolumns:
+        vpro_df['neg_interaction'] = vpro_df[negcolumns].sum(axis=1)
+    else:
+        vpro_df['neg_interaction'] = 0
+                 
     vpro_df['Versatile'] = vpro_df['pos_interaction'].ge(1) & vpro_df['neg_interaction'].ge(1) 
     vpro_df = vpro_df.reset_index()
 
