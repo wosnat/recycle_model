@@ -1,5 +1,5 @@
 # Introduction
-This document describes the model. We are modeling  the interaction between *Prochlorococcus*, an autotrophic phytoplankton, and co-occurring marine heterotrophic bacterias.
+This document describes the model. We are modeling the interaction between *Prochlorococcus*, an autotrophic phytoplankton, and co-occurring marine heterotrophic bacteria.
 
 The model represents the interaction between the autotroph and heterotroph through the lens of nutrients exchanges and detoxification.
 
@@ -20,16 +20,16 @@ The model represents the interaction between the autotroph and heterotroph throu
 | $ROS$   | $\mu M ROS$  |  Reactive Oxygen Species             |
 
 
-$i$ is the subscript for population, and can be either *Prochlorococcus* or Heterotroph.
+$i$ is the subscript for population and can be either *Prochlorococcus* or Heterotroph.
 
 # Main model overview
 ![image](https://github.com/wosnat/recycle_model/assets/22752755/93bd90ac-fb83-4eb8-be1f-3a8d5a945e48)
 
-In our model, C and N are taken up from dissolved organic and/or inorganic forms into C and N stores ($C_i$ and $N_i$ respectively), which are then combined through biosynthesis into functional biomass  ($B_i$, figure 1). Functional biomass is either degraded back into stores to support respiration or lost through mortality (Eq 1)
+In our model, C and N are taken up from dissolved organic and/or inorganic forms into C and N stores ($C_i$ and $N_i$ respectively), which are then combined through biosynthesis into functional biomass ($B_i$, figure 1). Functional biomass is either degraded back into stores to support respiration or lost through mortality (Eq 1)
 
 The functional biomass has a fixed C/N ratio ($C2N_i$). $B_i$, the biomass variable is maintained in $\mu M  N$, representing also the corresponding C biomass of $C2N_i  \cdot  B_i$.
 
-The stores are utilized for biosynthesis, respiration (C store only) and are degraded into dessolved organic matter upon death (Eq2, Eq3). When the stores are imbalanced, some of them may be exuded as overflow (see below).
+The stores are utilized for biosynthesis, respiration (C store only) and are degraded into dissolved organic matter upon death (Eq2, Eq3). When the stores are imbalanced, some of them may be exuded as overflow (see below).
 
 EQ1:    $dB_i/dt = biosynthesisN_i - biomassbreakdownC_i / C2N_i - deathB_i  $
 
@@ -57,16 +57,16 @@ EQ7: $biomassbreakdownC_i = \max(0, respirationC_i - requiredCStore_i)$
 
 # Model variants
 
-There is a baseline model and additional 4 model variants encoding different interaction mechanisms between the 2 populations (Exoenzymes, Excess Overflow, Mixotrophy, ROS detoxyfication). 
+There is a baseline model and additional 4 model variants encoding different interaction mechanisms between the 2 populations (Exoenzymes, Excess Overflow, Mixotrophy, ROS detoxification). 
 
 ### Baseline model
-In the baseline model, the heterotroph consumes organic N and C as well is inorganic N. While the autotroph consumes inorganic C (photosynthesis) and inorganic N. The only processes in the base model are nutrients uptake, biosynthesis, respiration and death. In addition, there is a very slow abiotic degradation of DON to DIN. All other models are a superset of the baseline model, adding additional interaction-related processes.
+In the baseline model, the heterotroph consumes organic N and C as well is inorganic N. While the autotroph consumes inorganic C (photosynthesis) and inorganic N. The only processes in the base model are nutrients uptake, biosynthesis, respiration, and death. In addition, there is a very slow abiotic degradation of DON to DIN. All other models are a superset of the baseline model, adding additional interaction-related processes.
 
 ### Excess Overflow
 
 In the overflow model, the uptake that is over the C2N ratio is released as overflow.
-In photosynthetic organisms this includes photosyntheate that cannnot be utilized due to N limitation.
-In the heterotrophs, under C limitation, carbon is extracted from organic compouds and the N containing waste (e.g. NH4) is released.
+In photosynthetic organisms this includes photosynthate that cannot be utilized due to N limitation.
+In the heterotrophs, under C limitation, carbon is extracted from organic compounds and the N containing waste (e.g. NH4) is released.
 The model makes the store maintain the C:N ratio and exude the rest.
 
 ### Mixotrophy
@@ -77,9 +77,9 @@ In the exoenzyme model, DON is degraded to DIN by exoenzymes released by the het
 
 ### ROS detoxyfication
 ROS (reactive oxygen species) is a natural byproduct of core metabolic processes as well as photosynthesis.
-It is toxic to living organism. *Prochlorococcus* lost the cabability of to degrade ROS, and relies on the heterotrophs to degrade it.
+It is toxic to living organism. *Prochlorococcus* lost the capability of to degrade ROS and relies on the heterotrophs to degrade it.
 In the ROS model, ROS is produced by both organisms and is toxic, increasing the loss rate. Both organisms can also degrade it. 
-ROS is an unstable compounds and also decays over time.
+ROS is an unstable compound and also decays over time.
 
 # Carbon Resources
 
@@ -97,8 +97,8 @@ Where $\gamma_{i}$ is the portion of the losses (death and leakiness) that is la
 
 # Nitrogen Resources
 
-The system is closed to nitrogen. The nitrogen budget consists of the initial nitrogen in organic (DON), inroganic (DIN) and  recalcitrant, non-labile organic (RDON), as well as the nitrogen in the  cells biomass and nitrogen store. Thus the system as a whole is nitrogen limited.
-DON is constantly degrated abiotically into DIN (in all models). In the EXOENZYME model it is also degraded by exoenzymes released be the heterotroph (see DON breakdown due to exoenzymes)
+The system is closed to nitrogen. The nitrogen budget consists of the initial nitrogen in organic (DON), inorganic (DIN) and recalcitrant, non-labile organic (RDON), as well as the nitrogen in the  cells biomass and nitrogen store. Thus, the system as a whole is nitrogen limited.
+DON is constantly degraded abiotically into DIN (in all models). In the EXOENZYME model it is also degraded by exoenzymes released be the heterotroph (see DON breakdown due to exoenzymes)
 
 Eq12: $totaldeathN_i = deathB_i + deathN_i$
 
