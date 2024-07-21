@@ -147,7 +147,6 @@ if __name__ == '__main__':
 
     parser.add_argument("--outdpath", help="output dir", default='.')
     parser.add_argument("--infpath", help="input dir", default='.')
-    parser.add_argument("--run_id", help="run id", required=True)
     
     
     args = parser.parse_args()
@@ -162,7 +161,6 @@ if __name__ == '__main__':
     fname = os.path.basename(fpath)
     session_id = fname.replace('_df.csv.gz', '')
     
-    session_id = args.run_id
     df = pd.read_csv(fpath)
     df = df.reset_index(drop=True)
 
