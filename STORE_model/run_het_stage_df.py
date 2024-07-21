@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 import math
-
+import os
 
 # import sys
 # sys.path.append('..')
@@ -146,7 +146,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='cleanup PONLY runs and produce VPROS.')
 
     parser.add_argument("--outdpath", help="output dir", default='.')
-    parser.add_argument("--indpath", help="input dir", default='.')
+    parser.add_argument("--infpath", help="input dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
     
     
@@ -157,10 +157,13 @@ if __name__ == '__main__':
 
 #######################
 
-    dpath = args.indpath
+    fpath = args.infpath
+    # results/final/het/monte_het_add_100per_vpro_ROS_clean_df.csv.gz
+    fname = os.path.basename(fpath)
+    session_id = fname.replace('_df.csv.gz', '')
     
     session_id = args.run_id
-    df = pd.read_csv(os.path.join(dpath,f'{session_id}_df.csv.gz',))
+    df = pd.read_csv(fpath)
     df = df.reset_index(drop=True)
 
 
@@ -195,12 +198,12 @@ if __name__ == '__main__':
     df['Het/Pro C'] = df['Bhtotal[C]'].div(df['Bptotal[C]'])
     df['Het/Pro N'] = df['Bhtotal[N]'].div(df['Bptotal[N]'])
 
-    stage_df = df.groupby(['run_id', 'model', 'y_pred']).apply(_get_stages).reset_index()
+    stage_df = df.groupby(['run_id',]).apply(_get_stages).reset_index()
 
     df['stage'] = df.groupby('run_id')['day'].transform(_mark_stages)
 
 
-    stat_df = df.groupby(['run_id', 'model', 'y_pred', 'stage']).agg({
+    stat_df = df.groupby(['run_id', 'stage']).agg({
         'DON' : ['mean', 'std'],  
         'DIN' : ['mean', 'std'],
            'DOC': ['mean', 'std'],
@@ -211,21 +214,21 @@ if __name__ == '__main__':
         'Het/Pro N': ['mean', 'std'],
         'day': lambda x : x.max() - x.min(),
         'alive' : lambda x : ' '.join(x.unique()),
-        
+    })
 
     stat_df.columns = stat_df.columns.get_level_values(0) + ' ' +  stat_df.columns.get_level_values(1) 
     stat_df.rename(columns={'day <lambda>' : 'length (days)', 'alive <lambda>' : 'alive states'}, inplace=True)
 
 
     pstat_df = stat_df.reset_index().pivot(
-        index=['run_id', 'model', 'y_pred'],
+        index=['run_id'],
         columns='stage',
     )
     pstat_df.columns = pstat_df.columns.get_level_values(0) + ' [' +  pstat_df.columns.get_level_values(1) + ']'
     pstat_df = pstat_df.reset_index()
 
 
-    merged_stage_df = pd.merge(stage_df, pstat_df, on=['run_id', 'model', 'y_pred'],)
+    merged_stage_df = pd.merge(stage_df, pstat_df, on=['run_id'],)
     merged_stage_df
 
     merged_stage_df.to_csv(os.path.join(out_dpath, f'stage_stats_{session_id}.csv'))
