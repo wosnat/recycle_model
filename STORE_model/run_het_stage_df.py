@@ -12,46 +12,6 @@ import math
 # from model_equations_separate_NC_store_numba import *
 
 
-# TODO
-df = pd.read_csv('sample_df.csv.gz')
-
-
-df = df.reset_index(drop=True)
-
-
-per_sec_cols = [
-     'gross_uptakeINp',
-       'gross_uptakeINh', 'gross_uptakeONp', 'gross_uptakeONh',
-       'gross_uptakeICp', 'gross_uptakeICh', 'gross_uptakeOCp',
-       'gross_uptakeOCh', 'uptakeNp', 'uptakeNh', 'uptakeCp', 'uptakeCh',
-        'biosynthesisNp', 'biosynthesisNh', 'respirationCp',
-       'respirationCh', 'biomass_breakdownCp', 'biomass_breakdownCh',
-       'overflowNp', 'overflowNh', 'overflowCp', 'overflowCh', 
-       
-       'ROSproductionp', 'ROSproductionh', 'ROSlossp', 'ROSlossh',
-       'deathbiomassNp', 'deathbiomassNh', 'deathstoreNp', 'deathstoreNh',
-       'deathstoreCp', 'deathstoreCh', 'DON2DIN_exop', 'DON2DIN_exoh',
-       'DON2DIN', 'additionalLossRatep', 'additionalLossRateh',  'deathC_DOCp', 'deathC_DOCh', 'deathN_DONp',
-       'deathN_DONh'
-]
-for c in per_sec_cols:
-    df[c] = df[c]*seconds_in_day
-
-
-
-df['alive'] = 'alive'
-maskp = df['Bptotal[C]'].le(2)
-maskh = df['Bhtotal[C]'].le(2)
-df.loc[maskp, 'alive'] =  'deadp'
-df.loc[maskh, 'alive'] =  'deadh'
-df.loc[maskp & maskh, 'alive'] =  'dead'
-
-
-df['Het/Pro C'] = df['Bhtotal[C]'].div(df['Bptotal[C]'])
-df['Het/Pro N'] = df['Bhtotal[N]'].div(df['Bptotal[N]'])
-
-
-
 def _get_stable_range(x, col, startday=0):
     x1 = x.loc[x['day'].ge(startday)].copy()
     std_df = x1[col].rolling(window=3,center=True).std()
@@ -124,7 +84,6 @@ def _get_stages(x):
 
 
 
-stage_df = df.groupby(['run_id', 'model', 'y_pred']).apply(_get_stages).reset_index()
 
 
 
@@ -179,37 +138,94 @@ def _mark_stages(x):
 
 
 
-df['stage'] = df.groupby('run_id')['day'].transform(_mark_stages)
+if __name__ == '__main__':
+    import argparse
+    import json
+    import pprint
 
+    parser = argparse.ArgumentParser(description='cleanup PONLY runs and produce VPROS.')
 
-
-
-stat_df = df.groupby(['run_id', 'model', 'y_pred', 'stage']).agg({
-    'DON' : ['mean', 'std'],  
-    'DIN' : ['mean', 'std'],
-       'DOC': ['mean', 'std'],
-    'ROS': ['mean', 'std'],
-    'QCp': ['mean', 'std'],
-    'QCh': ['mean', 'std'],
-    'Het/Pro C': ['mean', 'std'],
-    'Het/Pro N': ['mean', 'std'],
-    'day': lambda x : x.max() - x.min(),
-    'alive' : lambda x : ' '.join(x.unique()),
+    parser.add_argument("--outdpath", help="output dir", default='.')
+    parser.add_argument("--indpath", help="input dir", default='.')
+    parser.add_argument("--run_id", help="run id", required=True)
     
+    
+    args = parser.parse_args()
+    out_dpath = args.outdpath
+    if out_dpath != '':
+        os.makedirs(out_dpath, exist_ok=True)
 
-stat_df.columns = stat_df.columns.get_level_values(0) + ' ' +  stat_df.columns.get_level_values(1) 
-stat_df.rename(columns={'day <lambda>' : 'length (days)', 'alive <lambda>' : 'alive states'}, inplace=True)
+#######################
+
+    dpath = args.indpath
+    
+    session_id = args.run_id
+    df = pd.read_csv(os.path.join(dpath,f'{session_id}_df.csv.gz',))
+    df = df.reset_index(drop=True)
 
 
-pstat_df = stat_df.reset_index().pivot(
-    index=['run_id', 'model', 'y_pred'],
-    columns='stage',
-)
-pstat_df.columns = pstat_df.columns.get_level_values(0) + ' [' +  pstat_df.columns.get_level_values(1) + ']'
-pstat_df = pstat_df.reset_index()
+    per_sec_cols = [
+         'gross_uptakeINp',
+           'gross_uptakeINh', 'gross_uptakeONp', 'gross_uptakeONh',
+           'gross_uptakeICp', 'gross_uptakeICh', 'gross_uptakeOCp',
+           'gross_uptakeOCh', 'uptakeNp', 'uptakeNh', 'uptakeCp', 'uptakeCh',
+            'biosynthesisNp', 'biosynthesisNh', 'respirationCp',
+           'respirationCh', 'biomass_breakdownCp', 'biomass_breakdownCh',
+           'overflowNp', 'overflowNh', 'overflowCp', 'overflowCh', 
+           
+           'ROSproductionp', 'ROSproductionh', 'ROSlossp', 'ROSlossh',
+           'deathbiomassNp', 'deathbiomassNh', 'deathstoreNp', 'deathstoreNh',
+           'deathstoreCp', 'deathstoreCh', 'DON2DIN_exop', 'DON2DIN_exoh',
+           'DON2DIN', 'additionalLossRatep', 'additionalLossRateh',  'deathC_DOCp', 'deathC_DOCh', 'deathN_DONp',
+           'deathN_DONh'
+    ]
+    for c in per_sec_cols:
+        df[c] = df[c]*seconds_in_day
 
 
-merged_stage_df = pd.merge(stage_df, pstat_df, on=['run_id', 'model', 'y_pred'],)
-merged_stage_df
 
-merged_stage_df.to_csv(?)
+    df['alive'] = 'alive'
+    maskp = df['Bptotal[C]'].le(2)
+    maskh = df['Bhtotal[C]'].le(2)
+    df.loc[maskp, 'alive'] =  'deadp'
+    df.loc[maskh, 'alive'] =  'deadh'
+    df.loc[maskp & maskh, 'alive'] =  'dead'
+
+
+    df['Het/Pro C'] = df['Bhtotal[C]'].div(df['Bptotal[C]'])
+    df['Het/Pro N'] = df['Bhtotal[N]'].div(df['Bptotal[N]'])
+
+    stage_df = df.groupby(['run_id', 'model', 'y_pred']).apply(_get_stages).reset_index()
+
+    df['stage'] = df.groupby('run_id')['day'].transform(_mark_stages)
+
+
+    stat_df = df.groupby(['run_id', 'model', 'y_pred', 'stage']).agg({
+        'DON' : ['mean', 'std'],  
+        'DIN' : ['mean', 'std'],
+           'DOC': ['mean', 'std'],
+        'ROS': ['mean', 'std'],
+        'QCp': ['mean', 'std'],
+        'QCh': ['mean', 'std'],
+        'Het/Pro C': ['mean', 'std'],
+        'Het/Pro N': ['mean', 'std'],
+        'day': lambda x : x.max() - x.min(),
+        'alive' : lambda x : ' '.join(x.unique()),
+        
+
+    stat_df.columns = stat_df.columns.get_level_values(0) + ' ' +  stat_df.columns.get_level_values(1) 
+    stat_df.rename(columns={'day <lambda>' : 'length (days)', 'alive <lambda>' : 'alive states'}, inplace=True)
+
+
+    pstat_df = stat_df.reset_index().pivot(
+        index=['run_id', 'model', 'y_pred'],
+        columns='stage',
+    )
+    pstat_df.columns = pstat_df.columns.get_level_values(0) + ' [' +  pstat_df.columns.get_level_values(1) + ']'
+    pstat_df = pstat_df.reset_index()
+
+
+    merged_stage_df = pd.merge(stage_df, pstat_df, on=['run_id', 'model', 'y_pred'],)
+    merged_stage_df
+
+    merged_stage_df.to_csv(os.path.join(out_dpath, f'stage_stats_{session_id}.csv'))
