@@ -11,6 +11,9 @@ import os
 # sys.path.append('..')
 # from model_equations_separate_NC_store_numba import *
 
+seconds_in_day = 24*60*60
+
+
 
 def _get_stable_range(x, col, startday=0):
     x1 = x.loc[x['day'].ge(startday)].copy()
