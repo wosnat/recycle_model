@@ -88,11 +88,11 @@ def _get_stages(x):
 
 
 
-
-
-def _mark_stages(x):
+def _get_stages_bins(run_id):
+    minday = 0
+    maxday=128.76736111111111
     #print (x.name)
-    stages = stage_df.loc[stage_df.run_id.isin([x.name])].squeeze()
+    stages = stage_df.loc[stage_df.run_id.isin([run_id])].squeeze()
     #print(stages)
     #print([x.day.min()-1, stages['maxPC'], stages['stableQCP'], stages['deadP'], x.day.max()+1])
     maxPC = stages['Max day Pro [C]']
@@ -110,28 +110,23 @@ def _mark_stages(x):
     pro_eq_end = max(maxPC, pro_eq_end)
     
     # the defualt set of stages, assuming 2 equilibrium states. (what abount equilibrium late pro?)    
-    bins = [x.min()-1, maxPC, pro_eq_start, eq_start, eq_end, pro_eq_end, x.max()+1]
-    labels=['Bloom', 'Bust', 'Equilibrium Pro', 'Equilibrium', 'Equilibrium Pro (cont)', 'Post equilibrium']
-    if (pro_eq_count <= 5):
-        # no pro equilibrium
-        bins = [x.min()-1, maxPC,  x.max()+1]
+    bins = [minday, maxPC, eq_start, eq_end, maxday]
+    labels=['Bloom', 'Bust',  'Equilibrium', 'Post equilibrium']
+    if (pro_eq_count <= 5) or (eq_end < maxPC+5) or (eq_start + 5> eq_end):
+        # no equilibrium
+        bins = [minday, maxPC,  maxday]
         labels=['Bloom', 'Bust', ]
-    elif (eq_start + 5>= eq_end) or (het_eq_count <= 5):
-        # no common equilibrium
-        bins = [x.min()-1, maxPC, pro_eq_start, pro_eq_end, x.max()+1]
-        labels=['Bloom', 'Bust',  'Equilibrium Pro', 'Post equilibrium']
-    elif pro_eq_start >= eq_start:
-        # no early Pro equilibrium 
-        bins = [x.min()-1, maxPC, eq_start, eq_end, pro_eq_end, x.max()+1]
-        labels=['Bloom', 'Bust',  'Equilibrium', 'Equilibrium Pro (cont)', 'Post equilibrium']
-    elif pro_eq_end <= eq_end:
-        bins = [x.min()-1, maxPC, eq_start, eq_end, x.max()+1]
-        labels=['Bloom', 'Bust',  'Equilibrium', 'Post equilibrium']
         
-        
+    #print(labels, bins)  
     labels = [labels[i] for i in range(len(labels)) if bins[i] != bins[i+1]]
-    #print(bins)
-    #print(labels)
+    #bins = [bins[i] for i in range(len(labels)) if bins[i] != bins[i+1]]
+    # remove duplicates
+    bins = list(dict.fromkeys(bins))
+    return bins, labels
+
+
+def _mark_stages(x):
+    bins, labels = _get_stages_bins(x.name)
     return  pd.cut(
         x,
         bins=bins,
@@ -207,12 +202,8 @@ if __name__ == '__main__':
     stat_df = df.groupby(['run_id', 'stage']).agg({
         'DON' : ['mean', 'std'],  
         'DIN' : ['mean', 'std'],
-           'DOC': ['mean', 'std'],
+        'DOC': ['mean', 'std'],
         'ROS': ['mean', 'std'],
-        'QCp': ['mean', 'std'],
-        'QCh': ['mean', 'std'],
-        'Het/Pro C': ['mean', 'std'],
-        'Het/Pro N': ['mean', 'std'],
         'day': lambda x : x.max() - x.min(),
         'alive' : lambda x : ' '.join(x.unique()),
     })
@@ -229,7 +220,27 @@ if __name__ == '__main__':
     pstat_df = pstat_df.reset_index()
 
 
+    stat_df_alive = df.loc[df.alive.isin(['alive'])].groupby(['run_id', 'stage']).agg({
+        'QCp': ['mean', 'std'],
+        'QCh': ['mean', 'std'],
+        'Het/Pro C': ['mean', 'std'],
+        'Het/Pro N': ['mean', 'std'],
+    })
+
+    stat_df_alive.columns = stat_df_alive.columns.get_level_values(0) + ' ' +  stat_df_alive.columns.get_level_values(1) 
+    stat_df_alive.rename(columns={'day <lambda>' : 'length (days)', 'alive <lambda>' : 'alive states'}, inplace=True)
+
+
+    pstat_df_alive = stat_df_alive.reset_index().pivot(
+        index=['run_id'],
+        columns='stage',
+    )
+    pstat_df_alive.columns = pstat_df_alive.columns.get_level_values(0) + ' [' +  pstat_df_alive.columns.get_level_values(1) + ']'
+    pstat_df_alive = pstat_df_alive.reset_index()
+
+
     merged_stage_df = pd.merge(stage_df, pstat_df, on=['run_id'],)
+    merged_stage_df = pd.merge(merged_stage_df, pstat_df_alive, on=['run_id'],)
     merged_stage_df
 
     merged_stage_df.to_csv(os.path.join(out_dpath, f'stage_stats_{session_id}.csv'))
