@@ -105,9 +105,9 @@ if __name__ == '__main__':
     dpath = args.indpath
     
     session_id = args.run_id
-    sim_df = pd.read_csv(os.path.join(dpath,f'{session_id}_df.csv.gz',))
-    sum_df = pd.read_csv(os.path.join(dpath,f'{session_id}_sum.csv.gz',))
-    sim_df = sim_df.drop(columns=['Unnamed: 0'])
+    sim_df = pd.read_csv(os.path.join(dpath,f'{session_id}_clean_df.csv.gz',))
+    sum_df = pd.read_csv(os.path.join(dpath,f'{session_id}_clean_sum.csv.gz',))
+    #sim_df = sim_df.drop(columns=['Unnamed: 0'])
     
     minmse_df = pd.read_csv(os.path.join(dpath, f'predicted_classes_{session_id}.csv.gz',))
     minmse_df.VPRO = minmse_df.VPRO.str.replace('_monte_', '' ,regex=False)
