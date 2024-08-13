@@ -15,7 +15,7 @@ from model_equations_separate_NC_store_numba import *
 dpath = 'results/final/het'
 
 # add values for fields that have NA (because were run before we started printing their values
-def gen_df_for_nas(y, sum_df=sum_df1, which_organism='all'):
+def gen_df_for_nas(y, sum_df, which_organism='all'):
     run_id = y.name
     param_vals = sum_df.loc[sum_df['run_id'].isin([run_id])].squeeze().to_dict()
     (var_names, init_var_vals, intermediate_names, calc_dydt, prepare_params_tuple
@@ -28,7 +28,7 @@ def gen_df_for_nas(y, sum_df=sum_df1, which_organism='all'):
     return d
 
 def fill_NAs(df, sum_df):
-''' calculate values for params where we didn't print it (old versions) '''
+    ''' calculate values for params where we didn't print it (old versions) '''
     nacols = ['ROSproductionp', 'ROSproductionh', 'ROSlossp', 'ROSlossh',
            'deathbiomassNp', 'deathbiomassNh', 'deathstoreNp', 'deathstoreNh',
            'deathstoreCp', 'deathstoreCh', 'DON2DIN_exop', 'DON2DIN_exoh',
@@ -42,7 +42,7 @@ def fill_NAs(df, sum_df):
     sum_df1 = sum_df.loc[sum_df.run_id.isin(df_of_nas.run_id.unique())].copy()
 
 
-    df_filled = df_of_nas.groupby('run_id',group_keys=True).apply(gen_df_for_nas)
+    df_filled = df_of_nas.groupby('run_id',group_keys=True).apply(lambda x: gen_df_for_nas(x, sum_df1))
     df_final = pd.concat([df_filled, df_no_nas], ignore_index=True)
     return df_final
 
