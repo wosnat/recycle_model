@@ -112,7 +112,7 @@ def create_ellipse(x, y, w, h, inclination):
 
 
 
-def multimodel_venn(model_names,  cmap, data_dict, ax=None, vmin=None, vmax=None, annfmt = '.2g', cbar_label='', alpha=1, fontsize=18, **kwargs):
+def multimodel_venn(model_names,  cmap, data_dict, ax=None, vmin=None, vmax=None, annfmt = '.2g', cbar_label='', alpha=1, fontsize=18, ec='k', **kwargs):
     
     if ax is None:
         ax= plt.gca()
@@ -146,9 +146,12 @@ def multimodel_venn(model_names,  cmap, data_dict, ax=None, vmin=None, vmax=None
     for sliver, polygon in slivers.items():
         #print (sliver, c)
         #print (morder, sliver, data_dict[sliver])
-        c = cmap(cmap_norm(data_dict[sliver]))
-        annotation = ("{:" + annfmt + "}").format(data_dict[sliver])
-        addPolygonPatch(ax, polygon, fc=c, ec='k',  alpha=alpha, text=annotation, **kwargs)
+        annotation=''
+        c='white'
+        if sliver in data_dict:
+            c = cmap(cmap_norm(data_dict[sliver]))
+            annotation = ("{:" + annfmt + "}").format(data_dict[sliver])
+        addPolygonPatch(ax, polygon, fc=c, ec=ec,  alpha=alpha, text=annotation, **kwargs)
     
     ax.text(0.1, 1.25, model_names[1], fontsize=fontsize, ha="center", va='top')
     ax.text(-0.3, 0.88, model_names[0], fontsize=fontsize, ha="center", va="bottom")
