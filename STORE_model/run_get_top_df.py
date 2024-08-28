@@ -14,10 +14,10 @@ if __name__ == '__main__':
     import json
     import pprint
 
-    parser = argparse.ArgumentParser(description='cleanup PONLY runs and produce VPROS.')
+    parser = argparse.ArgumentParser(description='create df with only the top runs')
 
     parser.add_argument("--outdpath", help="output dir", default='.')
-    parser.add_argument("--topids", help="csv file with a list of top runs", default='.')
+    parser.add_argument("--topids", help="csv file with a list of top runs", required=True)
     parser.add_argument("--infpath", help="input dir", default='.')
     
     
