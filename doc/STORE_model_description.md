@@ -105,6 +105,7 @@ Eq12: $totaldeathN_i = deathB_i + deathN_i$
 Eq13: $dDIN/dt = \sum{(overflowN_i + DON2DIN_i - grossUptake_{i,DIN})} + globalDON2DIN$
 
 Eq14: $dDON/dt = \sum{(totaldeathN_i  \cdot  \gamma_{i} - grossUptake_{i,DON} - DON2DINexo_i)} - globalDON2DIN $
+
 Eq35: $DON2DINexo_i = KprodEXO_i  \cdot  B_i  \cdot  DON$
 
 
