@@ -153,7 +153,7 @@ We use exponential decay – in ISMEJ we show that other formulations are better
 In the ROS model, ROS is a toxin, killing some of the bacteria, and ROS influence is modeled as additional mortality. The additional mortality is capped by $ROSmaxD$, the saturated maximum toxicity of ROS. (see ROS section for additional details).
 
 
-Eq12: $additionalLossRate_i = \min(ROS * \omega_i, ROSmaxD)$
+Eq12: $additionalLossRate_i = \min(ROS \cdot \omega_i, ROSmaxD)$
 
 Eq12: $lossRate_i = M_i + additionalLossRate_i$ 
 
