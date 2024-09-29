@@ -126,9 +126,9 @@ Eq21: $uptakeC_i = grossUptake_{i,DIC} +  grossUptake_{i,DOC}$
 
 We are using monod limits to model the uptake dynamics based on resource availability.
 Where $R_j$ is one of the resources ($DOC$, $DON$, $DIC$, $DIN$),
-and $Kn_{ij}$ is the $Kn$ affinity for of organism $i$ for resource $j$ (EQ19).
+and $Km_{ij}$ is the $Kn$ affinity for of organism $i$ for resource $j$ (EQ19).
 
-Eq19: $grossUptake_{ij} = Vmax_{ij}  \cdot  B_{i}  \cdot  \frac{R_j}{R_j + Kn_{ij}}   \cdot  reg_{ij}$
+Eq19: $grossUptake_{ij} = Vmax_{ij}  \cdot  B_{i}  \cdot  \frac{R_j}{R_j + Km_{ij}}   \cdot  reg_{ij}$
 
 Uptake is regulated by not letting the stores grow too large. Using Droop-like equations.
 
