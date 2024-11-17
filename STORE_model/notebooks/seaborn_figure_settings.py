@@ -70,3 +70,61 @@ plt_rc_params={
 sns.set_style('white', rc=plt_rc_params)
 
 
+gorder = [ 'Strong', 'Sustained', 'Inhibited', 'Weak', 'Neutral',   'Other']
+
+gpalette = ['#882255', '#CC6677', '#332288', 
+             '#44AA99','#88CCEE',
+            '#D0CFCA',  ]
+gorder1 = gorder[:-2]
+gpalette = gpalette[:-2]
+# sns.color_palette(gpalette)
+
+
+
+axenic = ['Axenic']
+
+group1 = ['A. macleodii 1A3', 'Pseudoalteromonas haloplanktis',]
+
+group2 = ['Sulfitobacter pseudonitzschiae','Ruegeria pomeroyi', ]
+group3 = [ 'Marinovum 5F3','Roseovarius 5C3']
+group4 = [ 
+       'Marinobacter adhaerens HP15',
+       'Phaeobacter gallaeciensis', ]
+
+horder =  group1 + group2 + group3 + group4 + ['Axenic']
+
+# order based on tree order
+
+horder_tree = ['Pseudoalteromonas haloplanktis',
+ 'A. macleodii 1A3',
+ 'Marinobacter adhaerens HP15',
+ 'Phaeobacter gallaeciensis',
+ 'Ruegeria pomeroyi',
+ 'Marinovum 5F3',
+ 'Roseovarius 5C3',
+ 'Sulfitobacter pseudonitzschiae']
+
+gorder_tree = [
+'Strong',
+ 'Strong',
+ 'Inhibited',
+ 'Inhibited',
+ 'Sustained',
+ 'Weak',
+ 'Weak',
+ 'Sustained']
+gorder_full = [
+'Strong',
+ 'Strong',
+ 'Sustained',
+ 'Sustained',
+ 'Weak',
+ 'Weak',
+ 'Inhibited',
+ 'Inhibited',
+]
+
+gpalette_dict = dict(zip(gorder, gpalette))
+hpalette_tree = [gpalette_dict[i] for i in gorder_tree]
+hpalette_g = [gpalette_dict[i] for i in gorder_full]
+#sns.color_palette(hpalette_tree)
