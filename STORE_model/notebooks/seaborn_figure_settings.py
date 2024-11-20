@@ -24,7 +24,7 @@ plt_rc_params={
     'legend.markerscale' : 2.5,
 
     # 'figure.figsize': (15,8),
-    
+    'savefig.bbox' : 'tight',
     'svg.fonttype': 'none',
     'text.usetex': False,
     'pdf.fonttype': 42,
@@ -68,6 +68,7 @@ plt_rc_params={
     # 'image.cmap': 'inferno'
 }
 sns.set_style('white', rc=plt_rc_params)
+plt.rcParams.update(plt_rc_params)
 
 
 gorder = [ 'Strong', 'Sustained', 'Inhibited', 'Weak', 'Neutral',   'Other']
