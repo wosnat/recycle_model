@@ -6,7 +6,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2024-11-20T13:51:38.721471</dc:date>
+    <dc:date>2024-12-15T13:06:22.859012</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -87,42 +87,42 @@ z
 L 71.49293 568.53 
 L 71.49293 443.79 
 L 74.16 443.79 
-" clip-path="url(#p145f0c61a5)" style="fill: none; stroke: #000000; stroke-width: 3"/>
+" clip-path="url(#p2b3351efa4)" style="fill: none; stroke: #000000"/>
     <path d="M 74.16 693.27 
 L 71.327764 693.27 
 L 71.327764 506.16 
 L 71.49293 506.16 
-" clip-path="url(#p145f0c61a5)" style="fill: none; stroke: #000000; stroke-width: 3"/>
+" clip-path="url(#p2b3351efa4)" style="fill: none; stroke: #000000"/>
     <path d="M 74.16 818.01 
 L 70.504116 818.01 
 L 70.504116 599.715 
 L 71.327764 599.715 
-" clip-path="url(#p145f0c61a5)" style="fill: none; stroke: #000000; stroke-width: 3"/>
+" clip-path="url(#p2b3351efa4)" style="fill: none; stroke: #000000"/>
     <path d="M 74.16 942.75 
 L 69.948393 942.75 
 L 69.948393 708.8625 
 L 70.504116 708.8625 
-" clip-path="url(#p145f0c61a5)" style="fill: none; stroke: #000000; stroke-width: 3"/>
+" clip-path="url(#p2b3351efa4)" style="fill: none; stroke: #000000"/>
     <path d="M 74.16 194.31 
 L 64.6938 194.31 
 L 64.6938 69.57 
 L 74.16 69.57 
-" clip-path="url(#p145f0c61a5)" style="fill: none; stroke: #000000; stroke-width: 3"/>
+" clip-path="url(#p2b3351efa4)" style="fill: none; stroke: #000000"/>
     <path d="M 74.16 319.05 
 L 48.13035 319.05 
 L 48.13035 131.94 
 L 64.6938 131.94 
-" clip-path="url(#p145f0c61a5)" style="fill: none; stroke: #000000; stroke-width: 3"/>
+" clip-path="url(#p2b3351efa4)" style="fill: none; stroke: #000000"/>
     <path d="M 69.948393 825.80625 
 L 10.388571 825.80625 
 L 10.388571 225.495 
 L 48.13035 225.495 
-" clip-path="url(#p145f0c61a5)" style="fill: none; stroke: #000000; stroke-width: 3"/>
+" clip-path="url(#p2b3351efa4)" style="fill: none; stroke: #000000"/>
    </g>
   </g>
  </g>
  <defs>
-  <clipPath id="p145f0c61a5">
+  <clipPath id="p2b3351efa4">
    <rect x="7.2" y="7.2" width="66.96" height="997.92"/>
   </clipPath>
  </defs>
