@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="425.971625pt" height="209.8185pt" viewBox="0 0 425.971625 209.8185" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2024-12-18T08:58:40.204014</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.8.0, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 209.8185 
+L 425.971625 209.8185 
+L 425.971625 0 
+L 0 0 
+L 0 209.8185 
+z
+" style="fill: none"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 52.747625 173.2755 
+L 136.477625 173.2755 
+L 136.477625 20.0715 
+L 52.747625 20.0715 
+L 52.747625 173.2755 
+z
+" style="fill: none"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="text_1">
+      <text style="fill: #373737; font: 8.8px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="73.680125" y="187.874375" transform="rotate(-0 73.680125 187.874375)">Agree</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="text_2">
+      <text style="fill: #373737; font: 8.8px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="115.545125" y="187.874375" transform="rotate(-0 115.545125 187.874375)">Disagree</text>
+     </g>
+    </g>
+    <g id="text_3">
+     <text style="fill: #373737; font: 9.6px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="94.612625" y="200.598" transform="rotate(-0 94.612625 200.598)">pred_agree</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="text_4">
+      <text style="fill: #373737; font: 8.8px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: end" x="44.447625" y="176.424937" transform="rotate(-0 44.447625 176.424937)">0</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="text_5">
+      <text style="fill: #373737; font: 8.8px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: end" x="44.447625" y="144.793014" transform="rotate(-0 44.447625 144.793014)">10000</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="text_6">
+      <text style="fill: #373737; font: 8.8px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: end" x="44.447625" y="113.161091" transform="rotate(-0 44.447625 113.161091)">20000</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="text_7">
+      <text style="fill: #373737; font: 8.8px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: end" x="44.447625" y="81.529168" transform="rotate(-0 44.447625 81.529168)">30000</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="text_8">
+      <text style="fill: #373737; font: 8.8px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: end" x="44.447625" y="49.897245" transform="rotate(-0 44.447625 49.897245)">40000</text>
+     </g>
+    </g>
+    <g id="text_9">
+     <text style="fill: #373737; font: 9.6px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="14.0715" y="96.6735" transform="rotate(-90 14.0715 96.6735)">count</text>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 56.934125 173.2755 
+L 90.426125 173.2755 
+L 90.426125 81.504965 
+L 56.934125 81.504965 
+z
+" clip-path="url(#pc02650f20b)" style="fill: #bc9f6c"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 98.799125 173.2755 
+L 132.291125 173.2755 
+L 132.291125 148.925246 
+L 98.799125 148.925246 
+z
+" clip-path="url(#pc02650f20b)" style="fill: #6b2a2a"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 52.747625 173.2755 
+L 52.747625 20.0715 
+" style="fill: none; stroke: #373737; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 52.747625 173.2755 
+L 136.477625 173.2755 
+" style="fill: none; stroke: #373737; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_10">
+    <text style="fill: #373737; font: 9.6px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="94.612625" y="14.0715" transform="rotate(-0 94.612625 14.0715)">MIXOTROPH</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_7">
+    <path d="M 146.845625 173.2755 
+L 230.575625 173.2755 
+L 230.575625 20.0715 
+L 146.845625 20.0715 
+L 146.845625 173.2755 
+z
+" style="fill: none"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_3">
+     <g id="text_11">
+      <text style="fill: #373737; font: 8.8px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="167.778125" y="187.874375" transform="rotate(-0 167.778125 187.874375)">Agree</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="text_12">
+      <text style="fill: #373737; font: 8.8px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="209.643125" y="187.874375" transform="rotate(-0 209.643125 187.874375)">Disagree</text>
+     </g>
+    </g>
+    <g id="text_13">
+     <text style="fill: #373737; font: 9.6px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="188.710625" y="200.598" transform="rotate(-0 188.710625 200.598)">pred_agree</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_6"/>
+    <g id="ytick_7"/>
+    <g id="ytick_8"/>
+    <g id="ytick_9"/>
+    <g id="ytick_10"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 151.032125 173.2755 
+L 184.524125 173.2755 
+L 184.524125 27.366929 
+L 151.032125 27.366929 
+z
+" clip-path="url(#p005060dc8e)" style="fill: #bc9f6c"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 192.897125 173.2755 
+L 226.389125 173.2755 
+L 226.389125 125.571397 
+L 192.897125 125.571397 
+z
+" clip-path="url(#p005060dc8e)" style="fill: #6b2a2a"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 146.845625 173.2755 
+L 146.845625 20.0715 
+" style="fill: none; stroke: #373737; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 146.845625 173.2755 
+L 230.575625 173.2755 
+" style="fill: none; stroke: #373737; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_14">
+    <text style="fill: #373737; font: 9.6px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="188.710625" y="14.0715" transform="rotate(-0 188.710625 14.0715)">OVERFLOW</text>
+   </g>
+  </g>
+  <g id="axes_3">
+   <g id="patch_12">
+    <path d="M 240.943625 173.2755 
+L 324.673625 173.2755 
+L 324.673625 20.0715 
+L 240.943625 20.0715 
+L 240.943625 173.2755 
+z
+" style="fill: none"/>
+   </g>
+   <g id="matplotlib.axis_5">
+    <g id="xtick_5">
+     <g id="text_15">
+      <text style="fill: #373737; font: 8.8px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="261.876125" y="187.874375" transform="rotate(-0 261.876125 187.874375)">Agree</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="text_16">
+      <text style="fill: #373737; font: 8.8px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="303.741125" y="187.874375" transform="rotate(-0 303.741125 187.874375)">Disagree</text>
+     </g>
+    </g>
+    <g id="text_17">
+     <text style="fill: #373737; font: 9.6px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="282.808625" y="200.598" transform="rotate(-0 282.808625 200.598)">pred_agree</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_6">
+    <g id="ytick_11"/>
+    <g id="ytick_12"/>
+    <g id="ytick_13"/>
+    <g id="ytick_14"/>
+    <g id="ytick_15"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 245.130125 173.2755 
+L 278.622125 173.2755 
+L 278.622125 88.707554 
+L 245.130125 88.707554 
+z
+" clip-path="url(#pd4e9d68e60)" style="fill: #bc9f6c"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 286.995125 173.2755 
+L 320.487125 173.2755 
+L 320.487125 96.86859 
+L 286.995125 96.86859 
+z
+" clip-path="url(#pd4e9d68e60)" style="fill: #6b2a2a"/>
+   </g>
+   <g id="patch_15">
+    <path d="M 240.943625 173.2755 
+L 240.943625 20.0715 
+" style="fill: none; stroke: #373737; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_16">
+    <path d="M 240.943625 173.2755 
+L 324.673625 173.2755 
+" style="fill: none; stroke: #373737; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_18">
+    <text style="fill: #373737; font: 9.6px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="282.808625" y="14.0715" transform="rotate(-0 282.808625 14.0715)">EXOENZYME</text>
+   </g>
+  </g>
+  <g id="axes_4">
+   <g id="patch_17">
+    <path d="M 335.041625 173.2755 
+L 418.771625 173.2755 
+L 418.771625 20.0715 
+L 335.041625 20.0715 
+L 335.041625 173.2755 
+z
+" style="fill: none"/>
+   </g>
+   <g id="matplotlib.axis_7">
+    <g id="xtick_7">
+     <g id="text_19">
+      <text style="fill: #373737; font: 8.8px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="355.974125" y="187.874375" transform="rotate(-0 355.974125 187.874375)">Agree</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="text_20">
+      <text style="fill: #373737; font: 8.8px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="397.839125" y="187.874375" transform="rotate(-0 397.839125 187.874375)">Disagree</text>
+     </g>
+    </g>
+    <g id="text_21">
+     <text style="fill: #373737; font: 9.6px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="376.906625" y="200.598" transform="rotate(-0 376.906625 200.598)">pred_agree</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_8">
+    <g id="ytick_16"/>
+    <g id="ytick_17"/>
+    <g id="ytick_18"/>
+    <g id="ytick_19"/>
+    <g id="ytick_20"/>
+   </g>
+   <g id="patch_18">
+    <path d="M 339.228125 173.2755 
+L 372.720125 173.2755 
+L 372.720125 114.136457 
+L 339.228125 114.136457 
+z
+" clip-path="url(#pf2f9d476fd)" style="fill: #bc9f6c"/>
+   </g>
+   <g id="patch_19">
+    <path d="M 381.093125 173.2755 
+L 414.585125 173.2755 
+L 414.585125 160.701811 
+L 381.093125 160.701811 
+z
+" clip-path="url(#pf2f9d476fd)" style="fill: #6b2a2a"/>
+   </g>
+   <g id="patch_20">
+    <path d="M 335.041625 173.2755 
+L 335.041625 20.0715 
+" style="fill: none; stroke: #373737; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_21">
+    <path d="M 335.041625 173.2755 
+L 418.771625 173.2755 
+" style="fill: none; stroke: #373737; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_22">
+    <text style="fill: #373737; font: 9.6px 'Arial', 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif; text-anchor: middle" x="376.906625" y="14.0715" transform="rotate(-0 376.906625 14.0715)">ROS</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pc02650f20b">
+   <rect x="52.747625" y="20.0715" width="83.73" height="153.204"/>
+  </clipPath>
+  <clipPath id="p005060dc8e">
+   <rect x="146.845625" y="20.0715" width="83.73" height="153.204"/>
+  </clipPath>
+  <clipPath id="pd4e9d68e60">
+   <rect x="240.943625" y="20.0715" width="83.73" height="153.204"/>
+  </clipPath>
+  <clipPath id="pf2f9d476fd">
+   <rect x="335.041625" y="20.0715" width="83.73" height="153.204"/>
+  </clipPath>
+ </defs>
+</svg>
