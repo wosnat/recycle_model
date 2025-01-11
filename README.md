@@ -13,6 +13,8 @@ Prochlorococcus is marine autotroph, ubiquitous in the world oligotrophic oceans
 The goal of this repo is to model this interaction, explore possible mechanism underlying the observed outcomes, associated organism traits and possible biogeochemical implications.
 The code contains an implementation of the model, code for running simulations using randomly selected parameter values, a classification engine to classify to the different experimental outcomes and jupyter notebooks analyzing the results.
 
+
+
 # System Requirments
 * Python 3.11
 * Additional required python packages are listed in requirements.txt
@@ -182,7 +184,7 @@ options:
   --infpath INFPATH    input dir
 ```
 
-# notebooks used to analyze the simulation results
+# Notebooks used to analyze the simulation results
 
 * STORE_model/notebooks/CC10_phylogenetic_tree.ipynb : create phylogenetic tree of the heterotroph bacteria used in the experiment (figure 1). 
 * STORE_model/notebooks/model_store_analyze_monte_ponly_curves.ipynb - analyze monoculuture simulations (Figure 1)
