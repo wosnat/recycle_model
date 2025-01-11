@@ -185,32 +185,17 @@ options:
 # notebooks used to analyze the simulation results
 
 * STORE_model/notebooks/CC10_phylogenetic_tree.ipynb : create phylogenetic tree of the heterotroph bacteria used in the experiment (figure 1). 
+* STORE_model/notebooks/model_store_analyze_monte_ponly_curves.ipynb - analyze monoculuture simulations (Figure 1)
+* STORE_model/notebooks/model_store_analyze_monte_curves.ipynb - analyze coculuture simulations (Figure 1)
+* STORE_model/notebooks/model_store_analyze_monte_ponly_params.ipynb - analyze vPro parameters in monoculuture simulations (Figure S5, S6)
+* STORE_model/notebooks/verastile_vpros.ipynb - distribution of outcomes and versatility (Figure 2, S12)
+* STORE_model/notebooks/verastile_vpros_multi.ipynb - distribution of outcomes and versatility for mechanism combinations (Figure S15, S16)
+* STORE_model/notebooks/model_store_analyze_monte_correlation_to_biomass.ipynb - correlation between param values and biomass (Figure 3)
+* STORE_model/notebooks/model_store_analyze_monte_curves_top.ipynb - analyze top select coculuture simulations (Figure 4)
+* STORE_model/notebooks/model_store_analyze_monte_biogeo.ipynb - analyze biogeo results (figure 5)
+* STORE_model/notebooks/model_store_analyze_monte_biogeo_multi.ipynb - analyze biogeo results for mechanism combinations
 * STORE_model/notebooks/create param table.ipynb : Create the table of parameters model (supplemantary table S2)
-
-
-STORE_model/notebooks/10cc_fit_per_model.ipynb
-STORE_model/notebooks/create_venn.ipynb
-STORE_model/notebooks/model_store_analyze_monte_biogeo_create_files.ipynb
-STORE_model/notebooks/model_store_analyze_monte_biogeo_full.ipynb
-STORE_model/notebooks/model_store_analyze_monte_biogeo.ipynb
-STORE_model/notebooks/model_store_analyze_monte_biogeo_multi.ipynb
-STORE_model/notebooks/model_store_analyze_monte_compare_MSE_prediction.ipynb
-STORE_model/notebooks/model_store_analyze_monte_correlation_to_biomass.ipynb
-STORE_model/notebooks/model_store_analyze_monte_curves_cleanup.ipynb
-STORE_model/notebooks/model_store_analyze_monte_curves.ipynb
-STORE_model/notebooks/model_store_analyze_monte_curves_top.ipynb
-STORE_model/notebooks/model_store_analyze_monte_het_analyze_flux_all.ipynb
-STORE_model/notebooks/model_store_analyze_monte_het_analyze_flux.ipynb
-STORE_model/notebooks/model_store_analyze_monte_het_EXOENZYME.ipynb
-STORE_model/notebooks/model_store_analyze_monte_het_OVERFLOW.ipynb
-STORE_model/notebooks/model_store_analyze_monte_het_params.ipynb
-STORE_model/notebooks/model_store_analyze_monte_het_ROS.ipynb
-STORE_model/notebooks/model_store_analyze_monte_PCA.ipynb
-STORE_model/notebooks/model_store_analyze_monte_ponly_curves.ipynb
-STORE_model/notebooks/model_store_analyze_monte_ponly_params.ipynb
-STORE_model/notebooks/model_store_het_params_corr.ipynb
-STORE_model/notebooks/verastile_vpros.ipynb
-STORE_model/notebooks/verastile_vpros_multi.ipynb
+* STORE_model/notebooks/model_store_analyze_monte_compare_MSE_prediction.ipynb - compare two alternative classification methods (ML and RMSE) (Figure S10)
 
 
 
