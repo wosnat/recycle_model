@@ -918,7 +918,7 @@ def get_runid_unique_suffix(pro99_mode, which_organism, model, param_vals):
     suffix = f'{suffix}_h{hash_val}'
     return suffix 
 
-def get_constants_per_organism(pro99_mode, which_organism):
+def get_constants_per_organism(pro99_mode, which_organism, override_init):
     if which_organism == 'ponly':
         var_names, init_var_vals, intermediate_names =  get_ponly_init_vars(pro99_mode=pro99_mode)
         calc_dydt = basic_model_ponly_ode
@@ -932,6 +932,12 @@ def get_constants_per_organism(pro99_mode, which_organism):
         var_names, init_var_vals, intermediate_names =  get_main_init_vars(pro99_mode=pro99_mode)
         calc_dydt = basic_model_cc_ode
         prepare_params_tuple = prepare_params_tuple_cc
+    for vname, vval in override_init:
+        # override  the init value if the command line option is used (for sensitivity analysis
+        init_var_vals = [
+            vval if vname == n else v 
+            for n, v in zip(var_names, init_var_vals)
+        ]
     return (var_names, init_var_vals, intermediate_names, calc_dydt, prepare_params_tuple)
 
 def get_t_eval_and_t_end(t_eval, refdf, maxday):
@@ -1044,7 +1050,16 @@ if __name__ == '__main__':
     parser.add_argument("--monte_add_noise", help="add noise to monte fixed params",  action="store_true")
     parser.add_argument("--monte", help="run monte carlo",
                         action="store_true")
-    
+    # this is for overriding init vars
+    def parse_str_num_pair(arg):
+        try:
+            string, number = arg.split(',')
+            return string, float(number)
+        except ValueError:
+            raise argparse.ArgumentTypeError("Pair must be in the form 'string,number'")    
+    parser.add_argument('--override_init', type=parse_str_num_pair, nargs="+",
+        help="override init values: A pair of varname (string) and number (initial concentration in uM) in the form 'string,number'"
+        )
     
     args = parser.parse_args()
     dpath = args.outdpath
@@ -1075,8 +1090,10 @@ if __name__ == '__main__':
     new_param_vals = get_param_vals_from_json_list(args.model, args.json)
     suffix = get_runid_unique_suffix(args.pro99_mode, args.which_organism, args.model, new_param_vals)
     t_eval, t_end = get_t_eval_and_t_end(args.t_eval, refdf, args.maxday)
+    
     (var_names, init_var_vals, intermediate_names, calc_dydt, prepare_params_tuple
-        ) = get_constants_per_organism(args.pro99_mode, args.which_organism)
+        ) = get_constants_per_organism(args.pro99_mode, args.which_organism, 
+                                       args.override_init)
 
     if ref_pro99_df is not None:
         t_eval_pro99, t_end_pro99 = get_t_eval_and_t_end(None, ref_pro99_df, args.maxday)
