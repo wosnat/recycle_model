@@ -1050,6 +1050,7 @@ if __name__ == '__main__':
     parser.add_argument("--monte_add_noise", help="add noise to monte fixed params",  action="store_true")
     parser.add_argument("--monte", help="run monte carlo",
                         action="store_true")
+    parser.add_argument('--rerun_csv', help='a csv with list of param values from previous run. Rerun with sensitivity (for example with a different init values)', default='None')
     # this is for overriding init vars
     def parse_str_num_pair(arg):
         try:
@@ -1191,6 +1192,27 @@ if __name__ == '__main__':
                 print('ERROR:', i)
                 print(inst)
                 pass
+    elif args.rerun_csv != 'None':
+        # load CSV file with params and rerun all simulations
+        def _rerun_simulation(x) :
+            try:
+                run_id = f'{args.run_id}_{x.run_id}'
+                new_param_vals = x.to_dict()
+                del new_param_vals['run_id']
+                MSE_err = run_solver_from_new_params_and_save(
+                    new_param_vals, refdf, args.outdpath, 
+                    run_id, init_var_vals, 
+                    calc_dydt, prepare_params_tuple, t_end , t_eval, var_names, intermediate_names,
+                )
+                print ('MSE:', MSE_err)
+            except Exception as inst:
+                print('ERROR: ', inst)
+                pass
+        print ('loading {args.rerun_csv}')
+        param_csv_df = pd.read_csv(args.rerun_csv)
+        print ('start rerunning {param_csv_df.shape[0]} simulations')
+        param_csv_df.apply(_rerun_simulation)
+        print ('finished rerunning {param_csv_df.shape[0]} simulations')
 
     else:
         # default - run simulation
