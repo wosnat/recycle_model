@@ -1210,6 +1210,8 @@ if __name__ == '__main__':
                 pass
         print ('loading {args.rerun_csv}')
         param_csv_df = pd.read_csv(args.rerun_csv)
+        if 'Unnamed: 0' in param_csv_df.columns:
+            param_csv_df = param_csv_df.drop(columns=['Unnamed: 0']).copy()
         print ('start rerunning {param_csv_df.shape[0]} simulations')
         param_csv_df.apply(_rerun_simulation)
         print ('finished rerunning {param_csv_df.shape[0]} simulations')
