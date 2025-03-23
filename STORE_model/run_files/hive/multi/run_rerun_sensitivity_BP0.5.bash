@@ -33,10 +33,10 @@ for fname in "${fnames_sum[@]}"
 do
     echo "Processing $fname"
     fpath="${dpath}/${fname}_clean_sum.csv.gz"
-    baseid=rerun_het_DIN800
+    baseid=rerun_het_BP05
     ODIR=${ODIR_base}/${baseid}/${fname}
     run_id=${baseid}
-    sbatch --partition=hive7d,hiveunlim --wrap "$RDIR/model_equations_separate_NC_store_numba.py --ref_csv $RDIR/reference_final.xlsx  --outdpath ${ODIR}/out --model MIN --run_id $run_id --which_organism all --rerun_csv $fpath --override_init DIN,800"
+    sbatch --partition=hive7d,hiveunlim --wrap "$RDIR/model_equations_separate_NC_store_numba.py --ref_csv $RDIR/reference_final.xlsx  --outdpath ${ODIR}/out --model MIN --run_id $run_id --which_organism all --rerun_csv $fpath --override_init Bp,0.5"
 done
 
 

@@ -1196,7 +1196,7 @@ if __name__ == '__main__':
         # load CSV file with params and rerun all simulations
         def _rerun_simulation(x) :
             try:
-                run_id = f'{args.run_id}_{x.run_id}'
+                run_id = f'{args.run_id}_{x["run_id"]}'
                 new_param_vals = x.to_dict()
                 del new_param_vals['run_id']
                 MSE_err = run_solver_from_new_params_and_save(
@@ -1208,13 +1208,13 @@ if __name__ == '__main__':
             except Exception as inst:
                 print('ERROR: ', inst)
                 pass
-        print ('loading {args.rerun_csv}')
+        print (f'loading {args.rerun_csv}')
         param_csv_df = pd.read_csv(args.rerun_csv)
         if 'Unnamed: 0' in param_csv_df.columns:
             param_csv_df = param_csv_df.drop(columns=['Unnamed: 0']).copy()
-        print ('start rerunning {param_csv_df.shape[0]} simulations')
-        param_csv_df.apply(_rerun_simulation)
-        print ('finished rerunning {param_csv_df.shape[0]} simulations')
+        print (f'start rerunning {param_csv_df.shape[0]} simulations')
+        param_csv_df.apply(_rerun_simulation, axis=1)
+        print (f'finished rerunning {param_csv_df.shape[0]} simulations')
 
     else:
         # default - run simulation
