@@ -39,7 +39,7 @@ NBIOMASS_LOD_NOT_GROWING = 2.34502821
 
 
 # cleanup
-def cleanup_session(session_id, sim_df, mse_df, sum_df, out_dpath):
+def cleanup_session(session_id, sim_df, mse_df, sum_df, out_dpath, disable_C2N):
     pro99_mode = False 
     which_organism = 'all'
     (var_names, init_var_vals, intermediate_names, calc_dydt, prepare_params_tuple
@@ -59,12 +59,14 @@ def cleanup_session(session_id, sim_df, mse_df, sum_df, out_dpath):
     bad_ids_missing_compare_points =  mse_df.loc[mse_df.compare_points != 74, 'run_id']
     print('bad_ids_missing_compare_points: ',len(bad_ids_missing_compare_points))
 
-
-    problematic_C2N_runids = sim_df.loc[
-        sim_df['Bhtotal[C]'].ge(5) & 
-        sim_df['QCh'].le(3.5)& 
-        sim_df['day'].ge(10)
-    ].run_id.unique()
+    if disable_C2N:
+        problematic_C2N_runids = set()
+    else:
+        problematic_C2N_runids = sim_df.loc[
+            sim_df['Bhtotal[C]'].ge(5) & 
+            sim_df['QCh'].le(3.5)& 
+            sim_df['day'].ge(10)
+        ].run_id.unique()
     print('problematic_C2N_runids: ',len(problematic_C2N_runids))
     
     
@@ -166,6 +168,7 @@ if __name__ == '__main__':
     parser.add_argument("--outdpath", help="output dir", default='.')
     parser.add_argument("--indpath", help="input dir", default='.')
     parser.add_argument("--run_id", help="run id", required=True)
+    parser.add_argument("--disable_C2N", help="disable the cleanup C/N filtering",  action="store_true")
     
     
     args = parser.parse_args()
@@ -180,7 +183,7 @@ if __name__ == '__main__':
     mse_df = pd.read_csv(os.path.join(dpath,f'{session_id}_mse.csv.gz',))
     sum_df = pd.read_csv(os.path.join(dpath,f'{session_id}_sum.csv.gz',))
 
-    (sim_df, mse_df, sum_df, stats_df) = cleanup_session(session_id, sim_df, mse_df, sum_df, out_dpath)
+    (sim_df, mse_df, sum_df, stats_df) = cleanup_session(session_id, sim_df, mse_df, sum_df, out_dpath, args.disable_C2N)
     
     df_predicted_classes = classify_samples(sim_df, mse_df)
     vpro_df = find_versatile_vpros(df_predicted_classes)
