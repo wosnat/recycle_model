@@ -32,3 +32,11 @@ Inside the archive you can find the following data:
 
 Don't mind the foldernames starting with 4_, 5_,.. as the workflow is included in another pipeline.
 
+
+# list of EC enzymes 
+downloded from Brenda https://www.brenda-enzymes.org/download.php
+on 30/3/2025
+
+# list of ROS enzymes
+
+Johnson, Lisa A., and Laura A. Hug. "Distribution of reactive oxygen species defense mechanisms across domain bacteria." Free Radical Biology and Medicine 140 (2019): 93-102.‏
