@@ -14,4 +14,21 @@ https://github.com/lucaz88/genome_comparison_code
 
 
 
+# reanalysis by luca (located in C:\Users\Osnat\OneDrive - University of Haifa\Documents\results\10cc\Luca reannotation)
+
+ I finished the analyses on 13 genomes (all the yellow one except Thiomicrospira sp). I uploaded the results to this link:
+
+https://bokubox.boku.ac.at/#8dc1f076613b67837b952f542c86bd81
+
+Inside the archive you can find the following data:
+• Folder ‘4_gnm_analysis’ contains several reports of MAGs:
+        ◦ checkM2 for completeness and quality
+        ◦ gtdbtk for the taxonomic classification using Genome Database Taxonomy (GTDB)
+• Folder ‘5_gnm_annotation’ contains:
+        ◦ A Prokka subfolder containing the gene predictions for each MAG in both nucleotide and translated peptide formats, as well as the GFF and GBK files.
+        ◦ Outputs of multiple functional annotations: Prokka, KEGG Orthologies (KO), KEGG Modules (KM), KEGG manual (manual annotation of DHPS) and taurine metabolisms), dbCAN for the CAZy enzymes, antiSMASH for secondary metabolites, BioV for membrane transporters and some other specific databases targeting pathways involving DMSP and vibrioferrin metabolisms, phytohormone production.
+        ◦ The ‘MASTER_table.tsv’ file which consolidates the results from all annotation tools into a single table.
+• Folder ‘6_plots’ contains html iterative plots that may help exploring some of the provided dataset.
+
+Don't mind the foldernames starting with 4_, 5_,.. as the workflow is included in another pipeline.
 
