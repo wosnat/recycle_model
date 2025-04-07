@@ -1,0 +1,9 @@
+Coculture Outcome,Species,GTDB taxonomy,NCBI taxonID,Accession number,Number of genes,genes with EC/KO,Signal enzymes
+Strong,Alteromonas macleodii 1A3,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Alteromonadaceae;g__Alteromonas;s__Alteromonas macleodii,529120.0,2687454166,4366,2664,828
+Strong,Pseudoalteromonas haloplanktis,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Alteromonadaceae;g__Pseudoalteromonas;s__Pseudoalteromonas nigrifaciens,326442.0,GCA_000026085.1,3647,2395,684
+Sustained,Sulfitobacter pseudonitzschiae,d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhodobacterales;f__Rhodobacteraceae;g__Sulfitobacter_C;s__Sulfitobacter_C pseudonitzschiae_A,1402135.0,CeMEB_private,5190,3265,595
+Sustained,Ruegeria pomeroyi,d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhodobacterales;f__Rhodobacteraceae;g__Ruegeria_B;s__Ruegeria_B pomeroyi,246200.0,GCA_000011965.2,4575,2899,583
+Weak,Marinovum 5F3,d__Bacteria;p__Pseudomonadota;c__Alphaproteobacteria;o__Rhodobacterales;f__Rhodobacteraceae;g__Marinovum;s__Marinovum algicola,,GCF_900109145.1,5810,3447,670
+Weak,Roseovarius 5C3,d__Bacteria;p__Pseudomonadota;c__Alphaproteobacteria;o__Rhodobacterales;f__Rhodobacteraceae;g__Roseovarius;s__Roseovarius sp030733425,,GCF_030733425.1,4423,2636,588
+Inhibited,Marinobacter adhaerens HP15,d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Oleiphilaceae;g__Marinobacter;s__Marinobacter adhaerens,225937.0,650377991,4541,2850,669
+Inhibited,Phaeobacter gallaeciensis,d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhodobacterales;f__Rhodobacteraceae;g__Phaeobacter;s__Phaeobacter gallaeciensis,1423144.0,GCA_000511385.1,4566,2767,590
