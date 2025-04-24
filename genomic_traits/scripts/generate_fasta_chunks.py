@@ -27,7 +27,7 @@ def batch_iterator(iterator, chunk_size):
 
 
 def create_batch_fasta(fpath, odpath, chunk_size):
-    basefname, extension = os.path.splitext(os.path.basename(relative_path))
+    basefname, extension = os.path.splitext(os.path.basename(fpath))
 
 
     
