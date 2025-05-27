@@ -96,7 +96,7 @@ def cleanup_session(session_id, sim_df, mse_df, sum_df, out_dpath, disable_C2N):
     
 
 def classify_samples(sim_df1, mse_df):
-    model_fpath = os.path.join(os.path.dirname(__file__),'ML_model','10CC_ML_classifier.joblib')
+    model_fpath = os.path.join(os.path.dirname(__file__),'ML_model','shading_10CC_ML_classifier.joblib')
     stack = load(model_fpath) 
     sim_df = sim_df1[['run_id', 'day', 'Bptotal[N]','Bptotal[C]']].copy()
     sim_df.rename(columns={
