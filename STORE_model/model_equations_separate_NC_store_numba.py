@@ -933,12 +933,15 @@ def get_constants_per_organism(pro99_mode, which_organism, override_init=None):
         calc_dydt = basic_model_cc_ode
         prepare_params_tuple = prepare_params_tuple_cc
     if override_init is not None:
-        for vname, vval in override_init:
-            # override  the init value if the command line option is used (for sensitivity analysis
-            init_var_vals = [
-                vval if vname == n else v 
-                for n, v in zip(var_names, init_var_vals)
-            ]
+        override_init_dict = dict(override_init)
+        # override  the init value if the command line option is used (for sensitivity analysis)
+        init_var_vals = [
+            override_init_dict(n) if n in override_init_dict else v 
+            for n, v in zip(var_names, init_var_vals)
+        ]
+        print('override_init', override_init)
+        print('init_var_vals', list(zip(var_names, init_var_vals)))
+        
     return (var_names, init_var_vals, intermediate_names, calc_dydt, prepare_params_tuple)
 
 def get_t_eval_and_t_end(t_eval, refdf, maxday):
