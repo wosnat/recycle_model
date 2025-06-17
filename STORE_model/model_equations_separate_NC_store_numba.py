@@ -936,7 +936,7 @@ def get_constants_per_organism(pro99_mode, which_organism, override_init=None):
         override_init_dict = dict(override_init)
         # override  the init value if the command line option is used (for sensitivity analysis)
         init_var_vals = [
-            override_init_dict(n) if n in override_init_dict else v 
+            override_init_dict[n] if n in override_init_dict else v 
             for n, v in zip(var_names, init_var_vals)
         ]
         print('override_init', override_init)

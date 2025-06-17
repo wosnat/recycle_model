@@ -113,6 +113,7 @@ def classify_samples(sim_df1, mse_df):
 
     # TODO
     df_predicted_classes['VPRO'] = df_predicted_classes.idx.str.replace(r'.*(vpro.*)_\d+',r'\1', regex=True)
+    df_predicted_classes['VPRO'] = df_predicted_classes['VPRO'].str.replace('_monte_', '' ,regex=False)
 
     df_predicted_classes_merged = pd.merge(df_predicted_classes, mse_df, left_on=['run_id', 'y_pred'], right_on=['run_id', 'Group'], how='left')
     df_predicted_classes_merged['RMSE_filled'] = df_predicted_classes_merged['RMSE'].fillna(0)

@@ -36,7 +36,7 @@ do
     baseid=rerun_het_DIN800DOC160
     ODIR=${ODIR_base}/${baseid}/${fname}
     run_id=${baseid}
-    sbatch --partition=hive7d,hiveunlim --wrap "$RDIR/model_equations_separate_NC_store_numba.py --ref_csv $RDIR/reference_final.xlsx  --outdpath ${ODIR}/out --model MIN --run_id $run_id --which_organism all --rerun_csv $fpath --override_init DIN,800 --override_init DOC,160"
+    sbatch --partition=hive7d,hiveunlim --wrap "$RDIR/model_equations_separate_NC_store_numba.py --ref_csv $RDIR/reference_final.xlsx  --outdpath ${ODIR}/out --model MIN --run_id $run_id --which_organism all --rerun_csv $fpath --override_init DIN,800 DOC,160"
 done
 
 
