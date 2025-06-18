@@ -15,3 +15,15 @@ RDIR=/lustre1/home/dsher/oweissber/RECYCLE_MODEL/results/rerun_sensitivity/; for
 cd slurm
 sbatch ../run_files/hive/multi/run_create_biogeo_rerun_sensitivity.sbatch
 
+# ponly (init only)
+
+ls -d ~/RECYCLE_MODEL/results/rerun_sensitivity/*/monte_het_clean/out
+
+RDIR=/lustre1/home/dsher/oweissber/RECYCLE_MODEL/results/rerun_sensitivity_ponly; 
+
+
+
+sbatch --wrap "$PWD/results_postprocess.py --dpath ~/RECYCLE_MODEL/results/rerun_sensitivity_ponly/*/out --run_id rerun_sensitivity_ponly --outdpath results/rerun_sensitivity_ponly; $PWD/run_het_clean_classify_veratiles.py --indpath results/rerun_sensitivity_ponly --run_id rerun_sensitivity_ponly --outdpath results/rerun_sensitivity_ponly/clean; $PWD/run_het_biogeo_create_files.py --outdpath results/rerun_sensitivity_ponly/clean --indpath results/rerun_sensitivity_ponly/clean --run_id rerun_sensitivity_ponly"
+
+
+
