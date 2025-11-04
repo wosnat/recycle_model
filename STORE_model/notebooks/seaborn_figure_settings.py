@@ -53,6 +53,8 @@ plt_rc_params={
     # 'ytick.minor.pad': 1,
     # 'ytick.minor.width': 0.5,
 
+    'xtick.bottom' : True,  # add yticks for nature
+    'ytick.left' : True,
     # Avoid black unless necessary
     'text.color': _new_black,
     'patch.edgecolor': _new_black,
